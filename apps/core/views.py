@@ -1,5 +1,6 @@
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.utils.html import escape
 
 
 def home(request):
@@ -24,8 +25,9 @@ def search_placeholder(request):
     query = request.GET.get("q", "").strip()
     if request.htmx:
         if query:
+            safe_query = escape(query)
             return HttpResponse(
-                f'<p class="text-gray-500 text-sm">Search for "<strong class="text-accent-400">{query}</strong>" '
+                f'<p class="text-gray-500 text-sm">Search for "<strong class="text-accent-400">{safe_query}</strong>" '
                 f"coming in Phase 2...</p>"
             )
         return HttpResponse("")

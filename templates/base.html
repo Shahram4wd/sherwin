@@ -86,6 +86,7 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
+{% load static %}
 <body class="min-h-screen text-white font-sans flex flex-col star-field" x-data="{ mobileMenu: false }">
 
     <!-- Desktop Navigation -->
@@ -143,6 +144,9 @@
             </div>
         </div>
     </footer>
+
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <script src="{% static 'js/main.js' %}" defer></script>
 
     <!-- Mobile Bottom Navigation -->
     <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav z-50 border-t border-white/5">
