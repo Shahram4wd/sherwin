@@ -91,9 +91,12 @@
     <!-- Desktop Navigation -->
     <header class="hidden md:block glass-nav sticky top-0 z-50">
         <nav class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-            <a href="{% url 'core:home' %}" class="flex items-center space-x-2 group">
-                <span class="text-accent-400 text-2xl font-display font-bold tracking-tight group-hover:glow-accent transition-all">S</span>
-                <span class="text-white font-display font-semibold text-lg tracking-wide">Sherwin<span class="text-gray-500">&lt;</span><span class="text-accent-400">U</span><span class="text-gray-500">&gt;</span></span>
+            <a href="{% url 'core:home' %}" class="flex items-center space-x-3 group">
+                <div class="w-8 h-8 rounded-lg bg-accent-500 flex items-center justify-center shadow-lg shadow-accent-500/25 group-hover:shadow-accent-500/40 transition-all">
+                    <span class="text-white text-sm font-display font-bold">S</span>
+                </div>
+                <span class="text-white font-display font-semibold text-lg tracking-wide">Sherwin</span>
+                <span class="text-accent-400 font-display font-bold text-sm -ml-2">Universe</span>
             </a>
             <div class="flex items-center space-x-8">
                 {% include "includes/nav_links.html" %}
@@ -104,9 +107,12 @@
     <!-- Mobile Header -->
     <header class="md:hidden glass-nav sticky top-0 z-50">
         <nav class="px-4 py-4 flex items-center justify-between">
-            <a href="{% url 'core:home' %}" class="flex items-center space-x-2">
-                <span class="text-accent-400 text-xl font-display font-bold">S</span>
-                <span class="text-white font-display font-semibold">Sherwin<span class="text-gray-500">&lt;</span><span class="text-accent-400">U</span><span class="text-gray-500">&gt;</span></span>
+            <a href="{% url 'core:home' %}" class="flex items-center space-x-2.5">
+                <div class="w-7 h-7 rounded-md bg-accent-500 flex items-center justify-center shadow-lg shadow-accent-500/25">
+                    <span class="text-white text-xs font-display font-bold">S</span>
+                </div>
+                <span class="text-white font-display font-semibold text-base">Sherwin</span>
+                <span class="text-accent-400 font-display font-bold text-xs -ml-1.5">Universe</span>
             </a>
             <button @click="mobileMenu = !mobileMenu" class="p-2 text-gray-400 hover:text-accent-400 transition-colors" aria-label="Toggle menu">
                 <svg x-show="!mobileMenu" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
