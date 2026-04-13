@@ -2,7 +2,11 @@ __pycache__
 *.pyc
 *.pyo
 .env
+.env.*
 db.sqlite3
+docs/
+.git/
+.github/
 media/*
 !media/.gitkeep
 staticfiles/
