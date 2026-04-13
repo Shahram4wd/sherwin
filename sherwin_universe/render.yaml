@@ -1,0 +1,35 @@
+services:
+  - type: web
+    name: sherwin-universe
+    runtime: docker
+    dockerfilePath: ./sherwin_universe/Dockerfile
+    dockerContext: ./sherwin_universe
+    branch: main
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: sherwin-db
+          property: connectionString
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings.prod
+      - key: ALLOWED_HOSTS
+        value: ".onrender.com"
+      - key: SENTRY_DSN
+        value: ""
+      - key: R2_ACCESS_KEY
+        value: ""
+      - key: R2_SECRET_KEY
+        value: ""
+      - key: R2_BUCKET_NAME
+        value: "sherwin-universe"
+      - key: R2_ENDPOINT_URL
+        value: ""
+      - key: R2_CUSTOM_DOMAIN
+        value: ""
+
+databases:
+  - name: sherwin-db
+    plan: free
+    databaseName: sherwin_universe

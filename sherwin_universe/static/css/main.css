@@ -1,0 +1,10 @@
+/* Sherwin Universe - Custom styles */
+/* Tailwind CDN handles most styling in Phase 1 */
+/* This file is for any custom overrides */
+
+/* Add bottom padding on mobile for the fixed bottom nav */
+@media (max-width: 767px) {
+    body {
+        padding-bottom: 4rem;
+    }
+}

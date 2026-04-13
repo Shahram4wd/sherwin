@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block meta %}
+    <meta name="description" content="{% block meta_description %}Sherwin Universe - A digital journal, interactive science lab, and family time capsule.{% endblock %}">
+    <meta property="og:title" content="{% block og_title %}Sherwin Universe{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Chronicling Sherwin's growth, experiments, and creative projects.{% endblock %}">
+    <meta property="og:type" content="website">
+    {% endblock %}
+    <title>{% block title %}Sherwin Universe{% endblock %}</title>
+    <!-- Tailwind CSS CDN (Phase 1 - build pipeline in Phase 2) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
+                        accent: { 50: '#fdf4ff', 100: '#fae8ff', 200: '#f5d0fe', 300: '#f0abfc', 400: '#e879f9', 500: '#d946ef', 600: '#c026d3', 700: '#a21caf', 800: '#86198f', 900: '#701a75' },
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="min-h-screen bg-gray-50 text-gray-900 flex flex-col" x-data="{ mobileMenu: false }">
+    <!-- Desktop Navigation -->
+    <header class="hidden md:block bg-white shadow-sm sticky top-0 z-50">
+        <nav class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="{% url 'core:home' %}" class="text-xl font-bold text-primary-700 hover:text-primary-500 transition-colors">
+                🌌 Sherwin Universe
+            </a>
+            <div class="flex items-center space-x-6">
+                {% include "includes/nav_links.html" %}
+            </div>
+        </nav>
+    </header>
+
+    <!-- Mobile Header -->
+    <header class="md:hidden bg-white shadow-sm sticky top-0 z-50">
+        <nav class="px-4 py-3 flex items-center justify-between">
+            <a href="{% url 'core:home' %}" class="text-lg font-bold text-primary-700">
+                🌌 Sherwin Universe
+            </a>
+            <button @click="mobileMenu = !mobileMenu" class="p-2 text-gray-600 hover:text-primary-600" aria-label="Toggle menu">
+                <svg x-show="!mobileMenu" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                </svg>
+                <svg x-show="mobileMenu" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </nav>
+        <!-- Mobile dropdown menu -->
+        <div x-show="mobileMenu" x-transition class="bg-white border-t px-4 pb-4 space-y-2">
+            {% include "includes/nav_links_mobile.html" %}
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-6xl mx-auto w-full px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-auto">
+        <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
+            <p>&copy; 2026 Sherwin Universe. Built with ❤️ and Django.</p>
+        </div>
+    </footer>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+        <div class="flex justify-around py-2">
+            <a href="{% url 'core:home' %}" class="flex flex-col items-center text-xs text-gray-600 hover:text-primary-600 transition-colors">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                Home
+            </a>
+            <a href="{% url 'blog:journal' %}" class="flex flex-col items-center text-xs text-gray-600 hover:text-primary-600 transition-colors">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                Journal
+            </a>
+            <a href="{% url 'timeline:timeline' %}" class="flex flex-col items-center text-xs text-gray-600 hover:text-primary-600 transition-colors">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                Timeline
+            </a>
+            <a href="{% url 'gallery:highlights' %}" class="flex flex-col items-center text-xs text-gray-600 hover:text-primary-600 transition-colors">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Highlights
+            </a>
+            <a href="{% url 'miniapps:lab' %}" class="flex flex-col items-center text-xs text-gray-600 hover:text-primary-600 transition-colors">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                Lab
+            </a>
+        </div>
+    </nav>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

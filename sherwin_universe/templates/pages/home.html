@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Home — Sherwin Universe{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Hero -->
+    <section class="text-center py-12">
+        <h1 class="text-4xl md:text-5xl font-bold text-primary-800 mb-4">Welcome to Sherwin's Universe</h1>
+        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
+            A digital journal, interactive science lab, and family time capsule.
+            Chronicling growth, experiments, and creative projects.
+        </p>
+    </section>
+
+    <!-- HTMX Search Example -->
+    <section class="max-w-xl mx-auto">
+        <div class="relative">
+            <input
+                type="search"
+                name="q"
+                placeholder="Search the universe..."
+                hx-get="{% url 'core:search' %}"
+                hx-trigger="keyup changed delay:300ms"
+                hx-target="#search-results"
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
+                aria-label="Search"
+            >
+            <div id="search-results" class="mt-2"></div>
+        </div>
+    </section>
+
+    <!-- Preview Cards -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+        <a href="{% url 'blog:journal' %}" class="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-xl font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">📖 Journal</h2>
+                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Coming Soon</span>
+            </div>
+            <p class="text-gray-600 text-sm">Stories, science experiments, discoveries, and adventures.</p>
+        </a>
+
+        <a href="{% url 'timeline:timeline' %}" class="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-xl font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">⏳ Timeline</h2>
+                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Coming Soon</span>
+            </div>
+            <p class="text-gray-600 text-sm">A chronological journey through milestones and memories.</p>
+        </a>
+
+        <a href="{% url 'gallery:highlights' %}" class="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-xl font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">🎨 Highlights</h2>
+                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Coming Soon</span>
+            </div>
+            <p class="text-gray-600 text-sm">Photo gallery showcasing favorite moments and creations.</p>
+        </a>
+
+        <a href="{% url 'miniapps:lab' %}" class="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-xl font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">🔬 Lab</h2>
+                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Coming Soon</span>
+            </div>
+            <p class="text-gray-600 text-sm">Interactive mini apps and experiments to explore.</p>
+        </a>
+
+        <a href="{% url 'core:about' %}" class="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-xl font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">👋 About</h2>
+                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Coming Soon</span>
+            </div>
+            <p class="text-gray-600 text-sm">Meet Sherwin and learn about this universe.</p>
+        </a>
+    </section>
+</div>
+{% endblock %}
