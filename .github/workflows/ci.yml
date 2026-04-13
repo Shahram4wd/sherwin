@@ -19,16 +19,13 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        working-directory: sherwin_universe
         run: |
           pip install --upgrade pip
           pip install -r requirements/dev.txt
 
       - name: Lint with ruff
-        working-directory: sherwin_universe
         run: ruff check .
 
       - name: Run tests with coverage
-        working-directory: sherwin_universe
         run: |
           pytest --cov=apps --cov-report=term-missing --cov-fail-under=60
