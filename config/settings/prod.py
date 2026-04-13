@@ -2,7 +2,7 @@ import sentry_sdk
 
 from .base import *  # noqa: F401, F403
 
-DEBUG = False
+DEBUG = env.bool("DEBUG", default=False)  # noqa: F405
 
 ALLOWED_HOSTS = env("ALLOWED_HOSTS")  # noqa: F405
 
