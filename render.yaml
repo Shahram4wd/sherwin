@@ -26,3 +26,9 @@ services:
         value: ""
       - key: R2_CUSTOM_DOMAIN
         value: ""
+      - key: DJANGO_SUPERUSER_USERNAME
+        value: "admin"
+      - key: DJANGO_SUPERUSER_EMAIL
+        value: "admin@sherwinuniverse.com"
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
