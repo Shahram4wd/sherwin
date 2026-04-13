@@ -4,18 +4,29 @@
 {% block meta_description %}About Sherwin and the universe that chronicles his journey.{% endblock %}
 
 {% block content %}
-<section class="relative min-h-[70vh] flex items-center">
-    <div class="absolute bottom-1/4 -right-32 w-72 h-72 bg-accent-500/5 rounded-full blur-[100px]"></div>
-    <div class="max-w-6xl mx-auto px-6 w-full">
+<section class="max-w-4xl mx-auto px-6 pt-12 pb-24">
+    <div class="relative">
+        <div class="absolute bottom-1/4 -right-32 w-72 h-72 bg-accent-500/5 rounded-full blur-[100px]"></div>
+
         <p class="text-accent-400 text-xs font-medium tracking-[0.3em] uppercase mb-4">06 &mdash; About</p>
-        <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-6">About</h1>
+        <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-8">{{ about.title }}</h1>
+
+        {% if about.body %}
+        <div class="prose prose-invert prose-lg max-w-none
+            prose-headings:font-display prose-headings:text-white
+            prose-p:text-gray-300 prose-p:leading-relaxed
+            prose-a:text-accent-400">
+            {{ about.body|safe }}
+        </div>
+        {% else %}
         <div class="glass-card rounded-xl p-8 max-w-2xl">
-            <span class="inline-block text-[10px] bg-accent-400/10 text-accent-400 px-3 py-1 rounded-full font-medium uppercase tracking-wider mb-4">Coming in Phase 2</span>
             <p class="text-gray-400 leading-relaxed">
                 Meet Sherwin and learn about this universe.
                 A place to share who he is, what he loves, and where this journey is headed.
             </p>
+            <p class="text-gray-600 text-sm mt-4">Content can be edited via the admin panel.</p>
         </div>
+        {% endif %}
     </div>
 </section>
 {% endblock %}

@@ -1,14 +1,38 @@
+from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import render
 from django.utils.html import escape
 
+from apps.blog.models import Post, PostMedia
+from apps.timeline.models import TimelineEvent
+
+from .models import AboutPage
+
 
 def home(request):
-    return render(request, "pages/home.html")
+    featured_post = (
+        Post.published.filter(is_featured=True).select_related("category").first()
+    )
+    latest_posts = Post.published.select_related("category")[:6]
+    recent_highlights = (
+        PostMedia.objects.filter(is_gallery_visible=True)
+        .select_related("post")
+        .order_by("-uploaded_at")[:6]
+    )
+    recent_events = TimelineEvent.objects.select_related("linked_post")[:5]
+
+    context = {
+        "featured_post": featured_post,
+        "latest_posts": latest_posts,
+        "recent_highlights": recent_highlights,
+        "recent_events": recent_events,
+    }
+    return render(request, "pages/home.html", context)
 
 
 def about(request):
-    return render(request, "pages/about.html")
+    about_page = AboutPage.load()
+    return render(request, "pages/about.html", {"about": about_page})
 
 
 def robots_txt(request):
@@ -20,15 +44,25 @@ def robots_txt(request):
     return HttpResponse("\n".join(lines), content_type="text/plain")
 
 
-def search_placeholder(request):
-    """HTMX-powered search placeholder - returns partial HTML."""
+def search(request):
+    """HTMX-powered search - returns partial HTML results."""
     query = request.GET.get("q", "").strip()
     if request.htmx:
-        if query:
-            safe_query = escape(query)
-            return HttpResponse(
-                f'<p class="text-gray-500 text-sm">Search for "<strong class="text-accent-400">{safe_query}</strong>" '
-                f"coming in Phase 2...</p>"
+        if query and len(query) >= 2:
+            results = (
+                Post.published.filter(
+                    models.Q(title__icontains=query)
+                    | models.Q(body__icontains=query)
+                    | models.Q(summary__icontains=query)
+                    | models.Q(tags__name__icontains=query)
+                )
+                .distinct()
+                .select_related("category")[:5]
+            )
+            return render(
+                request,
+                "includes/search_results.html",
+                {"results": results, "query": query},
             )
         return HttpResponse("")
     return render(request, "pages/home.html")

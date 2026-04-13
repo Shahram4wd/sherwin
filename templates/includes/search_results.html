@@ -1,0 +1,15 @@
+{% if results %}
+<div class="space-y-2">
+    {% for post in results %}
+    <a href="{{ post.get_absolute_url }}" class="block glass-card rounded-lg p-3 hover:border-accent-400/20 transition-all">
+        <h4 class="text-sm font-medium text-white">{{ post.title }}</h4>
+        <div class="flex items-center space-x-2 mt-1 text-xs text-gray-500">
+            {% if post.category %}<span>{{ post.category.name }}</span><span>&middot;</span>{% endif %}
+            <time>{{ post.published_at|date:"M j, Y" }}</time>
+        </div>
+    </a>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-gray-500 text-sm">No results found for "{{ query }}"</p>
+{% endif %}

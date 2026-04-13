@@ -1,0 +1,45 @@
+{% for post in posts %}
+<a href="{{ post.get_absolute_url }}" class="glass-card rounded-xl overflow-hidden block group transition-all duration-300">
+    {% if post.featured_image %}
+    <div class="aspect-video overflow-hidden border-b border-white/5">
+        <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
+    </div>
+    {% endif %}
+    <div class="p-5">
+        {% if post.category %}
+        <span class="text-[10px] bg-accent-400/10 text-accent-400 px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">{{ post.category.name }}</span>
+        {% endif %}
+        <h2 class="text-base font-display font-semibold text-white mt-3 group-hover:text-accent-400 transition-colors">{{ post.title }}</h2>
+        {% if post.summary %}
+        <p class="text-sm text-gray-500 mt-2 line-clamp-2">{{ post.summary }}</p>
+        {% endif %}
+        <div class="flex items-center space-x-3 mt-4 text-xs text-gray-600">
+            <time>{{ post.published_at|date:"M j, Y" }}</time>
+            <span class="w-1 h-1 rounded-full bg-gray-700"></span>
+            <span>{{ post.reading_time }} min</span>
+        </div>
+    </div>
+</a>
+{% empty %}
+<div class="col-span-full text-center py-16">
+    <p class="text-gray-500">No posts yet. Check back soon.</p>
+</div>
+{% endfor %}
+
+{% if posts.has_other_pages %}
+<div class="col-span-full flex justify-center mt-8 space-x-2">
+    {% if posts.has_previous %}
+    <a href="?page={{ posts.previous_page_number }}{% if current_category %}&category={{ current_category.slug }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+       class="px-4 py-2 rounded-full border border-white/10 text-sm text-gray-400 hover:border-accent-400/30 hover:text-accent-400 transition-all">
+        Previous
+    </a>
+    {% endif %}
+    <span class="px-4 py-2 text-sm text-gray-500">Page {{ posts.number }} of {{ posts.paginator.num_pages }}</span>
+    {% if posts.has_next %}
+    <a href="?page={{ posts.next_page_number }}{% if current_category %}&category={{ current_category.slug }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
+       class="px-4 py-2 rounded-full border border-white/10 text-sm text-gray-400 hover:border-accent-400/30 hover:text-accent-400 transition-all">
+        Next
+    </a>
+    {% endif %}
+</div>
+{% endif %}

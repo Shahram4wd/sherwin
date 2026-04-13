@@ -1,6 +1,13 @@
 from django.contrib import admin
+from django.utils import timezone
 
 from .models import Post, PostCategory, PostMedia
+
+
+class PostMediaInline(admin.TabularInline):
+    model = PostMedia
+    extra = 1
+    fields = ["file", "media_type", "alt_text", "caption", "order", "is_gallery_visible"]
 
 
 @admin.register(PostCategory)
@@ -11,13 +18,40 @@ class PostCategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Post)
 class PostAdmin(admin.ModelAdmin):
-    list_display = ["title", "status", "category", "published_at", "created_at"]
-    list_filter = ["status", "category", "created_at"]
-    search_fields = ["title", "body"]
+    list_display = [
+        "title",
+        "status",
+        "category",
+        "is_featured",
+        "reading_time",
+        "published_at",
+        "created_at",
+    ]
+    list_filter = ["status", "category", "is_featured", "created_at"]
+    search_fields = ["title", "body", "summary"]
     prepopulated_fields = {"slug": ("title",)}
     date_hierarchy = "created_at"
+    list_editable = ["status", "is_featured"]
+    inlines = [PostMediaInline]
+    fieldsets = (
+        (None, {"fields": ("title", "slug", "body", "summary")}),
+        ("Classification", {"fields": ("category", "tags", "is_featured")}),
+        ("Media", {"fields": ("featured_image",)}),
+        ("SEO", {"fields": ("meta_description",), "classes": ("collapse",)}),
+        (
+            "Publishing",
+            {"fields": ("status", "published_at")},
+        ),
+    )
+    actions = ["publish_posts"]
+
+    @admin.action(description="Publish selected posts")
+    def publish_posts(self, request, queryset):
+        queryset.update(status=Post.Status.PUBLISHED, published_at=timezone.now())
 
 
 @admin.register(PostMedia)
 class PostMediaAdmin(admin.ModelAdmin):
-    list_display = ["post", "caption", "created_at"]
+    list_display = ["post", "media_type", "alt_text", "order", "is_gallery_visible", "uploaded_at"]
+    list_filter = ["media_type", "is_gallery_visible"]
+    list_editable = ["order", "is_gallery_visible"]

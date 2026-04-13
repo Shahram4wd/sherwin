@@ -1,0 +1,120 @@
+{% load static %}
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} — Sherwin Universe{% endblock %}
+{% block meta_description %}{{ post.seo_description }}{% endblock %}
+{% block og_title %}{{ post.title }}{% endblock %}
+{% block og_description %}{{ post.seo_description }}{% endblock %}
+
+{% block extra_head %}
+<script type="application/ld+json">
+{
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "{{ post.title }}",
+    "datePublished": "{{ post.published_at|date:'c' }}",
+    "dateModified": "{{ post.updated_at|date:'c' }}",
+    "description": "{{ post.seo_description }}"{% if post.featured_image %},
+    "image": "{{ post.featured_image.url }}"{% endif %}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+<article class="max-w-4xl mx-auto px-6 py-16">
+    <!-- Breadcrumb -->
+    <nav class="flex items-center space-x-2 text-xs text-gray-500 mb-8">
+        <a href="{% url 'core:home' %}" class="hover:text-accent-400 transition-colors">Home</a>
+        <span>/</span>
+        <a href="{% url 'blog:journal' %}" class="hover:text-accent-400 transition-colors">Journal</a>
+        <span>/</span>
+        <span class="text-gray-400">{{ post.title|truncatewords:5 }}</span>
+    </nav>
+
+    <!-- Header -->
+    <header class="mb-12">
+        {% if post.category %}
+        <a href="{% url 'blog:journal' %}?category={{ post.category.slug }}" class="inline-block text-[10px] bg-accent-400/10 text-accent-400 px-3 py-1 rounded-full font-medium uppercase tracking-wider mb-4 hover:bg-accent-400/20 transition-colors">
+            {{ post.category.name }}
+        </a>
+        {% endif %}
+        <h1 class="text-4xl md:text-6xl font-display font-bold text-white mb-6 leading-tight">{{ post.title }}</h1>
+        <div class="flex items-center space-x-4 text-sm text-gray-500">
+            <time datetime="{{ post.published_at|date:'c' }}">{{ post.published_at|date:"F j, Y" }}</time>
+            <span class="w-1 h-1 rounded-full bg-gray-600"></span>
+            <span>{{ post.reading_time }} min read</span>
+        </div>
+    </header>
+
+    {% if post.featured_image %}
+    <div class="rounded-xl overflow-hidden mb-12 border border-white/5">
+        <img src="{{ post.featured_image.url }}" alt="{{ post.title }}" class="w-full h-auto" loading="lazy">
+    </div>
+    {% endif %}
+
+    <!-- Body -->
+    <div class="prose prose-invert prose-lg max-w-none
+        prose-headings:font-display prose-headings:text-white
+        prose-p:text-gray-300 prose-p:leading-relaxed
+        prose-a:text-accent-400 prose-a:no-underline hover:prose-a:underline
+        prose-strong:text-white
+        prose-code:text-accent-400 prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded
+        prose-blockquote:border-accent-400/30 prose-blockquote:text-gray-400
+        prose-img:rounded-xl prose-img:border prose-img:border-white/5
+        mb-12">
+        {{ post.body|safe }}
+    </div>
+
+    <!-- Media Gallery -->
+    {% if media_items %}
+    <section class="mb-12">
+        <h2 class="text-xl font-display font-semibold text-white mb-6">Media</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {% for item in media_items %}
+            {% if item.media_type == "image" %}
+            <div class="group relative rounded-lg overflow-hidden border border-white/5">
+                <img src="{{ item.file.url }}" alt="{{ item.alt_text }}" class="w-full h-48 object-cover" loading="lazy">
+                {% if item.caption %}
+                <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                    <p class="text-xs text-gray-300">{{ item.caption }}</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Tags -->
+    {% if post.tags.all %}
+    <div class="flex flex-wrap gap-2 mb-12 pt-8 border-t border-white/5">
+        {% for tag in post.tags.all %}
+        <a href="{% url 'blog:journal' %}?tag={{ tag.slug }}" class="text-xs px-3 py-1.5 rounded-full border border-white/10 text-gray-400 hover:border-accent-400/30 hover:text-accent-400 transition-all">
+            #{{ tag.name }}
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Related Posts -->
+    {% if related_posts %}
+    <section class="pt-8 border-t border-white/5">
+        <h2 class="text-xl font-display font-semibold text-white mb-6">Related Posts</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% for rp in related_posts %}
+            <a href="{{ rp.get_absolute_url }}" class="glass-card rounded-xl p-5 block group transition-all duration-300">
+                {% if rp.featured_image %}
+                <div class="rounded-lg overflow-hidden mb-3 border border-white/5">
+                    <img src="{{ rp.featured_image.url }}" alt="{{ rp.title }}" class="w-full h-32 object-cover" loading="lazy">
+                </div>
+                {% endif %}
+                <h3 class="text-sm font-medium text-white group-hover:text-accent-400 transition-colors">{{ rp.title }}</h3>
+                <p class="text-xs text-gray-500 mt-1">{{ rp.published_at|date:"M j, Y" }}</p>
+            </a>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</article>
+{% endblock %}
