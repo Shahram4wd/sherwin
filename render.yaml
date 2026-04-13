@@ -9,9 +9,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        fromDatabase:
-          name: sherwin-db
-          property: connectionString
+        sync: false
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.prod
       - key: ALLOWED_HOSTS
@@ -28,8 +26,3 @@ services:
         value: ""
       - key: R2_CUSTOM_DOMAIN
         value: ""
-
-databases:
-  - name: sherwin-db
-    plan: free
-    databaseName: sherwin_universe
