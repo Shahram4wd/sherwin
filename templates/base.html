@@ -17,39 +17,98 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a' },
-                        accent: { 50: '#fdf4ff', 100: '#fae8ff', 200: '#f5d0fe', 300: '#f0abfc', 400: '#e879f9', 500: '#d946ef', 600: '#c026d3', 700: '#a21caf', 800: '#86198f', 900: '#701a75' },
+                        space: {
+                            950: '#050508',
+                            900: '#0a0a12',
+                            800: '#111120',
+                            700: '#1a1a2e',
+                            600: '#22223a',
+                        },
+                        accent: {
+                            400: '#ff4d4d',
+                            500: '#ef2d2d',
+                            600: '#dc2626',
+                        },
+                        glass: 'rgba(255, 255, 255, 0.05)',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif'],
+                        display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+                    },
+                    backgroundImage: {
+                        'stars': 'radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)), radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)), radial-gradient(1px 1px at 90px 40px, #ddd, rgba(0,0,0,0)), radial-gradient(1px 1px at 130px 80px, #fff, rgba(0,0,0,0)), radial-gradient(2px 2px at 160px 30px, #eee, rgba(0,0,0,0))',
                     }
                 }
             }
         }
     </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+    <style>
+        body { background: #050508; }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(12px);
+        }
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.15);
+        }
+        .glass-nav {
+            background: rgba(10, 10, 18, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .glow-accent { text-shadow: 0 0 20px rgba(239, 45, 45, 0.4); }
+        .glow-box { box-shadow: 0 0 30px rgba(239, 45, 45, 0.15); }
+        .star-field {
+            background-image:
+                radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6), transparent),
+                radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1.5px 1.5px at 50% 10%, rgba(255,255,255,0.7), transparent),
+                radial-gradient(1px 1px at 70% 40%, rgba(255,255,255,0.3), transparent),
+                radial-gradient(1px 1px at 85% 75%, rgba(255,255,255,0.5), transparent),
+                radial-gradient(1.5px 1.5px at 15% 80%, rgba(255,255,255,0.4), transparent),
+                radial-gradient(1px 1px at 60% 90%, rgba(255,255,255,0.3), transparent),
+                radial-gradient(1px 1px at 95% 15%, rgba(255,255,255,0.6), transparent);
+        }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+        .animate-float { animation: float 6s ease-in-out infinite; }
+        @keyframes pulse-glow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+        .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+    </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="min-h-screen bg-gray-50 text-gray-900 flex flex-col" x-data="{ mobileMenu: false }">
+<body class="min-h-screen text-white font-sans flex flex-col star-field" x-data="{ mobileMenu: false }">
+
     <!-- Desktop Navigation -->
-    <header class="hidden md:block bg-white shadow-sm sticky top-0 z-50">
-        <nav class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="{% url 'core:home' %}" class="text-xl font-bold text-primary-700 hover:text-primary-500 transition-colors">
-                🌌 Sherwin Universe
+    <header class="hidden md:block glass-nav sticky top-0 z-50">
+        <nav class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+            <a href="{% url 'core:home' %}" class="flex items-center space-x-2 group">
+                <span class="text-accent-400 text-2xl font-display font-bold tracking-tight group-hover:glow-accent transition-all">S</span>
+                <span class="text-white font-display font-semibold text-lg tracking-wide">Sherwin<span class="text-gray-500">&lt;</span><span class="text-accent-400">U</span><span class="text-gray-500">&gt;</span></span>
             </a>
-            <div class="flex items-center space-x-6">
+            <div class="flex items-center space-x-8">
                 {% include "includes/nav_links.html" %}
             </div>
         </nav>
     </header>
 
     <!-- Mobile Header -->
-    <header class="md:hidden bg-white shadow-sm sticky top-0 z-50">
-        <nav class="px-4 py-3 flex items-center justify-between">
-            <a href="{% url 'core:home' %}" class="text-lg font-bold text-primary-700">
-                🌌 Sherwin Universe
+    <header class="md:hidden glass-nav sticky top-0 z-50">
+        <nav class="px-4 py-4 flex items-center justify-between">
+            <a href="{% url 'core:home' %}" class="flex items-center space-x-2">
+                <span class="text-accent-400 text-xl font-display font-bold">S</span>
+                <span class="text-white font-display font-semibold">Sherwin<span class="text-gray-500">&lt;</span><span class="text-accent-400">U</span><span class="text-gray-500">&gt;</span></span>
             </a>
-            <button @click="mobileMenu = !mobileMenu" class="p-2 text-gray-600 hover:text-primary-600" aria-label="Toggle menu">
+            <button @click="mobileMenu = !mobileMenu" class="p-2 text-gray-400 hover:text-accent-400 transition-colors" aria-label="Toggle menu">
                 <svg x-show="!mobileMenu" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
                 </svg>
@@ -58,45 +117,48 @@
                 </svg>
             </button>
         </nav>
-        <!-- Mobile dropdown menu -->
-        <div x-show="mobileMenu" x-transition class="bg-white border-t px-4 pb-4 space-y-2">
+        <div x-show="mobileMenu" x-transition class="glass-nav px-4 pb-4 space-y-1">
             {% include "includes/nav_links_mobile.html" %}
         </div>
     </header>
 
     <!-- Main Content -->
-    <main class="flex-1 max-w-6xl mx-auto w-full px-4 py-8">
+    <main class="flex-1 w-full">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t mt-auto">
-        <div class="max-w-6xl mx-auto px-4 py-6 text-center text-sm text-gray-500">
-            <p>&copy; 2026 Sherwin Universe. Built with ❤️ and Django.</p>
+    <footer class="border-t border-white/5 mt-auto">
+        <div class="max-w-6xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p class="text-sm text-gray-500">&copy; 2026 Sherwin Universe. Built with Django.</p>
+            <div class="flex items-center space-x-4">
+                <span class="inline-block w-2 h-2 rounded-full bg-accent-500 animate-pulse-glow"></span>
+                <span class="text-xs text-gray-600 uppercase tracking-widest">Systems Online</span>
+            </div>
         </div>
     </footer>
 
     <!-- Mobile Bottom Navigation -->
-    <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
-        <div class="flex justify-around py-2">
-            <a href="{% url 'core:home' %}" class="flex flex-col items-center text-xs text-gray-600 hover:text-primary-600 transition-colors">
-                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav z-50 border-t border-white/5">
+        <div class="flex justify-around py-3">
+            <a href="{% url 'core:home' %}" class="flex flex-col items-center text-xs text-gray-500 hover:text-accent-400 transition-colors">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                 Home
             </a>
-            <a href="{% url 'blog:journal' %}" class="flex flex-col items-center text-xs text-gray-600 hover:text-primary-600 transition-colors">
-                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+            <a href="{% url 'blog:journal' %}" class="flex flex-col items-center text-xs text-gray-500 hover:text-accent-400 transition-colors">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
                 Journal
             </a>
-            <a href="{% url 'timeline:timeline' %}" class="flex flex-col items-center text-xs text-gray-600 hover:text-primary-600 transition-colors">
-                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            <a href="{% url 'timeline:timeline' %}" class="flex flex-col items-center text-xs text-gray-500 hover:text-accent-400 transition-colors">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                 Timeline
             </a>
-            <a href="{% url 'gallery:highlights' %}" class="flex flex-col items-center text-xs text-gray-600 hover:text-primary-600 transition-colors">
-                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                Highlights
+            <a href="{% url 'gallery:highlights' %}" class="flex flex-col items-center text-xs text-gray-500 hover:text-accent-400 transition-colors">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                Gallery
             </a>
-            <a href="{% url 'miniapps:lab' %}" class="flex flex-col items-center text-xs text-gray-600 hover:text-primary-600 transition-colors">
-                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+            <a href="{% url 'miniapps:lab' %}" class="flex flex-col items-center text-xs text-gray-500 hover:text-accent-400 transition-colors">
+                <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
                 Lab
             </a>
         </div>

@@ -3,74 +3,145 @@
 {% block title %}Home — Sherwin Universe{% endblock %}
 
 {% block content %}
-<div class="space-y-8">
-    <!-- Hero -->
-    <section class="text-center py-12">
-        <h1 class="text-4xl md:text-5xl font-bold text-primary-800 mb-4">Welcome to Sherwin's Universe</h1>
-        <p class="text-lg text-gray-600 max-w-2xl mx-auto">
-            A digital journal, interactive science lab, and family time capsule.
-            Chronicling growth, experiments, and creative projects.
-        </p>
-    </section>
+<!-- Hero Section -->
+<section class="relative min-h-[85vh] flex items-center overflow-hidden">
+    <!-- Background glow effects -->
+    <div class="absolute top-1/4 -left-32 w-96 h-96 bg-accent-500/10 rounded-full blur-[120px]"></div>
+    <div class="absolute bottom-1/4 -right-32 w-80 h-80 bg-blue-500/5 rounded-full blur-[100px]"></div>
 
-    <!-- HTMX Search Example -->
-    <section class="max-w-xl mx-auto">
-        <div class="relative">
-            <input
-                type="search"
-                name="q"
-                placeholder="Search the universe..."
-                hx-get="{% url 'core:search' %}"
-                hx-trigger="keyup changed delay:300ms"
-                hx-target="#search-results"
-                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none"
-                aria-label="Search"
-            >
-            <div id="search-results" class="mt-2"></div>
+    <div class="max-w-6xl mx-auto px-6 w-full grid grid-cols-1 lg:grid-cols-3 gap-12 items-center">
+        <!-- Left: Hero Content -->
+        <div class="lg:col-span-2 space-y-8">
+            <div class="space-y-2">
+                <p class="text-accent-400 text-sm font-medium tracking-[0.3em] uppercase">01 &mdash; Getting Started</p>
+                <h1 class="text-6xl md:text-8xl font-display font-bold text-white leading-none">
+                    Sherwin's<br>
+                    <span class="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-500">Universe</span>
+                </h1>
+            </div>
+            <p class="text-gray-400 text-lg max-w-lg leading-relaxed">
+                A digital journal, interactive science lab, and family time capsule.
+                Chronicling growth, experiments, and creative projects across the cosmos.
+            </p>
+
+            <!-- HTMX Search -->
+            <div class="max-w-md">
+                <div class="relative group">
+                    <input
+                        type="search"
+                        name="q"
+                        placeholder="Search the universe..."
+                        hx-get="{% url 'core:search' %}"
+                        hx-trigger="keyup changed delay:300ms"
+                        hx-target="#search-results"
+                        class="w-full px-5 py-3 rounded-full bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:border-accent-400/50 focus:ring-1 focus:ring-accent-400/20 outline-none transition-all text-sm"
+                        aria-label="Search"
+                    >
+                    <svg class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                </div>
+                <div id="search-results" class="mt-3"></div>
+            </div>
+
+            <a href="{% url 'blog:journal' %}" class="inline-flex items-center space-x-3 px-6 py-3 rounded-full border border-white/20 text-white hover:border-accent-400/50 hover:bg-white/5 transition-all group text-sm">
+                <span>Explore Journal</span>
+                <svg class="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
+            </a>
         </div>
-    </section>
 
-    <!-- Preview Cards -->
-    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-        <a href="{% url 'blog:journal' %}" class="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-xl font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">📖 Journal</h2>
-                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Coming Soon</span>
+        <!-- Right: Feature Cards -->
+        <div class="space-y-4">
+            <div class="glass-card rounded-xl p-6 text-center transition-all duration-300 group animate-float">
+                <div class="w-12 h-12 mx-auto mb-3 flex items-center justify-center rounded-lg bg-white/5 group-hover:bg-accent-400/10 transition-colors">
+                    <svg class="w-6 h-6 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+                </div>
+                <p class="text-white text-sm font-medium">Digital Journal</p>
+                <p class="text-gray-500 text-xs mt-1">Stories & Discoveries</p>
             </div>
-            <p class="text-gray-600 text-sm">Stories, science experiments, discoveries, and adventures.</p>
-        </a>
 
-        <a href="{% url 'timeline:timeline' %}" class="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-xl font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">⏳ Timeline</h2>
-                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Coming Soon</span>
+            <div class="glass-card rounded-xl p-6 text-center transition-all duration-300 group" style="animation: float 6s ease-in-out 1s infinite">
+                <div class="w-12 h-12 mx-auto mb-3 flex items-center justify-center rounded-lg bg-white/5 group-hover:bg-accent-400/10 transition-colors">
+                    <svg class="w-6 h-6 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
+                </div>
+                <p class="text-white text-sm font-medium">Science Lab</p>
+                <p class="text-gray-500 text-xs mt-1">Interactive Experiments</p>
             </div>
-            <p class="text-gray-600 text-sm">A chronological journey through milestones and memories.</p>
-        </a>
 
-        <a href="{% url 'gallery:highlights' %}" class="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-xl font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">🎨 Highlights</h2>
-                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Coming Soon</span>
+            <div class="glass-card rounded-xl p-6 text-center transition-all duration-300 group" style="animation: float 6s ease-in-out 2s infinite">
+                <div class="w-12 h-12 mx-auto mb-3 flex items-center justify-center rounded-lg bg-white/5 group-hover:bg-accent-400/10 transition-colors">
+                    <svg class="w-6 h-6 text-accent-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </div>
+                <p class="text-white text-sm font-medium">Time Capsule</p>
+                <p class="text-gray-500 text-xs mt-1">Milestones & Memories</p>
             </div>
-            <p class="text-gray-600 text-sm">Photo gallery showcasing favorite moments and creations.</p>
-        </a>
+        </div>
+    </div>
+</section>
 
-        <a href="{% url 'miniapps:lab' %}" class="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-xl font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">🔬 Lab</h2>
-                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Coming Soon</span>
-            </div>
-            <p class="text-gray-600 text-sm">Interactive mini apps and experiments to explore.</p>
-        </a>
+<!-- Section Cards -->
+<section class="max-w-6xl mx-auto px-6 pb-24">
+    <div class="border-t border-white/5 pt-16">
+        <p class="text-accent-400 text-xs font-medium tracking-[0.3em] uppercase mb-8">02 &mdash; Explore</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <a href="{% url 'blog:journal' %}" class="glass-card rounded-xl p-6 transition-all duration-300 group block">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-display font-semibold text-white group-hover:text-accent-400 transition-colors">Journal</h2>
+                    <span class="text-[10px] bg-accent-400/10 text-accent-400 px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">Soon</span>
+                </div>
+                <p class="text-gray-500 text-sm leading-relaxed">Stories, science experiments, discoveries, and adventures.</p>
+                <div class="mt-4 flex items-center text-xs text-gray-600 group-hover:text-accent-400/60 transition-colors">
+                    <span>Explore</span>
+                    <svg class="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </a>
 
-        <a href="{% url 'core:about' %}" class="group block bg-white rounded-xl shadow-sm hover:shadow-md transition-shadow p-6 border border-gray-100">
-            <div class="flex items-center justify-between mb-3">
-                <h2 class="text-xl font-semibold text-gray-800 group-hover:text-primary-600 transition-colors">👋 About</h2>
-                <span class="text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full font-medium">Coming Soon</span>
-            </div>
-            <p class="text-gray-600 text-sm">Meet Sherwin and learn about this universe.</p>
-        </a>
-    </section>
-</div>
+            <a href="{% url 'timeline:timeline' %}" class="glass-card rounded-xl p-6 transition-all duration-300 group block">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-display font-semibold text-white group-hover:text-accent-400 transition-colors">Timeline</h2>
+                    <span class="text-[10px] bg-accent-400/10 text-accent-400 px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">Soon</span>
+                </div>
+                <p class="text-gray-500 text-sm leading-relaxed">A chronological journey through milestones and memories.</p>
+                <div class="mt-4 flex items-center text-xs text-gray-600 group-hover:text-accent-400/60 transition-colors">
+                    <span>Explore</span>
+                    <svg class="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </a>
+
+            <a href="{% url 'gallery:highlights' %}" class="glass-card rounded-xl p-6 transition-all duration-300 group block">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-display font-semibold text-white group-hover:text-accent-400 transition-colors">Highlights</h2>
+                    <span class="text-[10px] bg-accent-400/10 text-accent-400 px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">Soon</span>
+                </div>
+                <p class="text-gray-500 text-sm leading-relaxed">Photo gallery showcasing favorite moments and creations.</p>
+                <div class="mt-4 flex items-center text-xs text-gray-600 group-hover:text-accent-400/60 transition-colors">
+                    <span>Explore</span>
+                    <svg class="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </a>
+
+            <a href="{% url 'miniapps:lab' %}" class="glass-card rounded-xl p-6 transition-all duration-300 group block">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-display font-semibold text-white group-hover:text-accent-400 transition-colors">Lab</h2>
+                    <span class="text-[10px] bg-blue-400/10 text-blue-400 px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">Phase 3</span>
+                </div>
+                <p class="text-gray-500 text-sm leading-relaxed">Interactive mini apps and experiments to explore.</p>
+                <div class="mt-4 flex items-center text-xs text-gray-600 group-hover:text-accent-400/60 transition-colors">
+                    <span>Explore</span>
+                    <svg class="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </a>
+
+            <a href="{% url 'core:about' %}" class="glass-card rounded-xl p-6 transition-all duration-300 group block">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-display font-semibold text-white group-hover:text-accent-400 transition-colors">About</h2>
+                    <span class="text-[10px] bg-accent-400/10 text-accent-400 px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">Soon</span>
+                </div>
+                <p class="text-gray-500 text-sm leading-relaxed">Meet Sherwin and learn about this universe.</p>
+                <div class="mt-4 flex items-center text-xs text-gray-600 group-hover:text-accent-400/60 transition-colors">
+                    <span>Explore</span>
+                    <svg class="w-3 h-3 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </div>
+            </a>
+        </div>
+    </div>
+</section>
 {% endblock %}

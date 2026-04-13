@@ -25,7 +25,7 @@ def search_placeholder(request):
     if request.htmx:
         if query:
             return HttpResponse(
-                f'<p class="text-gray-500 text-sm">Search for "<strong>{query}</strong>" '
+                f'<p class="text-gray-500 text-sm">Search for "<strong class="text-accent-400">{query}</strong>" '
                 f"coming in Phase 2...</p>"
             )
         return HttpResponse("")

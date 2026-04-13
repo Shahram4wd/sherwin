@@ -4,12 +4,18 @@
 {% block meta_description %}Interactive mini apps and experiments in Sherwin's lab.{% endblock %}
 
 {% block content %}
-<div class="text-center py-16">
-    <h1 class="text-3xl font-bold text-gray-800 mb-4">🔬 Lab</h1>
-    <span class="inline-block text-sm bg-accent-100 text-accent-700 px-3 py-1 rounded-full font-medium mb-6">Coming in Phase 3</span>
-    <p class="text-gray-600 max-w-lg mx-auto">
-        Interactive mini apps and experiments to explore — from color mixers
-        to solar system simulators. Each app is a self-contained adventure.
-    </p>
-</div>
+<section class="relative min-h-[70vh] flex items-center">
+    <div class="absolute top-1/2 -left-32 w-72 h-72 bg-accent-500/5 rounded-full blur-[100px]"></div>
+    <div class="max-w-6xl mx-auto px-6 w-full">
+        <p class="text-accent-400 text-xs font-medium tracking-[0.3em] uppercase mb-4">05 &mdash; Lab</p>
+        <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-6">Lab</h1>
+        <div class="glass-card rounded-xl p-8 max-w-2xl">
+            <span class="inline-block text-[10px] bg-blue-400/10 text-blue-400 px-3 py-1 rounded-full font-medium uppercase tracking-wider mb-4">Coming in Phase 3</span>
+            <p class="text-gray-400 leading-relaxed">
+                Interactive mini apps and experiments to explore — from color mixers
+                to solar system simulators. Each app is a self-contained adventure.
+            </p>
+        </div>
+    </div>
+</section>
 {% endblock %}
