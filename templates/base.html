@@ -104,10 +104,9 @@
             <div class="relative flex-1 max-w-xs">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                 <input type="search" placeholder="Search snaps..."
-                       hx-get="{% url 'core:search' %}" hx-trigger="keyup changed delay:300ms" hx-target="#nav-search-results"
+                       hx-get="{% url 'core:search' %}" hx-trigger="keyup changed delay:300ms" hx-target="#snap-feed"
                        name="q" autocomplete="off"
                        class="w-full pl-9 pr-4 py-2 rounded-lg bg-space-800 border border-white/10 text-white placeholder-gray-500 focus:border-accent-400/50 focus:ring-1 focus:ring-accent-400/20 outline-none text-sm">
-                <div id="nav-search-results" class="absolute left-0 right-0 top-full mt-2 z-50"></div>
             </div>
 
             <div class="flex items-center space-x-6 ml-auto">
@@ -131,10 +130,9 @@
             <div x-show="mobileSearch" x-transition class="flex-1 relative">
                 <input type="search" x-ref="mobileSearchInput" placeholder="Search snaps..."
                        @keydown.escape="mobileSearch = false"
-                       hx-get="{% url 'core:search' %}" hx-trigger="keyup changed delay:300ms" hx-target="#mobile-nav-search-results"
+                       hx-get="{% url 'core:search' %}" hx-trigger="keyup changed delay:300ms" hx-target="#snap-feed"
                        name="q" autocomplete="off"
                        class="w-full px-4 py-2 rounded-xl bg-space-800 border border-white/10 text-white placeholder-gray-500 focus:border-accent-400/50 outline-none text-sm">
-                <div id="mobile-nav-search-results" class="absolute left-0 right-0 top-full mt-1 z-50"></div>
             </div>
 
             <div class="flex items-center gap-1 shrink-0">

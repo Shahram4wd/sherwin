@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.auth.models import User
 
-from .models import PinProfile
+from .models import PinProfile, UserProfile
 
 
 class PinProfileInline(admin.StackedInline):
@@ -11,12 +11,17 @@ class PinProfileInline(admin.StackedInline):
     readonly_fields = ("pin_hash",)
 
 
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    can_delete = False
+
+
 admin.site.unregister(User)
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
-    inlines = [PinProfileInline]
+    inlines = [UserProfileInline, PinProfileInline]
 
 
 @admin.register(PinProfile)

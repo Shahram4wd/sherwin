@@ -24,3 +24,18 @@ class PinProfile(models.Model):
     def check_pin(self, raw_pin):
         from django.contrib.auth.hashers import check_password
         return check_password(raw_pin, self.pin_hash)
+
+
+class UserProfile(models.Model):
+    """Extended profile with avatar and bio."""
+
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="profile",
+    )
+    avatar = models.ImageField(upload_to="avatars/", blank=True)
+    bio = models.TextField(blank=True, help_text="Short about-me text")
+
+    def __str__(self):
+        return f"Profile for {self.user.username}"

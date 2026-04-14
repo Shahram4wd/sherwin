@@ -19,9 +19,7 @@
         </div>
 
         <!-- Images -->
-        <a href="{% url 'snaps:snap_detail' slug=snap.slug %}">
-            {% include "snaps/includes/image_carousel.html" with snap=snap css_class="hover:brightness-110 transition-all" %}
-        </a>
+        {% include "snaps/includes/image_carousel.html" with snap=snap css_class="hover:brightness-110 transition-all" %}
 
         <!-- Content -->
         <div class="px-4 pt-3 pb-4 space-y-2.5">
@@ -32,7 +30,7 @@
             {% if snap.tags.all %}
             <div class="flex flex-wrap gap-1.5">
                 {% for tag in snap.tags.all %}
-                <span class="text-xs text-accent-400/80 font-medium">#{{ tag.name }}</span>
+                <a href="{% url 'core:home' %}?tag={{ tag.name|urlencode }}" class="text-xs text-accent-400/80 font-medium hover:text-accent-400 transition-colors">#{{ tag.name }}</a>
                 {% endfor %}
             </div>
             {% endif %}

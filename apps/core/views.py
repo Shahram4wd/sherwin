@@ -3,6 +3,8 @@ from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import render
 
+from taggit.models import Tag
+
 from apps.blog.models import Post, PostMedia
 from apps.timeline.models import TimelineEvent
 
@@ -19,7 +21,18 @@ def home(request):
     paginator = Paginator(snaps_qs, 12)
     snaps = paginator.get_page(request.GET.get("page"))
 
-    return render(request, "pages/home.html", {"snaps": snaps, "current_tag": tag})
+    all_tags = Tag.objects.filter(
+        taggit_taggeditem_items__content_type__model="post",
+    ).distinct().order_by("name")
+
+    about = AboutPage.load()
+
+    return render(request, "pages/home.html", {
+        "snaps": snaps,
+        "current_tag": tag,
+        "all_tags": all_tags,
+        "about": about,
+    })
 
 
 def about(request):
@@ -37,7 +50,7 @@ def robots_txt(request):
 
 
 def search(request):
-    """HTMX-powered search - returns partial HTML results.
+    """HTMX-powered search - filters the snap feed inline.
 
     Uses PostgreSQL full-text search when available, falls back to icontains for SQLite.
     """
@@ -55,10 +68,10 @@ def search(request):
                     Post.published.annotate(rank=SearchRank(vector, search_query))
                     .filter(rank__gte=0.01)
                     .order_by("-rank")
-                    .select_related("category")[:5]
+                    .select_related("category", "created_by")
+                    .prefetch_related("tags", "media")[:20]
                 )
                 if not results.exists():
-                    # Fallback to icontains if FTS returns nothing
                     results = (
                         Post.published.filter(
                             models.Q(title__icontains=query)
@@ -66,7 +79,8 @@ def search(request):
                             | models.Q(tags__name__icontains=query)
                         )
                         .distinct()
-                        .select_related("category")[:5]
+                        .select_related("category", "created_by")
+                        .prefetch_related("tags", "media")[:20]
                     )
             else:
                 results = (
@@ -77,12 +91,17 @@ def search(request):
                         | models.Q(tags__name__icontains=query)
                     )
                     .distinct()
-                    .select_related("category")[:5]
+                    .select_related("category", "created_by")
+                    .prefetch_related("tags", "media")[:20]
                 )
             return render(
                 request,
                 "includes/search_results.html",
-                {"results": results, "query": query},
+                {"snaps": results, "query": query},
             )
-        return HttpResponse("")
+        # Empty query: return the normal feed
+        snaps_qs = Post.snaps.select_related("category", "created_by").prefetch_related("tags", "media")
+        paginator = Paginator(snaps_qs, 12)
+        snaps = paginator.get_page(1)
+        return render(request, "snaps/includes/snap_cards.html", {"snaps": snaps})
     return render(request, "pages/home.html")
