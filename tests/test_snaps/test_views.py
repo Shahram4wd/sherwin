@@ -143,3 +143,55 @@ class SnapDetailViewTests(TestCase):
         self.snap.save()
         response = self.client.get(reverse("snaps:snap_detail", kwargs={"slug": "test-snap"}))
         assert response.status_code == 404
+
+
+class SnapEditViewTests(TestCase):
+    def setUp(self):
+        self.client = Client()
+        self.user = User.objects.create_user(username="sherwin", password="testpass")
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        image = SimpleUploadedFile("test.jpg", _create_test_image().read(), content_type="image/jpeg")
+        self.snap = Post.objects.create(
+            title="Edit Me",
+            slug="edit-me",
+            body="Old caption",
+            post_type=Post.PostType.SNAP,
+            status=Post.Status.PUBLISHED,
+            created_by=self.user,
+            featured_image=image,
+        )
+        self.url = reverse("snaps:snap_edit", kwargs={"slug": "edit-me"})
+
+    def test_edit_requires_login(self):
+        response = self.client.get(self.url)
+        assert response.status_code == 302
+        assert "accounts/login" in response.url
+
+    def test_edit_form_loads(self):
+        self.client.login(username="sherwin", password="testpass")
+        response = self.client.get(self.url)
+        assert response.status_code == 200
+        assert b"Edit Snap" in response.content
+        assert b"Old caption" in response.content
+
+    def test_edit_caption(self):
+        self.client.login(username="sherwin", password="testpass")
+        response = self.client.post(self.url, {
+            "caption": "Updated caption",
+            "tag_list": "Art",
+        })
+        assert response.status_code == 302
+        self.snap.refresh_from_db()
+        assert self.snap.body == "Updated caption"
+        assert "Art" in list(self.snap.tags.names())
+
+    def test_edit_add_youtube(self):
+        self.client.login(username="sherwin", password="testpass")
+        response = self.client.post(self.url, {
+            "caption": "With video now",
+            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "tag_list": "",
+        })
+        assert response.status_code == 302
+        self.snap.refresh_from_db()
+        assert self.snap.youtube_url == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"

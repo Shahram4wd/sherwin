@@ -2,7 +2,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
 from apps.blog.models import Post
@@ -54,6 +54,52 @@ def snap_create(request):
     })
 
 
+@login_required(login_url="accounts:login")
+def snap_edit(request, slug):
+    """Edit an existing snap."""
+    snap = get_object_or_404(Post.published, slug=slug)
+
+    if request.method == "POST":
+        form = SnapForm(request.POST, request.FILES, instance=snap)
+        if form.is_valid():
+            files = form.cleaned_data.get("images") or []
+            cleaned_files = []
+            for f in files:
+                try:
+                    clean_buf, fmt = strip_exif(f)
+                    ext = {"jpeg": "jpg", "png": "png", "webp": "webp", "gif": "gif"}.get(fmt, "jpg")
+                    name = f"snap_{timezone.now().strftime('%Y%m%d_%H%M%S')}_{len(cleaned_files)}.{ext}"
+                    cleaned_files.append(InMemoryUploadedFile(
+                        clean_buf, "images", name, f"image/{fmt}", clean_buf.getbuffer().nbytes, None
+                    ))
+                except Exception:
+                    cleaned_files.append(f)
+
+            if cleaned_files:
+                form.cleaned_data["images"] = cleaned_files[0]
+                extra_images = cleaned_files[1:] if len(cleaned_files) > 1 else None
+            else:
+                form.cleaned_data["images"] = None
+                extra_images = None
+
+            post = form.save(extra_images=extra_images)
+            messages.success(request, "Snap updated!")
+            return redirect("snaps:snap_detail", slug=post.slug)
+    else:
+        form = SnapForm(instance=snap, initial={
+            "caption": snap.body,
+            "youtube_url": snap.youtube_url,
+            "tag_list": ",".join(snap.tags.names()),
+        })
+
+    return render(request, "snaps/snap_form.html", {
+        "form": form,
+        "snap": snap,
+        "editing": True,
+        "default_tags": DEFAULT_TAGS,
+    })
+
+
 def snap_feed(request):
     """Home feed of latest snaps."""
     snaps_qs = Post.snaps.select_related("category", "created_by").prefetch_related("tags", "media")
@@ -76,7 +122,6 @@ def snap_feed(request):
 
 def snap_detail(request, slug):
     """Detail view for a single snap."""
-    from django.shortcuts import get_object_or_404
     snap = get_object_or_404(
         Post.published.select_related("category", "created_by").prefetch_related("media"),
         slug=slug,

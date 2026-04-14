@@ -80,7 +80,12 @@ class SnapForm(forms.ModelForm):
         cleaned = super().clean()
         images = cleaned.get("images", [])
         youtube_url = cleaned.get("youtube_url", "")
-        if not images and not youtube_url:
+        # On edit, existing content (image/video) is enough
+        has_existing = bool(
+            self.instance and self.instance.pk
+            and (self.instance.featured_image or self.instance.youtube_url)
+        )
+        if not images and not youtube_url and not has_existing:
             raise forms.ValidationError("Please add at least one image or a YouTube video link.")
         return cleaned
 
@@ -92,7 +97,9 @@ class SnapForm(forms.ModelForm):
         images = self.cleaned_data.get("images", [])
         if images:
             post.featured_image = images if not isinstance(images, list) else images[0] if images else None
-        post.youtube_url = self.cleaned_data.get("youtube_url", "")
+        youtube_url = self.cleaned_data.get("youtube_url", "")
+        # Allow clearing youtube_url on edit
+        post.youtube_url = youtube_url
         if user:
             post.created_by = user
         if commit:

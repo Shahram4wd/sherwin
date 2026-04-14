@@ -30,8 +30,8 @@
         Back to feed
     </a>
 
-    <!-- Snap Images -->
-    {% if snap.featured_image %}
+    <!-- Snap Images / Video -->
+    {% if snap.featured_image or snap.youtube_video_id %}
     <div class="rounded-2xl overflow-hidden mb-6">
         {% include "snaps/includes/image_carousel.html" with snap=snap css_class="" loading="eager" %}
     </div>
@@ -59,6 +59,13 @@
         {% if snap.created_by %}
         <span>&middot;</span>
         <span>by {{ snap.created_by.get_full_name|default:snap.created_by.username }}</span>
+        {% endif %}
+        {% if user.is_authenticated %}
+        <span>&middot;</span>
+        <a href="{% url 'snaps:snap_edit' slug=snap.slug %}" class="inline-flex items-center gap-1 text-gray-500 hover:text-accent-400 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
+            Edit
+        </a>
         {% endif %}
     </div>
 

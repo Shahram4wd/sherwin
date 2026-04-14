@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Create a Snap - Sherwin Universe{% endblock %}
+{% block title %}{% if editing %}Edit Snap{% else %}Create a Snap{% endif %} - Sherwin Universe{% endblock %}
 
 {% block content %}
 <div class="min-h-screen flex items-center justify-center px-4 py-8" x-data="snapForm()">
     <div class="w-full max-w-lg">
-        <h1 class="text-2xl font-display font-bold text-center mb-6">Share something!</h1>
+        <h1 class="text-2xl font-display font-bold text-center mb-6">{% if editing %}Edit Snap{% else %}Share something!{% endif %}</h1>
 
         <form method="post" enctype="multipart/form-data" class="space-y-6">
             {% csrf_token %}
@@ -212,8 +212,13 @@
                     :class="hasContent ? 'bg-accent-500 hover:bg-accent-600 shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40' : 'bg-gray-700 cursor-not-allowed'"
                     class="w-full py-4 rounded-xl text-white font-semibold text-lg transition-all">
                 <span class="flex items-center justify-center gap-2">
+                    {% if editing %}
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                    Save Changes
+                    {% else %}
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
                     Share
+                    {% endif %}
                 </span>
             </button>
         </form>
@@ -225,12 +230,13 @@
 <script>
 function snapForm() {
     return {
-        previews: [],
+        previews: [{% if editing and snap.featured_image %}'{{ snap.featured_image.url }}'{% endif %}{% if editing %}{% for img in snap.media.all %}{% if snap.featured_image or not forloop.first %},{% endif %}'{{ img.file.url }}'{% endfor %}{% endif %}],
+        existingImageCount: {% if editing %}{% if snap.featured_image %}{{ snap.media.count|add:1 }}{% else %}{{ snap.media.count }}{% endif %}{% else %}0{% endif %},
         files: [],
         previewIdx: 0,
-        caption: '',
+        caption: '{{ form.caption.value|default:""|escapejs }}',
         youtubeUrl: '{{ form.youtube_url.value|default:""|escapejs }}',
-        selectedTags: [],
+        selectedTags: '{{ form.initial.tag_list|default:""|escapejs }}'.split(',').filter(t => t.trim()).map(t => t.trim()),
         customTags: [],
         showCustomTag: false,
         showEmojis: false,
@@ -251,8 +257,8 @@ function snapForm() {
             const m = this.youtubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
             return m ? m[1] : '';
         },
-        get hasContent() { return this.files.length > 0 || this.youtubeVideoId; },
-        get hasImage() { return this.files.length > 0 || this.youtubeVideoId; },
+        get hasContent() { return this.files.length > 0 || this.previews.length > 0 || this.youtubeVideoId; },
+        get hasImage() { return this.files.length > 0 || this.previews.length > 0 || this.youtubeVideoId; },
 
         insertEmoji(emoji) {
             const ta = this.$refs.captionArea;
