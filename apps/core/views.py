@@ -37,20 +37,48 @@ def robots_txt(request):
 
 
 def search(request):
-    """HTMX-powered search - returns partial HTML results."""
+    """HTMX-powered search - returns partial HTML results.
+
+    Uses PostgreSQL full-text search when available, falls back to icontains for SQLite.
+    """
     query = request.GET.get("q", "").strip()
     if request.htmx:
         if query and len(query) >= 2:
-            results = (
-                Post.published.filter(
-                    models.Q(title__icontains=query)
-                    | models.Q(body__icontains=query)
-                    | models.Q(summary__icontains=query)
-                    | models.Q(tags__name__icontains=query)
+            from django.db import connection
+
+            if connection.vendor == "postgresql":
+                from django.contrib.postgres.search import SearchQuery, SearchRank, SearchVector
+
+                vector = SearchVector("title", weight="A") + SearchVector("body", weight="B") + SearchVector("summary", weight="C")
+                search_query = SearchQuery(query, search_type="websearch")
+                results = (
+                    Post.published.annotate(rank=SearchRank(vector, search_query))
+                    .filter(rank__gte=0.01)
+                    .order_by("-rank")
+                    .select_related("category")[:5]
                 )
-                .distinct()
-                .select_related("category")[:5]
-            )
+                if not results.exists():
+                    # Fallback to icontains if FTS returns nothing
+                    results = (
+                        Post.published.filter(
+                            models.Q(title__icontains=query)
+                            | models.Q(body__icontains=query)
+                            | models.Q(tags__name__icontains=query)
+                        )
+                        .distinct()
+                        .select_related("category")[:5]
+                    )
+            else:
+                results = (
+                    Post.published.filter(
+                        models.Q(title__icontains=query)
+                        | models.Q(body__icontains=query)
+                        | models.Q(summary__icontains=query)
+                        | models.Q(tags__name__icontains=query)
+                    )
+                    .distinct()
+                    .select_related("category")[:5]
+                )
             return render(
                 request,
                 "includes/search_results.html",

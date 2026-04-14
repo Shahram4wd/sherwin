@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load images %}
 {% block title %}{{ snap.title }} - Sherwin Universe{% endblock %}
 {% block meta_description %}{{ snap.body|truncatewords:25 }}{% endblock %}
 {% block og_title %}{{ snap.title }}{% endblock %}
@@ -32,7 +33,7 @@
     <!-- Snap Image -->
     {% if snap.featured_image %}
     <div class="rounded-2xl overflow-hidden mb-6">
-        <img src="{{ snap.featured_image.url }}" alt="{{ snap.body|truncatewords:10 }}" class="w-full" loading="lazy">
+        {% responsive_image snap css_class="w-full" loading="eager" sizes="(max-width: 672px) 100vw, 672px" %}
     </div>
     {% endif %}
 

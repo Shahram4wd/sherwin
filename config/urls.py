@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
+from apps.blog.feeds import LatestPostsFeed, LatestSnapsFeed
 from apps.core.sitemaps import PostSitemap, StaticViewSitemap
 
 sitemaps = {
@@ -14,6 +15,7 @@ sitemaps = {
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("snap/", include("apps.snaps.urls")),
+    path("snap/feed/", LatestSnapsFeed(), name="snaps_feed"),
     path("accounts/", include("apps.accounts.urls")),
     path("notifications/", include("apps.notifications.urls")),
     path("journal/", include("apps.blog.urls")),

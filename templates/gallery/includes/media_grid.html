@@ -1,17 +1,26 @@
-{% for item in media_items %}
-<div class="group relative rounded-xl overflow-hidden border border-white/5 glass-card">
-    {% if item.media_type == "image" %}
-    <img src="{{ item.file.url }}" alt="{{ item.alt_text }}" class="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
-    {% elif item.media_type == "video" %}
+{% for item in gallery_items %}
+<div class="group relative rounded-xl overflow-hidden border border-white/5 glass-card cursor-pointer"
+     data-lightbox-idx="{{ forloop.counter0 }}" data-url="{{ item.url }}" data-alt="{{ item.alt }}" data-caption="{{ item.caption|truncatewords:20 }}"
+     @click="show('{{ item.url }}', '{{ item.alt|escapejs }}', '{{ item.caption|truncatewords:20|escapejs }}', {{ forloop.counter0 }})">
+    {% if item.type == "video" %}
     <div class="w-full h-56 bg-space-800 flex items-center justify-center">
         <svg class="w-12 h-12 text-accent-400" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
     </div>
+    {% else %}
+    <img src="{{ item.url }}" alt="{{ item.alt }}" class="w-full h-56 object-cover group-hover:scale-105 transition-transform duration-500" loading="lazy">
     {% endif %}
     <div class="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black/80 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
         {% if item.caption %}
-        <p class="text-xs text-gray-300">{{ item.caption }}</p>
+        <p class="text-xs text-gray-300 line-clamp-2">{{ item.caption|truncatewords:15 }}</p>
         {% endif %}
-        <a href="{{ item.post.get_absolute_url }}" class="text-[10px] text-accent-400 hover:underline mt-1 inline-block">View post &rarr;</a>
+        {% if item.tags %}
+        <div class="flex flex-wrap gap-1 mt-1">
+            {% for tag in item.tags %}
+            <span class="text-[10px] text-accent-400/70">#{{ tag }}</span>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <a href="{{ item.link }}" @click.stop class="text-[10px] text-accent-400 hover:underline mt-1 inline-block">View &rarr;</a>
     </div>
 </div>
 {% empty %}
@@ -20,16 +29,14 @@
 </div>
 {% endfor %}
 
-{% if media_items.has_other_pages %}
+{% if gallery_items.has_next %}
 <div class="col-span-full flex justify-center mt-8">
-    {% if media_items.has_next %}
     <button
-        hx-get="{% url 'gallery:highlights' %}?page={{ media_items.next_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_category %}&category={{ current_category }}{% endif %}"
+        hx-get="{% url 'gallery:highlights' %}?page={{ gallery_items.next_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_tag %}&tag={{ current_tag }}{% endif %}"
         hx-target="#media-grid"
         hx-swap="beforeend"
         class="px-6 py-2 rounded-full border border-white/10 text-sm text-gray-400 hover:border-accent-400/30 hover:text-accent-400 transition-all">
         Load More
     </button>
-    {% endif %}
 </div>
 {% endif %}

@@ -1,3 +1,4 @@
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
@@ -32,6 +33,7 @@ def snap_create(request):
                 pass  # If stripping fails, use original
 
             post = form.save(user=request.user)
+            messages.success(request, "Snap shared!")
             return redirect("snaps:snap_detail", slug=post.slug)
     else:
         form = SnapForm()

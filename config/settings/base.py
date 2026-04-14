@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     "django_htmx",
     "taggit",
     "storages",
+    "imagekit",
     # Local apps
     "apps.core",
     "apps.blog",

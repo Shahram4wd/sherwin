@@ -5,6 +5,8 @@ from django.db import models
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
+from imagekit.models import ImageSpecField
+from imagekit.processors import ResizeToFit
 from taggit.managers import TaggableManager
 
 
@@ -99,6 +101,25 @@ class Post(models.Model):
     )
     featured_image = models.ImageField(
         upload_to="posts/images/%Y/%m/", null=True, blank=True
+    )
+    # Thumbnail specs (generated on-demand, cached)
+    image_sm = ImageSpecField(
+        source="featured_image",
+        processors=[ResizeToFit(300, 300)],
+        format="WEBP",
+        options={"quality": 80},
+    )
+    image_md = ImageSpecField(
+        source="featured_image",
+        processors=[ResizeToFit(800, 800)],
+        format="WEBP",
+        options={"quality": 85},
+    )
+    image_lg = ImageSpecField(
+        source="featured_image",
+        processors=[ResizeToFit(1200, 1200)],
+        format="WEBP",
+        options={"quality": 90},
     )
     is_featured = models.BooleanField(
         default=False, help_text="Show as hero on homepage"

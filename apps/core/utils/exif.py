@@ -17,9 +17,8 @@ def strip_exif(image_file):
         fmt = "JPEG"
 
     # Create clean copy without EXIF
-    data = list(img.getdata())
     clean = Image.new(img.mode, img.size)
-    clean.putdata(data)
+    clean.putdata(list(img.getdata()) if not hasattr(img, "get_flattened_data") else list(img.get_flattened_data()))
 
     buf = io.BytesIO()
     save_kwargs = {"format": fmt}

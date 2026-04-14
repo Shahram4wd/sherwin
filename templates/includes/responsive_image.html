@@ -1,0 +1,12 @@
+{% if post.featured_image %}{% spaceless %}
+<img
+    src="{{ post.image_md.url }}"
+    srcset="{{ post.image_sm.url }} 300w, {{ post.image_md.url }} 800w, {{ post.image_lg.url }} 1200w"
+    sizes="{{ sizes }}"
+    alt="{{ alt }}"
+    class="{{ css_class }}"
+    loading="{{ loading }}"
+    width="{{ post.image_md.width }}"
+    height="{{ post.image_md.height }}"
+>
+{% endspaceless %}{% endif %}

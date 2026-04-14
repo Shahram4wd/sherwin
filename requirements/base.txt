@@ -8,4 +8,5 @@ gunicorn>=22.0
 sentry-sdk[django]>=2.0
 django-unfold>=0.30
 Pillow>=10.0
+django-imagekit>=5.0
 django-environ>=0.11

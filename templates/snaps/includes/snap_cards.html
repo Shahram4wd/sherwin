@@ -1,3 +1,4 @@
+{% load images %}
 <div class="space-y-5">
     {% for snap in snaps %}
     <article class="glass-card rounded-2xl overflow-hidden">
@@ -14,9 +15,7 @@
 
         <!-- Image -->
         <a href="{% url 'snaps:snap_detail' slug=snap.slug %}">
-            {% if snap.featured_image %}
-            <img src="{{ snap.featured_image.url }}" alt="{{ snap.body|truncatewords:5 }}" class="w-full object-cover hover:brightness-110 transition-all" loading="lazy">
-            {% endif %}
+            {% responsive_image snap css_class="w-full object-cover hover:brightness-110 transition-all" sizes="(max-width: 576px) 100vw, 576px" %}
         </a>
 
         <!-- Content -->

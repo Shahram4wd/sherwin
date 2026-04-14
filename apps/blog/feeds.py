@@ -23,3 +23,27 @@ class LatestPostsFeed(Feed):
 
     def item_pubdate(self, item):
         return item.published_at
+
+
+class LatestSnapsFeed(Feed):
+    title = "Sherwin Universe — Latest Snaps"
+    link = "/"
+    description = "Sherwin's latest snaps — discoveries, creations, and adventures."
+
+    def items(self):
+        return Post.snaps.select_related("created_by")[:20]
+
+    def item_title(self, item):
+        return item.title
+
+    def item_description(self, item):
+        desc = item.body or ""
+        if item.featured_image:
+            desc = f'<img src="{item.featured_image.url}" alt="{item.title}"><br>{desc}'
+        return desc
+
+    def item_link(self, item):
+        return item.get_absolute_url()
+
+    def item_pubdate(self, item):
+        return item.published_at
