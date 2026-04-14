@@ -75,6 +75,15 @@
                     </button>
                     {% endfor %}
 
+                    <!-- Custom tag chips -->
+                    <template x-for="tag in customTags" :key="tag">
+                        <button type="button"
+                                @click="toggleTag(tag)"
+                                :class="selectedTags.includes(tag) ? 'bg-accent-500 text-white border-accent-500' : 'bg-white/5 text-gray-400 border-white/10 hover:border-accent-400/30'"
+                                class="px-4 py-2 rounded-full text-sm font-medium border transition-all"
+                                x-text="tag"></button>
+                    </template>
+
                     <!-- Custom tag input -->
                     <div x-show="showCustomTag" class="flex items-center gap-2">
                         <input type="text" x-ref="customTag"
@@ -116,6 +125,7 @@ function snapForm() {
         hasImage: false,
         caption: '',
         selectedTags: [],
+        customTags: [],
         showCustomTag: false,
         dragover: false,
 
@@ -152,6 +162,7 @@ function snapForm() {
         addCustomTag() {
             const val = this.$refs.customTag.value.trim();
             if (val && !this.selectedTags.includes(val)) {
+                this.customTags.push(val);
                 this.selectedTags.push(val);
             }
             this.$refs.customTag.value = '';
