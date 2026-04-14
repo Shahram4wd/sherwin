@@ -45,7 +45,7 @@ class SnapForm(forms.ModelForm):
             tag_str = self.cleaned_data.get("tag_list", "")
             if tag_str:
                 tags = [t.strip() for t in tag_str.split(",") if t.strip()]
-                post.tags.set(*tags, clear=True)
+                post.tags.set(tags, clear=True)
             else:
                 post.tags.clear()
         return post
