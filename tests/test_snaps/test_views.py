@@ -61,6 +61,29 @@ class SnapCreateViewTests(TestCase):
         })
         assert response.status_code == 200  # re-renders form
 
+    def test_create_snap_with_youtube_url(self):
+        self.client.login(username="sherwin", password="testpass")
+        response = self.client.post(self.url, {
+            "caption": "Check this out",
+            "youtube_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "tag_list": "Fun",
+        })
+        assert response.status_code == 302
+        snap = Post.objects.first()
+        assert snap is not None
+        assert snap.youtube_url == "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        assert snap.youtube_video_id == "dQw4w9WgXcQ"
+        assert snap.body == "Check this out"
+
+    def test_create_snap_invalid_youtube_url(self):
+        self.client.login(username="sherwin", password="testpass")
+        response = self.client.post(self.url, {
+            "caption": "Bad link",
+            "youtube_url": "https://www.example.com/video",
+            "tag_list": "",
+        })
+        assert response.status_code == 200  # re-renders form with error
+
     def test_create_snap_without_caption(self):
         self.client.login(username="sherwin", password="testpass")
         image = _create_test_image()

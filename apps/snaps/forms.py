@@ -53,6 +53,7 @@ class SnapForm(forms.ModelForm):
     )
     youtube_url = forms.URLField(
         required=False,
+        assume_scheme="https",
         widget=forms.URLInput(
             attrs={
                 "placeholder": "https://www.youtube.com/watch?v=...",
