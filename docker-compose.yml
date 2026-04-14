@@ -1,0 +1,24 @@
+services:
+  web:
+    build: .
+    ports:
+      - "8088:8000"
+    volumes:
+      - .:/app
+      - static_data:/app/staticfiles
+      - media_data:/app/media
+    environment:
+      - DJANGO_SETTINGS_MODULE=config.settings.dev
+      - SECRET_KEY=local-dev-secret-key
+      - DJANGO_SUPERUSER_USERNAME=admin
+      - DJANGO_SUPERUSER_PASSWORD=admin
+      - DJANGO_SUPERUSER_EMAIL=admin@localhost
+    command: >
+      sh -c "pip install -r requirements/dev.txt --quiet &&
+             python manage.py migrate --noinput &&
+             python manage.py createsuperuser --noinput 2>/dev/null || true &&
+             python manage.py runserver 0.0.0.0:8000"
+
+volumes:
+  static_data:
+  media_data:

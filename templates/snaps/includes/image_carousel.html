@@ -11,15 +11,15 @@ Requires Alpine.js. The parent must NOT already have x-data for this snap.
     <div class="overflow-hidden">
         <div class="flex transition-transform duration-300 ease-out" :style="'transform: translateX(-' + (current * 100) + '%)'">
             {# First image: featured_image #}
-            <div class="w-full shrink-0">
+            <div class="w-full shrink-0 bg-black flex items-center justify-center">
                 {% if snap.featured_image %}
-                <img src="{{ snap.featured_image.url }}" alt="{{ snap.body|truncatewords:5 }}" class="w-full aspect-square object-cover {{ css_class|default:'' }}" loading="{{ loading|default:'lazy' }}">
+                <img src="{{ snap.featured_image.url }}" alt="{{ snap.body|truncatewords:5 }}" class="w-full max-h-[600px] object-contain {{ css_class|default:'' }}" loading="{{ loading|default:'lazy' }}">
                 {% endif %}
             </div>
             {# Additional images from PostMedia #}
             {% for img in extra_images %}
-            <div class="w-full shrink-0">
-                <img src="{{ img.file.url }}" alt="{{ img.alt_text|default:snap.body|truncatewords:5 }}" class="w-full aspect-square object-cover {{ css_class|default:'' }}" loading="lazy">
+            <div class="w-full shrink-0 bg-black flex items-center justify-center">
+                <img src="{{ img.file.url }}" alt="{{ img.alt_text|default:snap.body|truncatewords:5 }}" class="w-full max-h-[600px] object-contain {{ css_class|default:'' }}" loading="lazy">
             </div>
             {% endfor %}
         </div>
