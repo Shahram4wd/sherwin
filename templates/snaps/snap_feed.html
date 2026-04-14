@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Snaps - Sherwin Universe{% endblock %}
+{% block meta_description %}Sherwin's latest snaps and discoveries.{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8">
+    <div class="flex items-center justify-between mb-8">
+        <h1 class="text-3xl font-display font-bold">Snaps</h1>
+        {% if user.is_authenticated %}
+        <a href="{% url 'snaps:snap_create' %}" class="flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-4 py-2 rounded-xl font-medium transition-all shadow-lg shadow-accent-500/25">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            New Snap
+        </a>
+        {% endif %}
+    </div>
+
+    {% if snaps %}
+    <div id="snap-feed">
+        {% include "snaps/includes/snap_cards.html" %}
+    </div>
+    {% else %}
+    <div class="text-center py-20">
+        <div class="w-20 h-20 mx-auto mb-6 rounded-2xl bg-white/5 flex items-center justify-center">
+            <svg class="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+        </div>
+        <h2 class="text-xl font-display font-semibold text-gray-300 mb-2">No snaps yet</h2>
+        <p class="text-gray-500 mb-6">Share your first discovery!</p>
+        {% if user.is_authenticated %}
+        <a href="{% url 'snaps:snap_create' %}" class="inline-flex items-center gap-2 bg-accent-500 hover:bg-accent-600 text-white px-6 py-3 rounded-xl font-medium transition-all shadow-lg shadow-accent-500/25">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+            Create a Snap
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

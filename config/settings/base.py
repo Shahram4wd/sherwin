@@ -36,10 +36,12 @@ INSTALLED_APPS = [
     # Local apps
     "apps.core",
     "apps.blog",
+    "apps.snaps",
     "apps.gallery",
     "apps.timeline",
     "apps.miniapps",
     "apps.accounts",
+    "apps.notifications",
     "apps.ai_tools",
 ]
 
@@ -113,3 +115,18 @@ TAGGIT_CASE_INSENSITIVE = True
 # Security defaults (overridden in prod)
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False
+
+# Auth
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "core:home"
+
+# Email (override in prod with SMTP)
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = "Sherwin Universe <noreply@sherwinuniverse.com>"
+
+# Notifications
+PARENT_NOTIFICATION_EMAIL = env("PARENT_NOTIFICATION_EMAIL", default="")
+SITE_URL = env("SITE_URL", default="http://localhost:8080")
+
+# Session (30-day PIN sessions)
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 30

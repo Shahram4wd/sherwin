@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Create a Snap - Sherwin Universe{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center px-4 py-8" x-data="snapForm()">
+    <div class="w-full max-w-lg">
+        <h1 class="text-2xl font-display font-bold text-center mb-6">Share something!</h1>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+
+            <!-- Image Upload Area -->
+            <div class="relative glass-card rounded-2xl overflow-hidden cursor-pointer group"
+                 @click="$refs.imageInput.click()"
+                 @dragover.prevent="dragover = true"
+                 @dragleave="dragover = false"
+                 @drop.prevent="handleDrop($event)"
+                 :class="{ 'border-accent-400/40': dragover }">
+
+                <!-- Preview -->
+                <template x-if="imagePreview">
+                    <div class="relative">
+                        <img :src="imagePreview" class="w-full max-h-96 object-cover" alt="Preview">
+                        <button type="button" @click.stop="removeImage()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-accent-500 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </template>
+
+                <!-- Upload placeholder -->
+                <template x-if="!imagePreview">
+                    <div class="flex flex-col items-center justify-center py-20 text-gray-500 group-hover:text-accent-400 transition-colors">
+                        <svg class="w-16 h-16 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                        <span class="text-lg font-medium">Tap to add a photo</span>
+                        <span class="text-sm mt-1">or drag and drop</span>
+                    </div>
+                </template>
+
+                <input type="file" name="image" accept="image/*"
+                       x-ref="imageInput"
+                       @change="handleFileSelect($event)"
+                       class="hidden" required>
+            </div>
+
+            {% if form.image.errors %}
+            <p class="text-red-400 text-sm">{{ form.image.errors.0 }}</p>
+            {% endif %}
+
+            <!-- Caption -->
+            <div>
+                <textarea name="caption"
+                          x-model="caption"
+                          maxlength="500"
+                          rows="3"
+                          placeholder="What did you make / discover / do?"
+                          class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-accent-400/40 focus:ring-1 focus:ring-accent-400/20 resize-none text-lg">{{ form.caption.value|default:"" }}</textarea>
+                <div class="text-right mt-1">
+                    <span class="text-xs" :class="caption.length > 450 ? 'text-accent-400' : 'text-gray-600'" x-text="caption.length + '/500'"></span>
+                </div>
+            </div>
+
+            <!-- Tags -->
+            <div>
+                <p class="text-sm text-gray-400 mb-3">Add tags</p>
+                <div class="flex flex-wrap gap-2">
+                    {% for tag in default_tags %}
+                    <button type="button"
+                            @click="toggleTag('{{ tag }}')"
+                            :class="selectedTags.includes('{{ tag }}') ? 'bg-accent-500 text-white border-accent-500' : 'bg-white/5 text-gray-400 border-white/10 hover:border-accent-400/30'"
+                            class="px-4 py-2 rounded-full text-sm font-medium border transition-all">
+                        {{ tag }}
+                    </button>
+                    {% endfor %}
+
+                    <!-- Custom tag input -->
+                    <div x-show="showCustomTag" class="flex items-center gap-2">
+                        <input type="text" x-ref="customTag"
+                               @keydown.enter.prevent="addCustomTag()"
+                               placeholder="New tag"
+                               class="w-24 bg-white/5 border border-white/10 rounded-full px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-accent-400/40">
+                        <button type="button" @click="addCustomTag()" class="text-accent-400 text-sm">Add</button>
+                    </div>
+                    <button type="button"
+                            @click="showCustomTag = true; $nextTick(() => $refs.customTag.focus())"
+                            x-show="!showCustomTag"
+                            class="px-4 py-2 rounded-full text-sm font-medium border border-dashed border-white/20 text-gray-500 hover:text-accent-400 hover:border-accent-400/30 transition-all">
+                        + Add
+                    </button>
+                </div>
+                <input type="hidden" name="tag_list" :value="selectedTags.join(',')">
+            </div>
+
+            <!-- Share Button -->
+            <button type="submit"
+                    :disabled="!hasImage"
+                    :class="hasImage ? 'bg-accent-500 hover:bg-accent-600 shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40' : 'bg-gray-700 cursor-not-allowed'"
+                    class="w-full py-4 rounded-xl text-white font-semibold text-lg transition-all">
+                <span class="flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                    Share
+                </span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function snapForm() {
+    return {
+        imagePreview: null,
+        hasImage: false,
+        caption: '',
+        selectedTags: [],
+        showCustomTag: false,
+        dragover: false,
+
+        handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) this.previewFile(file);
+        },
+        handleDrop(e) {
+            this.dragover = false;
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                this.$refs.imageInput.files = e.dataTransfer.files;
+                this.previewFile(file);
+            }
+        },
+        previewFile(file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                this.imagePreview = e.target.result;
+                this.hasImage = true;
+            };
+            reader.readAsDataURL(file);
+        },
+        removeImage() {
+            this.imagePreview = null;
+            this.hasImage = false;
+            this.$refs.imageInput.value = '';
+        },
+        toggleTag(tag) {
+            const i = this.selectedTags.indexOf(tag);
+            if (i > -1) this.selectedTags.splice(i, 1);
+            else this.selectedTags.push(tag);
+        },
+        addCustomTag() {
+            const val = this.$refs.customTag.value.trim();
+            if (val && !this.selectedTags.includes(val)) {
+                this.selectedTags.push(val);
+            }
+            this.$refs.customTag.value = '';
+            this.showCustomTag = false;
+        }
+    };
+}
+</script>
+{% endblock %}

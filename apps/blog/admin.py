@@ -20,34 +20,39 @@ class PostCategoryAdmin(admin.ModelAdmin):
 class PostAdmin(admin.ModelAdmin):
     list_display = [
         "title",
+        "post_type",
         "status",
         "category",
+        "created_by",
         "is_featured",
-        "reading_time",
         "published_at",
         "created_at",
     ]
-    list_filter = ["status", "category", "is_featured", "created_at"]
+    list_filter = ["post_type", "status", "category", "is_featured", "created_at"]
     search_fields = ["title", "body", "summary"]
     prepopulated_fields = {"slug": ("title",)}
     date_hierarchy = "created_at"
     list_editable = ["status", "is_featured"]
     inlines = [PostMediaInline]
     fieldsets = (
-        (None, {"fields": ("title", "slug", "body", "summary")}),
+        (None, {"fields": ("post_type", "title", "slug", "body", "summary")}),
         ("Classification", {"fields": ("category", "tags", "is_featured")}),
         ("Media", {"fields": ("featured_image",)}),
         ("SEO", {"fields": ("meta_description",), "classes": ("collapse",)}),
         (
             "Publishing",
-            {"fields": ("status", "published_at")},
+            {"fields": ("status", "created_by", "published_at")},
         ),
     )
-    actions = ["publish_posts"]
+    actions = ["publish_posts", "archive_posts"]
 
     @admin.action(description="Publish selected posts")
     def publish_posts(self, request, queryset):
         queryset.update(status=Post.Status.PUBLISHED, published_at=timezone.now())
+
+    @admin.action(description="Archive selected posts")
+    def archive_posts(self, request, queryset):
+        queryset.update(status=Post.Status.ARCHIVED)
 
 
 @admin.register(PostMedia)

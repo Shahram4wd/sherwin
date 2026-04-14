@@ -13,6 +13,9 @@ sitemaps = {
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("snap/", include("apps.snaps.urls")),
+    path("accounts/", include("apps.accounts.urls")),
+    path("notifications/", include("apps.notifications.urls")),
     path("journal/", include("apps.blog.urls")),
     path("timeline/", include("apps.timeline.urls")),
     path("highlights/", include("apps.gallery.urls")),

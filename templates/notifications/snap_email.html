@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<body style="font-family: sans-serif; background: #050508; color: #e5e5e5; padding: 20px;">
+    <div style="max-width: 500px; margin: 0 auto; background: #111120; border-radius: 12px; overflow: hidden;">
+        {% if post.featured_image %}
+        <img src="{{ view_url }}{{ post.featured_image.url }}" alt="Snap" style="width: 100%; max-height: 300px; object-fit: cover;">
+        {% endif %}
+        <div style="padding: 20px;">
+            <h2 style="margin: 0 0 8px; color: #ff4d4d; font-size: 18px;">New Snap from Sherwin</h2>
+            <p style="margin: 0 0 12px; color: #d1d5db;">{{ post.body|default:"(no caption)" }}</p>
+            {% if post.tags.all %}
+            <p style="margin: 0 0 16px; color: #9ca3af; font-size: 14px;">
+                {% for tag in post.tags.all %}#{{ tag.name }} {% endfor %}
+            </p>
+            {% endif %}
+            <div style="display: flex; gap: 12px;">
+                <a href="{{ view_url }}" style="display: inline-block; padding: 10px 20px; background: #22223a; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px;">View on site</a>
+                <a href="{{ archive_url }}" style="display: inline-block; padding: 10px 20px; background: #dc2626; color: #fff; text-decoration: none; border-radius: 8px; font-size: 14px;">Archive this Snap</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

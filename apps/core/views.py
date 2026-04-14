@@ -1,7 +1,7 @@
+from django.core.paginator import Paginator
 from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import render
-from django.utils.html import escape
 
 from apps.blog.models import Post, PostMedia
 from apps.timeline.models import TimelineEvent
@@ -10,24 +10,16 @@ from .models import AboutPage
 
 
 def home(request):
-    featured_post = (
-        Post.published.filter(is_featured=True).select_related("category").first()
-    )
-    latest_posts = Post.published.select_related("category")[:6]
-    recent_highlights = (
-        PostMedia.objects.filter(is_gallery_visible=True)
-        .select_related("post")
-        .order_by("-uploaded_at")[:6]
-    )
-    recent_events = TimelineEvent.objects.select_related("linked_post")[:5]
+    snaps_qs = Post.snaps.select_related("category", "created_by").prefetch_related("tags")
 
-    context = {
-        "featured_post": featured_post,
-        "latest_posts": latest_posts,
-        "recent_highlights": recent_highlights,
-        "recent_events": recent_events,
-    }
-    return render(request, "pages/home.html", context)
+    tag = request.GET.get("tag")
+    if tag:
+        snaps_qs = snaps_qs.filter(tags__name__iexact=tag)
+
+    paginator = Paginator(snaps_qs, 12)
+    snaps = paginator.get_page(request.GET.get("page"))
+
+    return render(request, "pages/home.html", {"snaps": snaps, "current_tag": tag})
 
 
 def about(request):

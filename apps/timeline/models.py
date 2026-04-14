@@ -3,6 +3,7 @@ from django.db import models
 
 class TimelineEvent(models.Model):
     class EventType(models.TextChoices):
+        SNAP = "snap", "Snap"
         POST = "post", "Blog Post"
         MILESTONE = "milestone", "Milestone"
         BIRTHDAY = "birthday", "Birthday"

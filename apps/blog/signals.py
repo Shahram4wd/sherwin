@@ -22,10 +22,15 @@ def auto_create_timeline_event(sender, instance, **kwargs):
     ):
         from apps.timeline.models import TimelineEvent
 
+        if instance.post_type == Post.PostType.SNAP:
+            event_type = TimelineEvent.EventType.SNAP
+        else:
+            event_type = TimelineEvent.EventType.POST
+
         TimelineEvent.objects.create(
             title=instance.title,
-            description=instance.summary or "",
+            description=instance.summary or instance.body[:200] or "",
             event_date=(instance.published_at or instance.created_at).date(),
-            event_type=TimelineEvent.EventType.POST,
+            event_type=event_type,
             linked_post=instance,
         )
