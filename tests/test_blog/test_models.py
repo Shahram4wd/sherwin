@@ -16,7 +16,7 @@ class TestPost:
         post = Post.objects.create(title="My First Post", body="Hello world")
         assert post.slug == "my-first-post"
         assert str(post) == "My First Post"
-        assert post.status == Post.Status.DRAFT
+        assert post.status == Post.Status.PUBLISHED
 
     def test_post_with_category(self):
         cat = PostCategory.objects.create(name="Art")

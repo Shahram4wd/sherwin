@@ -10,7 +10,7 @@ from .models import AboutPage
 
 
 def home(request):
-    snaps_qs = Post.snaps.select_related("category", "created_by").prefetch_related("tags")
+    snaps_qs = Post.snaps.select_related("category", "created_by").prefetch_related("tags", "media")
 
     tag = request.GET.get("tag")
     if tag:

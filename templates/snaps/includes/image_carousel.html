@@ -1,0 +1,60 @@
+{% comment %}
+LinkedIn-style image carousel for snaps with multiple images.
+Usage: {% include "snaps/includes/image_carousel.html" with snap=snap %}
+Requires Alpine.js. The parent must NOT already have x-data for this snap.
+{% endcomment %}
+
+{% with extra_images=snap.media.all %}
+{% if extra_images %}
+{# Multi-image carousel #}
+<div x-data="{ current: 0, total: {{ extra_images|length|add:1 }} }" class="relative select-none">
+    <div class="overflow-hidden">
+        <div class="flex transition-transform duration-300 ease-out" :style="'transform: translateX(-' + (current * 100) + '%)'">
+            {# First image: featured_image #}
+            <div class="w-full shrink-0">
+                {% if snap.featured_image %}
+                <img src="{{ snap.featured_image.url }}" alt="{{ snap.body|truncatewords:5 }}" class="w-full aspect-square object-cover {{ css_class|default:'' }}" loading="{{ loading|default:'lazy' }}">
+                {% endif %}
+            </div>
+            {# Additional images from PostMedia #}
+            {% for img in extra_images %}
+            <div class="w-full shrink-0">
+                <img src="{{ img.file.url }}" alt="{{ img.alt_text|default:snap.body|truncatewords:5 }}" class="w-full aspect-square object-cover {{ css_class|default:'' }}" loading="lazy">
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# Navigation arrows #}
+    <button @click.prevent.stop="current = Math.max(0, current - 1)" x-show="current > 0"
+            x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+            class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+    </button>
+    <button @click.prevent.stop="current = Math.min(total - 1, current + 1)" x-show="current < total - 1"
+            x-transition:enter="transition ease-out duration-150" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+            class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/70 transition-colors z-10">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+    </button>
+
+    {# Counter badge #}
+    <div class="absolute top-3 right-3 bg-black/60 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full z-10">
+        <span x-text="(current + 1) + '/' + total"></span>
+    </div>
+
+    {# Dot indicators #}
+    <div class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
+        <template x-for="i in total" :key="i">
+            <button @click.prevent.stop="current = i - 1"
+                    :class="current === i - 1 ? 'bg-white w-2.5' : 'bg-white/50 w-1.5'"
+                    class="h-1.5 rounded-full transition-all duration-200"></button>
+        </template>
+    </div>
+</div>
+{% else %}
+{# Single image — no carousel needed #}
+{% if snap.featured_image %}
+<img src="{{ snap.featured_image.url }}" alt="{{ snap.body|truncatewords:5 }}" class="w-full {{ css_class|default:'object-cover' }}" loading="{{ loading|default:'lazy' }}">
+{% endif %}
+{% endif %}
+{% endwith %}

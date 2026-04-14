@@ -20,19 +20,25 @@ def snap_create(request):
     if request.method == "POST":
         form = SnapForm(request.POST, request.FILES)
         if form.is_valid():
-            # Strip EXIF from uploaded image
-            image = form.cleaned_data["image"]
-            try:
-                clean_buf, fmt = strip_exif(image)
-                ext = {"jpeg": "jpg", "png": "png", "webp": "webp", "gif": "gif"}.get(fmt, "jpg")
-                name = f"snap_{timezone.now().strftime('%Y%m%d_%H%M%S')}.{ext}"
-                form.cleaned_data["image"] = InMemoryUploadedFile(
-                    clean_buf, "image", name, f"image/{fmt}", clean_buf.getbuffer().nbytes, None
-                )
-            except Exception:
-                pass  # If stripping fails, use original
+            # Collect all uploaded images (cleaned_data['images'] is a list)
+            files = form.cleaned_data["images"]
+            cleaned_files = []
+            for f in files:
+                try:
+                    clean_buf, fmt = strip_exif(f)
+                    ext = {"jpeg": "jpg", "png": "png", "webp": "webp", "gif": "gif"}.get(fmt, "jpg")
+                    name = f"snap_{timezone.now().strftime('%Y%m%d_%H%M%S')}_{len(cleaned_files)}.{ext}"
+                    cleaned_files.append(InMemoryUploadedFile(
+                        clean_buf, "images", name, f"image/{fmt}", clean_buf.getbuffer().nbytes, None
+                    ))
+                except Exception:
+                    cleaned_files.append(f)
 
-            post = form.save(user=request.user)
+            # First image → featured_image, rest → PostMedia
+            form.cleaned_data["images"] = cleaned_files[0]
+            extra_images = cleaned_files[1:] if len(cleaned_files) > 1 else None
+
+            post = form.save(user=request.user, extra_images=extra_images)
             messages.success(request, "Snap shared!")
             return redirect("snaps:snap_detail", slug=post.slug)
     else:
@@ -46,7 +52,7 @@ def snap_create(request):
 
 def snap_feed(request):
     """Home feed of latest snaps."""
-    snaps_qs = Post.snaps.select_related("category", "created_by").prefetch_related("tags")
+    snaps_qs = Post.snaps.select_related("category", "created_by").prefetch_related("tags", "media")
 
     tag = request.GET.get("tag")
     if tag:
@@ -68,7 +74,7 @@ def snap_detail(request, slug):
     """Detail view for a single snap."""
     from django.shortcuts import get_object_or_404
     snap = get_object_or_404(
-        Post.published.select_related("category", "created_by"),
+        Post.published.select_related("category", "created_by").prefetch_related("media"),
         slug=slug,
     )
     related = (

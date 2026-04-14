@@ -41,7 +41,7 @@ class SnapCreateViewTests(TestCase):
         image = _create_test_image()
         response = self.client.post(self.url, {
             "caption": "My test snap",
-            "image": image,
+            "images": image,
             "tag_list": "Science,Fun",
         })
         assert response.status_code == 302
@@ -66,7 +66,7 @@ class SnapCreateViewTests(TestCase):
         image = _create_test_image()
         response = self.client.post(self.url, {
             "caption": "",
-            "image": image,
+            "images": image,
             "tag_list": "",
         })
         assert response.status_code == 302

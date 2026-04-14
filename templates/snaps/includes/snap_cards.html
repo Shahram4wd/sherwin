@@ -13,9 +13,9 @@
             </div>
         </div>
 
-        <!-- Image -->
+        <!-- Images -->
         <a href="{% url 'snaps:snap_detail' slug=snap.slug %}">
-            {% responsive_image snap css_class="w-full object-cover hover:brightness-110 transition-all" sizes="(max-width: 576px) 100vw, 576px" %}
+            {% include "snaps/includes/image_carousel.html" with snap=snap css_class="hover:brightness-110 transition-all" %}
         </a>
 
         <!-- Content -->

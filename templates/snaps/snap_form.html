@@ -17,36 +17,71 @@
                  @drop.prevent="handleDrop($event)"
                  :class="{ 'border-accent-400/40': dragover }">
 
-                <!-- Preview -->
-                <template x-if="imagePreview">
+                <!-- Preview carousel -->
+                <template x-if="previews.length > 0">
                     <div class="relative">
-                        <img :src="imagePreview" class="w-full max-h-96 object-cover" alt="Preview">
-                        <button type="button" @click.stop="removeImage()" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-accent-500 transition-colors">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        <!-- Image strip -->
+                        <div class="overflow-hidden">
+                            <div class="flex transition-transform duration-300 ease-out" :style="'transform: translateX(-' + (previewIdx * 100) + '%)'">
+                                <template x-for="(src, i) in previews" :key="i">
+                                    <div class="w-full shrink-0 relative">
+                                        <img :src="src" class="w-full max-h-96 object-cover" alt="Preview">
+                                        <button type="button" @click.stop="removeImage(i)" class="absolute top-3 right-3 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                        </button>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                        <!-- Nav arrows -->
+                        <button type="button" @click.stop="previewIdx = Math.max(0, previewIdx - 1)" x-show="previewIdx > 0"
+                                class="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 z-10">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"/></svg>
+                        </button>
+                        <button type="button" @click.stop="previewIdx = Math.min(previews.length - 1, previewIdx + 1)" x-show="previewIdx < previews.length - 1"
+                                class="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 flex items-center justify-center text-white hover:bg-black/70 z-10">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                        <!-- Counter -->
+                        <div x-show="previews.length > 1" class="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-xs font-medium px-2.5 py-1 rounded-full z-10">
+                            <span x-text="(previewIdx + 1) + '/' + previews.length"></span>
+                        </div>
+                        <!-- Dots -->
+                        <div x-show="previews.length > 1" class="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-1.5 z-10">
+                            <template x-for="(_, i) in previews" :key="i">
+                                <button type="button" @click.stop="previewIdx = i"
+                                        :class="previewIdx === i ? 'bg-white w-2.5' : 'bg-white/50 w-1.5'"
+                                        class="h-1.5 rounded-full transition-all duration-200"></button>
+                            </template>
+                        </div>
+                        <!-- Add more button -->
+                        <button type="button" @click.stop="$refs.imageInput.click()"
+                                class="absolute bottom-3 right-3 w-8 h-8 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-accent-500 transition-colors z-10">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
                         </button>
                     </div>
                 </template>
 
                 <!-- Upload placeholder -->
-                <template x-if="!imagePreview">
+                <template x-if="previews.length === 0">
                     <div class="flex flex-col items-center justify-center py-20 text-gray-500 group-hover:text-accent-400 transition-colors">
                         <svg class="w-16 h-16 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
                         </svg>
-                        <span class="text-lg font-medium">Tap to add a photo</span>
-                        <span class="text-sm mt-1">or drag and drop</span>
+                        <span class="text-lg font-medium">Tap to add photos</span>
+                        <span class="text-sm mt-1">or drag and drop &middot; up to 10 images</span>
                     </div>
                 </template>
 
-                <input type="file" name="image" accept="image/*"
+                <input type="file" name="images" accept="image/*" multiple
                        x-ref="imageInput"
                        @change="handleFileSelect($event)"
                        class="hidden" required>
             </div>
 
-            {% if form.image.errors %}
-            <p class="text-red-400 text-sm">{{ form.image.errors.0 }}</p>
+            {% if form.images.errors %}
+            <p class="text-red-400 text-sm">{{ form.images.errors.0 }}</p>
             {% endif %}
 
             <!-- Caption -->
@@ -121,38 +156,53 @@
 <script>
 function snapForm() {
     return {
-        imagePreview: null,
-        hasImage: false,
+        previews: [],
+        files: [],
+        previewIdx: 0,
         caption: '',
         selectedTags: [],
         customTags: [],
         showCustomTag: false,
         dragover: false,
 
+        get hasImage() { return this.files.length > 0; },
+
         handleFileSelect(e) {
-            const file = e.target.files[0];
-            if (file) this.previewFile(file);
+            const newFiles = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
+            this.addFiles(newFiles);
         },
         handleDrop(e) {
             this.dragover = false;
-            const file = e.dataTransfer.files[0];
-            if (file && file.type.startsWith('image/')) {
-                this.$refs.imageInput.files = e.dataTransfer.files;
-                this.previewFile(file);
+            const newFiles = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+            this.addFiles(newFiles);
+        },
+        addFiles(newFiles) {
+            const remaining = 10 - this.files.length;
+            const toAdd = newFiles.slice(0, remaining);
+            for (const file of toAdd) {
+                this.files.push(file);
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    this.previews.push(e.target.result);
+                    this.previewIdx = this.previews.length - 1;
+                };
+                reader.readAsDataURL(file);
             }
+            this.syncFileInput();
         },
-        previewFile(file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                this.imagePreview = e.target.result;
-                this.hasImage = true;
-            };
-            reader.readAsDataURL(file);
+        removeImage(idx) {
+            this.files.splice(idx, 1);
+            this.previews.splice(idx, 1);
+            if (this.previewIdx >= this.previews.length) {
+                this.previewIdx = Math.max(0, this.previews.length - 1);
+            }
+            this.syncFileInput();
         },
-        removeImage() {
-            this.imagePreview = null;
-            this.hasImage = false;
-            this.$refs.imageInput.value = '';
+        syncFileInput() {
+            // Rebuild the file input's FileList from our array
+            const dt = new DataTransfer();
+            for (const f of this.files) dt.items.add(f);
+            this.$refs.imageInput.files = dt.files;
         },
         toggleTag(tag) {
             const i = this.selectedTags.indexOf(tag);
