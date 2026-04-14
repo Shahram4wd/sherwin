@@ -85,14 +85,43 @@
             {% endif %}
 
             <!-- Caption -->
-            <div>
+            <div class="relative">
                 <textarea name="caption"
+                          x-ref="captionArea"
                           x-model="caption"
                           maxlength="500"
                           rows="3"
                           placeholder="What did you make / discover / do?"
-                          class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-accent-400/40 focus:ring-1 focus:ring-accent-400/20 resize-none text-lg">{{ form.caption.value|default:"" }}</textarea>
-                <div class="text-right mt-1">
+                          class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 pr-12 text-white placeholder-gray-500 focus:outline-none focus:border-accent-400/40 focus:ring-1 focus:ring-accent-400/20 resize-none text-lg">{{ form.caption.value|default:"" }}</textarea>
+                <!-- Emoji toggle -->
+                <button type="button" @click="showEmojis = !showEmojis"
+                        class="absolute right-3 top-3 w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 hover:text-accent-400 hover:bg-white/5 transition-all"
+                        :class="showEmojis ? 'text-accent-400 bg-white/5' : ''">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                </button>
+                <!-- Emoji picker -->
+                <div x-show="showEmojis" x-transition:enter="transition ease-out duration-150"
+                     x-transition:enter-start="opacity-0 translate-y-1" x-transition:enter-end="opacity-100 translate-y-0"
+                     @click.outside="showEmojis = false"
+                     class="absolute right-0 top-full mt-2 z-20 glass-card border border-white/10 rounded-xl p-3 w-72 shadow-xl">
+                    <div class="flex gap-1 mb-2 border-b border-white/10 pb-2 overflow-x-auto">
+                        <template x-for="(cat, idx) in emojiCategories" :key="idx">
+                            <button type="button" @click="emojiTab = idx"
+                                    :class="emojiTab === idx ? 'bg-accent-500/20 text-accent-400' : 'text-gray-500 hover:text-white'"
+                                    class="px-2 py-1 rounded-lg text-sm shrink-0 transition-colors"
+                                    x-text="cat.icon"></button>
+                        </template>
+                    </div>
+                    <div class="grid grid-cols-8 gap-0.5 max-h-48 overflow-y-auto scrollbar-thin">
+                        <template x-for="emoji in emojiCategories[emojiTab].items" :key="emoji">
+                            <button type="button" @click="insertEmoji(emoji)"
+                                    class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 text-lg transition-colors cursor-pointer"
+                                    x-text="emoji"></button>
+                        </template>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between mt-1">
+                    <span class="text-xs text-gray-600">Tap 😊 to add emojis</span>
                     <span class="text-xs" :class="caption.length > 450 ? 'text-accent-400' : 'text-gray-600'" x-text="caption.length + '/500'"></span>
                 </div>
             </div>
@@ -163,9 +192,33 @@ function snapForm() {
         selectedTags: [],
         customTags: [],
         showCustomTag: false,
+        showEmojis: false,
+        emojiTab: 0,
         dragover: false,
 
+        emojiCategories: [
+            { icon: '😊', items: ['😀','😃','😄','😁','😆','😅','🤣','😂','🙂','😊','😇','🥰','😍','🤩','😘','😋','😛','😜','🤪','😝','🤑','🤗','🤭','🫢','🤫','🤔','🫡','🤐','🤨','😐','😑','😶','🫥','😏','😒','🙄','😬','🤥','😌','😔','😪','🤤','😴','😷','🤒','🤕','🤢','🤮','🥵','🥶','🥴','😵','🤯','🤠','🥳','🥸','😎','🤓','🧐'] },
+            { icon: '🐾', items: ['🐶','🐱','🐭','🐹','🐰','🦊','🐻','🐼','🐻‍❄️','🐨','🐯','🦁','🐮','🐷','🐸','🐵','🙈','🙉','🙊','🐔','🐧','🐦','🐤','🦆','🦅','🦉','🦇','🐺','🐗','🐴','🦄','🐝','🪱','🐛','🦋','🐌','🐞','🐜','🪲','🐢','🐍','🦎','🐙','🦑','🦐','🦞','🦀','🐡','🐠','🐟','🐬','🐳','🐋','🦈','🐊','🐅','🐆','🦓','🦍'] },
+            { icon: '🍕', items: ['🍎','🍐','🍊','🍋','🍌','🍉','🍇','🍓','🫐','🍈','🍒','🍑','🥭','🍍','🥥','🥝','🍅','🍆','🥑','🥦','🥬','🥒','🌶️','🫑','🌽','🥕','🫒','🧄','🧅','🥔','🍠','🌰','🥜','🍯','🍞','🥐','🥖','🧀','🥚','🍳','🥞','🧇','🥓','🍔','🍟','🌭','🍕','🥪','🌮','🌯','🫔','🥗','🍝','🍜','🍲','🍛','🍣','🍱','🥟','🍤'] },
+            { icon: '⚽', items: ['⚽','🏀','🏈','⚾','🥎','🎾','🏐','🏉','🥏','🎱','🪀','🏓','🏸','🏒','🥅','⛳','🪁','🏹','🎣','🤿','🥊','🥋','🎽','🛹','🛼','🛷','⛸️','🥌','🎿','⛷️','🏋️','🤸','🤾','🏌️','🏇','🧘','🏄','🏊','🤽','🚣','🧗','🚴','🚵','🏆','🥇','🥈','🥉','🏅','🎖️','🎗️','🎪','🎭','🎨','🎬','🎤','🎧','🎼','🎹','🥁','🪘'] },
+            { icon: '🚀', items: ['🚗','🚕','🚙','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍️','🚲','🛴','🚨','🚔','🚍','🚘','🚖','✈️','🛩️','🛫','🛬','🪂','💺','🚀','🛸','🚁','🛶','⛵','🚤','🛥️','🛳️','⛴️','🚢','🗼','🏰','🏗️','🌉','🗽','🗿','🏛️','⛲','🎢','🎡','🎠','🏖️','🏝️','🏜️','🌋','⛰️','🏔️','🗻','🏕️','⛺','🏠','🏡','🏘️','🏚️'] },
+            { icon: '❤️', items: ['❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','❣️','💕','💞','💓','💗','💖','💘','💝','💟','☮️','✝️','☪️','🕉️','☸️','✡️','🔯','🕎','☯️','☦️','🛐','⛎','♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓','🆔','⚛️','🔮','🧿','🪬','💫','⭐','🌟','✨','💥','💢','💤','🕳️','💣','💬','🗯️'] },
+            { icon: '👍', items: ['👍','👎','👊','✊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖','🫳','🫴','👋','🤏','✍️','🫵','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🫦','💋','👶','🧒','👦','👧','🧑','👱'] },
+        ],
+
         get hasImage() { return this.files.length > 0; },
+
+        insertEmoji(emoji) {
+            const ta = this.$refs.captionArea;
+            const start = ta.selectionStart;
+            const end = ta.selectionEnd;
+            this.caption = this.caption.slice(0, start) + emoji + this.caption.slice(end);
+            this.$nextTick(() => {
+                const pos = start + emoji.length;
+                ta.focus();
+                ta.setSelectionRange(pos, pos);
+            });
+        },
 
         handleFileSelect(e) {
             const newFiles = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
