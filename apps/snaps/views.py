@@ -21,7 +21,7 @@ def snap_create(request):
         form = SnapForm(request.POST, request.FILES)
         if form.is_valid():
             # Collect all uploaded images (cleaned_data['images'] is a list)
-            files = form.cleaned_data["images"]
+            files = form.cleaned_data.get("images") or []
             cleaned_files = []
             for f in files:
                 try:
@@ -35,8 +35,12 @@ def snap_create(request):
                     cleaned_files.append(f)
 
             # First image → featured_image, rest → PostMedia
-            form.cleaned_data["images"] = cleaned_files[0]
-            extra_images = cleaned_files[1:] if len(cleaned_files) > 1 else None
+            if cleaned_files:
+                form.cleaned_data["images"] = cleaned_files[0]
+                extra_images = cleaned_files[1:] if len(cleaned_files) > 1 else None
+            else:
+                form.cleaned_data["images"] = None
+                extra_images = None
 
             post = form.save(user=request.user, extra_images=extra_images)
             messages.success(request, "Snap shared!")

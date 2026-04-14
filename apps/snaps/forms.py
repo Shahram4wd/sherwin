@@ -1,3 +1,5 @@
+import re
+
 from django import forms
 
 from apps.blog.models import Post
@@ -20,7 +22,14 @@ class MultipleImageField(forms.ImageField):
                     raise forms.ValidationError(self.error_messages["required"])
                 return []
             return [single_clean(d, initial) for d in data]
-        return [single_clean(data, initial)]
+        if data:
+            return [single_clean(data, initial)]
+        return []
+
+
+YOUTUBE_RE = re.compile(
+    r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/|youtube\.com/shorts/)([a-zA-Z0-9_-]{11})'
+)
 
 
 class SnapForm(forms.ModelForm):
@@ -39,8 +48,17 @@ class SnapForm(forms.ModelForm):
         ),
     )
     images = MultipleImageField(
-        required=True,
+        required=False,
         widget=MultipleImageInput(attrs={"accept": "image/*", "class": "snap-image-input"}),
+    )
+    youtube_url = forms.URLField(
+        required=False,
+        widget=forms.URLInput(
+            attrs={
+                "placeholder": "https://www.youtube.com/watch?v=...",
+                "class": "snap-youtube-input",
+            }
+        ),
     )
     tag_list = forms.CharField(required=False, widget=forms.HiddenInput())
 
@@ -51,12 +69,29 @@ class SnapForm(forms.ModelForm):
     def clean_caption(self):
         return (self.cleaned_data.get("caption") or "").strip()
 
+    def clean_youtube_url(self):
+        url = (self.cleaned_data.get("youtube_url") or "").strip()
+        if url and not YOUTUBE_RE.search(url):
+            raise forms.ValidationError("Please enter a valid YouTube URL.")
+        return url
+
+    def clean(self):
+        cleaned = super().clean()
+        images = cleaned.get("images", [])
+        youtube_url = cleaned.get("youtube_url", "")
+        if not images and not youtube_url:
+            raise forms.ValidationError("Please add at least one image or a YouTube video link.")
+        return cleaned
+
     def save(self, commit=True, user=None, extra_images=None):
         post = super().save(commit=False)
         post.post_type = Post.PostType.SNAP
         post.status = Post.Status.PUBLISHED
         post.body = self.cleaned_data.get("caption", "")
-        post.featured_image = self.cleaned_data["images"]
+        images = self.cleaned_data.get("images", [])
+        if images:
+            post.featured_image = images if not isinstance(images, list) else images[0] if images else None
+        post.youtube_url = self.cleaned_data.get("youtube_url", "")
         if user:
             post.created_by = user
         if commit:

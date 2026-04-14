@@ -77,12 +77,52 @@
                 <input type="file" name="images" accept="image/*" multiple
                        x-ref="imageInput"
                        @change="handleFileSelect($event)"
-                       class="hidden" required>
+                       class="hidden">
             </div>
 
             {% if form.images.errors %}
             <p class="text-red-400 text-sm">{{ form.images.errors.0 }}</p>
             {% endif %}
+
+            <!-- OR divider -->
+            <div class="flex items-center gap-3">
+                <div class="flex-1 border-t border-white/10"></div>
+                <span class="text-xs text-gray-500 uppercase tracking-wider">or add a video</span>
+                <div class="flex-1 border-t border-white/10"></div>
+            </div>
+
+            <!-- YouTube URL -->
+            <div>
+                <div class="relative">
+                    <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+                        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                    </div>
+                    <input type="url" name="youtube_url"
+                           x-model="youtubeUrl"
+                           placeholder="Paste YouTube link here"
+                           class="w-full bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-red-500/40 focus:ring-1 focus:ring-red-500/20 text-sm">
+                </div>
+                <!-- YouTube preview -->
+                <template x-if="youtubeVideoId">
+                    <div class="mt-3 relative rounded-xl overflow-hidden">
+                        <div class="relative bg-black" style="padding-bottom: 56.25%; height: 0;">
+                            <iframe :src="'https://www.youtube-nocookie.com/embed/' + youtubeVideoId"
+                                    class="absolute top-0 left-0 w-full h-full rounded-xl"
+                                    frameborder="0" allowfullscreen></iframe>
+                        </div>
+                        <button type="button" @click="youtubeUrl = ''"
+                                class="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                        </button>
+                    </div>
+                </template>
+                {% if form.youtube_url.errors %}
+                <p class="text-red-400 text-sm mt-1">{{ form.youtube_url.errors.0 }}</p>
+                {% endif %}
+                {% if form.non_field_errors %}
+                <p class="text-red-400 text-sm mt-1">{{ form.non_field_errors.0 }}</p>
+                {% endif %}
+            </div>
 
             <!-- Caption -->
             <div class="relative">
@@ -168,8 +208,8 @@
 
             <!-- Share Button -->
             <button type="submit"
-                    :disabled="!hasImage"
-                    :class="hasImage ? 'bg-accent-500 hover:bg-accent-600 shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40' : 'bg-gray-700 cursor-not-allowed'"
+                    :disabled="!hasContent"
+                    :class="hasContent ? 'bg-accent-500 hover:bg-accent-600 shadow-lg shadow-accent-500/25 hover:shadow-accent-500/40' : 'bg-gray-700 cursor-not-allowed'"
                     class="w-full py-4 rounded-xl text-white font-semibold text-lg transition-all">
                 <span class="flex items-center justify-center gap-2">
                     <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
@@ -189,6 +229,7 @@ function snapForm() {
         files: [],
         previewIdx: 0,
         caption: '',
+        youtubeUrl: '{{ form.youtube_url.value|default:""|escapejs }}',
         selectedTags: [],
         customTags: [],
         showCustomTag: false,
@@ -206,7 +247,12 @@ function snapForm() {
             { icon: '👍', items: ['👍','👎','👊','✊','🤛','🤜','👏','🙌','🫶','👐','🤲','🤝','🙏','✌️','🤞','🫰','🤟','🤘','🤙','👈','👉','👆','👇','☝️','✋','🤚','🖐️','🖖','🫳','🫴','👋','🤏','✍️','🫵','💪','🦾','🦿','🦵','🦶','👂','🦻','👃','🧠','🫀','🫁','🦷','🦴','👀','👁️','👅','👄','🫦','💋','👶','🧒','👦','👧','🧑','👱'] },
         ],
 
-        get hasImage() { return this.files.length > 0; },
+        get youtubeVideoId() {
+            const m = this.youtubeUrl.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/shorts\/)([a-zA-Z0-9_-]{11})/);
+            return m ? m[1] : '';
+        },
+        get hasContent() { return this.files.length > 0 || this.youtubeVideoId; },
+        get hasImage() { return this.files.length > 0 || this.youtubeVideoId; },
 
         insertEmoji(emoji) {
             const ta = this.$refs.captionArea;

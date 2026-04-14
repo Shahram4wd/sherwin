@@ -124,6 +124,11 @@ class Post(models.Model):
     is_featured = models.BooleanField(
         default=False, help_text="Show as hero on homepage"
     )
+    youtube_url = models.URLField(
+        max_length=300,
+        blank=True,
+        help_text="YouTube video URL (e.g. https://www.youtube.com/watch?v=... or https://youtu.be/...)",
+    )
     meta_description = models.CharField(
         max_length=160,
         blank=True,
@@ -203,6 +208,21 @@ class Post(models.Model):
     @property
     def is_snap(self):
         return self.post_type == self.PostType.SNAP
+
+    @property
+    def youtube_video_id(self):
+        """Extract YouTube video ID from stored URL."""
+        import re
+        if not self.youtube_url:
+            return ""
+        patterns = [
+            r'(?:youtube\.com/watch\?v=|youtu\.be/|youtube\.com/embed/|youtube\.com/shorts/)([a-zA-Z0-9_-]{11})',
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, self.youtube_url)
+            if match:
+                return match.group(1)
+        return ""
 
 
 class PostMedia(models.Model):
