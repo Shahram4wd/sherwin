@@ -1,23 +1,24 @@
 from django.contrib import admin
 from django.utils import timezone
+from unfold.admin import ModelAdmin, StackedInline, TabularInline
 
 from .models import Post, PostCategory, PostMedia
 
 
-class PostMediaInline(admin.TabularInline):
+class PostMediaInline(TabularInline):
     model = PostMedia
     extra = 1
     fields = ["file", "media_type", "alt_text", "caption", "order", "is_gallery_visible"]
 
 
 @admin.register(PostCategory)
-class PostCategoryAdmin(admin.ModelAdmin):
+class PostCategoryAdmin(ModelAdmin):
     list_display = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
 
 
 @admin.register(Post)
-class PostAdmin(admin.ModelAdmin):
+class PostAdmin(ModelAdmin):
     list_display = [
         "title",
         "post_type",
@@ -56,7 +57,7 @@ class PostAdmin(admin.ModelAdmin):
 
 
 @admin.register(PostMedia)
-class PostMediaAdmin(admin.ModelAdmin):
+class PostMediaAdmin(ModelAdmin):
     list_display = ["post", "media_type", "alt_text", "order", "is_gallery_visible", "uploaded_at"]
     list_filter = ["media_type", "is_gallery_visible"]
     list_editable = ["order", "is_gallery_visible"]

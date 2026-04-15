@@ -55,8 +55,8 @@ Supports: multi-image carousel, YouTube embeds, single image, or video-only snap
         <div x-ref="track" class="flex transition-transform duration-300 ease-out h-full" :style="'transform: translateX(-' + (current * 100) + '%)'">
             {# First image: featured_image #}
             {% if snap.featured_image %}
-            <div class="w-full shrink-0 cursor-pointer flex items-center justify-center" @click="fullscreen = true">
-                <img src="{{ snap.featured_image.url }}" alt="{{ snap.body|truncatewords:5 }}" class="w-full object-contain {{ css_class|default:'' }}" loading="{{ loading|default:'lazy' }}" @load="if(current===0) updateHeight()">
+            <div class="w-full shrink-0 cursor-pointer flex items-center justify-center{% if snap.lqip %} bg-cover bg-center bg-no-repeat{% endif %}" @click="fullscreen = true"{% if snap.lqip %} style="background-image: url('{{ snap.lqip }}')"{% endif %}>
+                <img src="{{ snap.featured_image.url }}" alt="{{ snap.body|truncatewords:5 }}" class="w-full object-contain {{ css_class|default:'' }} transition-opacity duration-300{% if snap.lqip %} opacity-0{% endif %}" loading="{{ loading|default:'lazy' }}" @load="$el.classList.remove('opacity-0'); if(current===0) updateHeight()">
             </div>
             {% endif %}
             {# Additional images from PostMedia #}
@@ -144,10 +144,10 @@ Supports: multi-image carousel, YouTube embeds, single image, or video-only snap
 
 {% elif snap.featured_image %}
 {# Single image with click-to-expand #}
-<div x-data="{ fullscreen: false }" class="relative">
+<div x-data="{ fullscreen: false }" class="relative{% if snap.lqip %} bg-cover bg-center bg-no-repeat{% endif %}"{% if snap.lqip %} style="background-image: url('{{ snap.lqip }}')"{% endif %}>
     <img src="{{ snap.featured_image.url }}" alt="{{ snap.body|truncatewords:5 }}"
-         class="w-full cursor-pointer {{ css_class|default:'object-cover' }}" loading="{{ loading|default:'lazy' }}"
-         @click="fullscreen = true">
+         class="w-full cursor-pointer {{ css_class|default:'object-cover' }} transition-opacity duration-300{% if snap.lqip %} opacity-0{% endif %}" loading="{{ loading|default:'lazy' }}"
+         @click="fullscreen = true" @load="$el.classList.remove('opacity-0')">
     <template x-teleport="body">
         <div x-show="fullscreen"
              x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"

@@ -11,6 +11,18 @@
         <p class="text-accent-400 text-xs font-medium tracking-[0.3em] uppercase mb-4">06 &mdash; About</p>
         <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-8">{{ about.title }}</h1>
 
+        {% if profile.avatar %}
+        <div class="mb-8">
+            <img src="{{ profile.avatar.url }}" alt="{{ about.title }}" class="w-28 h-28 rounded-full object-cover ring-3 ring-accent-500/30">
+        </div>
+        {% endif %}
+
+        {% if profile.bio %}
+        <div class="prose prose-invert prose-lg max-w-none prose-p:text-gray-300 prose-p:leading-relaxed mb-8">
+            <p>{{ profile.bio }}</p>
+        </div>
+        {% endif %}
+
         {% if about.body %}
         <div class="prose prose-invert prose-lg max-w-none
             prose-headings:font-display prose-headings:text-white

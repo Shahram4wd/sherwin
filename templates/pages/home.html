@@ -10,7 +10,9 @@
     <div class="lg:hidden mb-6 max-w-xl mx-auto space-y-4">
         <!-- Compact profile banner -->
         <div class="glass-card rounded-2xl p-4 flex items-center gap-4">
-            {% if about.profile_photo %}
+            {% if profile.avatar %}
+            <img src="{{ profile.avatar.url }}" alt="{{ about.title }}" class="w-14 h-14 rounded-full object-cover ring-2 ring-accent-500/30 shrink-0">
+            {% elif about.profile_photo %}
             <img src="{{ about.profile_photo.url }}" alt="{{ about.title }}" class="w-14 h-14 rounded-full object-cover ring-2 ring-accent-500/30 shrink-0">
             {% else %}
             <div class="w-14 h-14 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center text-white font-bold text-xl shrink-0">S</div>
@@ -45,7 +47,9 @@
                     <!-- Cover gradient -->
                     <div class="h-16 bg-gradient-to-r from-accent-600/40 to-accent-400/20"></div>
                     <div class="px-4 pb-4 -mt-8 text-center">
-                        {% if about.profile_photo %}
+                        {% if profile.avatar %}
+                        <img src="{{ profile.avatar.url }}" alt="{{ about.title }}" class="w-16 h-16 rounded-full object-cover ring-3 ring-space-900 mx-auto mb-2">
+                        {% elif about.profile_photo %}
                         <img src="{{ about.profile_photo.url }}" alt="{{ about.title }}" class="w-16 h-16 rounded-full object-cover ring-3 ring-space-900 mx-auto mb-2">
                         {% else %}
                         <div class="w-16 h-16 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center text-white font-bold text-2xl ring-3 ring-space-900 mx-auto mb-2">S</div>
@@ -87,9 +91,13 @@
                 <article class="glass-card rounded-2xl overflow-hidden">
                     <!-- Author header -->
                     <div class="flex items-center gap-3 px-4 py-3">
+                        {% if snap.created_by.profile.avatar %}
+                        <img src="{{ snap.created_by.profile.avatar.url }}" alt="{{ snap.created_by.first_name|default:snap.created_by.username }}" class="w-10 h-10 rounded-full object-cover shrink-0">
+                        {% else %}
                         <div class="w-10 h-10 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
                             {{ snap.created_by.first_name|default:snap.created_by.username|truncatechars:1 }}
                         </div>
+                        {% endif %}
                         <div class="flex-1 min-w-0">
                             <p class="text-white font-medium text-sm truncate">{{ snap.created_by.first_name|default:snap.created_by.username }}</p>
                             <time class="text-xs text-gray-500" datetime="{{ snap.published_at|date:'c' }}">{{ snap.published_at|timesince }} ago</time>

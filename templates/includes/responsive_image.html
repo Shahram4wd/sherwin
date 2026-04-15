@@ -1,12 +1,15 @@
 {% if post.featured_image %}{% spaceless %}
+<div class="relative{% if post.lqip %} bg-cover bg-center bg-no-repeat{% endif %}"{% if post.lqip %} style="background-image: url('{{ post.lqip }}')"{% endif %}>
 <img
     src="{{ post.image_md.url }}"
     srcset="{{ post.image_sm.url }} 300w, {{ post.image_md.url }} 800w, {{ post.image_lg.url }} 1200w"
     sizes="{{ sizes }}"
     alt="{{ alt }}"
-    class="{{ css_class }}"
+    class="{{ css_class }} transition-opacity duration-300{% if post.lqip %} opacity-0{% endif %}"
     loading="{{ loading }}"
     width="{{ post.image_md.width }}"
     height="{{ post.image_md.height }}"
+    onload="this.classList.remove('opacity-0')"
 >
+</div>
 {% endspaceless %}{% endif %}

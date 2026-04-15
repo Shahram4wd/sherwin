@@ -5,6 +5,7 @@ from django.shortcuts import render
 
 from taggit.models import Tag
 
+from apps.accounts.models import UserProfile
 from apps.blog.models import Post, PostMedia
 from apps.timeline.models import TimelineEvent
 
@@ -12,7 +13,7 @@ from .models import AboutPage
 
 
 def home(request):
-    snaps_qs = Post.snaps.select_related("category", "created_by").prefetch_related("tags", "media")
+    snaps_qs = Post.snaps.select_related("category", "created_by__profile").prefetch_related("tags", "media")
 
     tag = request.GET.get("tag")
     if tag:
@@ -26,18 +27,21 @@ def home(request):
     ).distinct().order_by("name")
 
     about = AboutPage.load()
+    profile = UserProfile.objects.select_related("user").first()
 
     return render(request, "pages/home.html", {
         "snaps": snaps,
         "current_tag": tag,
         "all_tags": all_tags,
         "about": about,
+        "profile": profile,
     })
 
 
 def about(request):
     about_page = AboutPage.load()
-    return render(request, "pages/about.html", {"about": about_page})
+    profile = UserProfile.objects.select_related("user").first()
+    return render(request, "pages/about.html", {"about": about_page, "profile": profile})
 
 
 def robots_txt(request):

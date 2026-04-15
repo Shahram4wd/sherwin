@@ -102,6 +102,11 @@ class Post(models.Model):
     featured_image = models.ImageField(
         upload_to="posts/images/%Y/%m/", null=True, blank=True
     )
+    lqip = models.TextField(
+        blank=True,
+        editable=False,
+        help_text="Auto-generated low-quality image placeholder (base64 data URI).",
+    )
     # Thumbnail specs (generated on-demand, cached)
     image_sm = ImageSpecField(
         source="featured_image",
@@ -187,7 +192,29 @@ class Post(models.Model):
         # Auto-set published_at for snaps
         if self.status == self.Status.PUBLISHED and not self.published_at:
             self.published_at = timezone.now()
+        # Auto-generate LQIP placeholder
+        if self.featured_image and not self.lqip:
+            self._generate_lqip()
         super().save(*args, **kwargs)
+
+    def _generate_lqip(self):
+        """Generate a tiny base64-encoded blurred placeholder image."""
+        import base64
+        import io
+
+        try:
+            from PIL import Image, ImageFilter
+            self.featured_image.seek(0)
+            img = Image.open(self.featured_image)
+            img = img.convert("RGB")
+            img.thumbnail((20, 20))
+            img = img.filter(ImageFilter.GaussianBlur(2))
+            buf = io.BytesIO()
+            img.save(buf, format="WEBP", quality=20)
+            b64 = base64.b64encode(buf.getvalue()).decode()
+            self.lqip = f"data:image/webp;base64,{b64}"
+        except Exception:
+            self.lqip = ""
 
     def get_absolute_url(self):
         if self.post_type == self.PostType.SNAP:
