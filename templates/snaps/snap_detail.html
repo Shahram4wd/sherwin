@@ -66,6 +66,19 @@
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"/></svg>
             Edit
         </a>
+        <span>&middot;</span>
+        <form method="post" action="{% url 'snaps:snap_delete' slug=snap.slug %}" class="inline" x-data="{ confirming: false }">
+            {% csrf_token %}
+            <button type="button" @click="confirming = true" x-show="!confirming" class="inline-flex items-center gap-1 text-gray-500 hover:text-red-400 transition-colors">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                Delete
+            </button>
+            <span x-show="confirming" x-cloak class="inline-flex items-center gap-2">
+                <span class="text-red-400 text-sm">Delete this snap?</span>
+                <button type="submit" class="text-red-400 hover:text-red-300 font-medium text-sm transition-colors">Yes</button>
+                <button type="button" @click="confirming = false" class="text-gray-500 hover:text-gray-300 text-sm transition-colors">No</button>
+            </span>
+        </form>
         {% endif %}
     </div>
 

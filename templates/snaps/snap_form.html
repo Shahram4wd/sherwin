@@ -222,6 +222,25 @@
                 </span>
             </button>
         </form>
+
+        {% if editing %}
+        <!-- Delete Snap -->
+        <form method="post" action="{% url 'snaps:snap_delete' slug=snap.slug %}" class="mt-4" x-data="{ confirming: false }">
+            {% csrf_token %}
+            <button type="button" @click="confirming = true" x-show="!confirming"
+                    class="w-full py-3 rounded-xl border border-red-500/20 text-red-400 hover:bg-red-500/10 font-medium transition-all flex items-center justify-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                Delete Snap
+            </button>
+            <div x-show="confirming" x-cloak class="w-full py-3 rounded-xl border border-red-500/30 bg-red-500/5 text-center space-y-2">
+                <p class="text-red-400 text-sm">Are you sure you want to delete this snap?</p>
+                <div class="flex items-center justify-center gap-4">
+                    <button type="submit" class="px-4 py-1.5 rounded-lg bg-red-500 hover:bg-red-600 text-white text-sm font-medium transition-colors">Yes, delete</button>
+                    <button type="button" @click="confirming = false" class="px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 text-sm font-medium transition-colors">Cancel</button>
+                </div>
+            </div>
+        </form>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

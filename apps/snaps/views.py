@@ -4,6 +4,7 @@ from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 
 from apps.blog.models import Post
 from apps.core.utils.exif import strip_exif
@@ -134,3 +135,13 @@ def snap_detail(request, slug):
         "snap": snap,
         "related_snaps": related,
     })
+
+
+@login_required(login_url="accounts:login")
+@require_POST
+def snap_delete(request, slug):
+    """Delete a snap."""
+    snap = get_object_or_404(Post.published, slug=slug)
+    snap.delete()
+    messages.success(request, "Snap deleted!")
+    return redirect("core:home")
