@@ -106,9 +106,9 @@
                 <template x-if="youtubeVideoId">
                     <div class="mt-3 relative rounded-xl overflow-hidden">
                         <div class="relative bg-black" style="padding-bottom: 56.25%; height: 0;">
-                            <iframe :src="'https://www.youtube-nocookie.com/embed/' + youtubeVideoId"
+                            <iframe :src="'https://www.youtube-nocookie.com/embed/' + youtubeVideoId + '?origin=' + window.location.origin"
                                     class="absolute top-0 left-0 w-full h-full rounded-xl"
-                                    frameborder="0" allowfullscreen></iframe>
+                                    frameborder="0" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
                         </div>
                         <button type="button" @click="youtubeUrl = ''"
                                 class="absolute top-2 right-2 w-7 h-7 rounded-full bg-black/60 flex items-center justify-center text-white hover:bg-red-500 transition-colors z-10">

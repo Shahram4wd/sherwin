@@ -99,6 +99,9 @@ STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
@@ -116,6 +119,7 @@ TAGGIT_CASE_INSENSITIVE = True
 # Security defaults (overridden in prod)
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
 
 # Auth
 LOGIN_URL = "accounts:login"
