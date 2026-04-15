@@ -1,10 +1,125 @@
-/* Sherwin Universe - Custom styles */
-/* Tailwind CDN handles most styling in Phase 1 */
-/* This file is for any custom overrides */
+/* Sherwin Universe - Custom Styles */
+/* Tailwind CDN handles most styling */
+/* This file provides theme overrides and custom rules */
 
-/* Add bottom padding on mobile for the fixed bottom nav */
+/* Mobile bottom padding for fixed bottom nav */
 @media (max-width: 767px) {
     body {
         padding-bottom: 4rem;
     }
+}
+
+/* ================================================================
+   LIGHT THEME OVERRIDES
+   Active when <html data-theme="light">
+   Nav stays dark in both themes.
+   ================================================================ */
+
+/* --- Base / Body --- */
+[data-theme="light"] body {
+    background: #f5f5f5;
+    color: #1f2937;
+}
+[data-theme="light"] .star-field {
+    background-image: none !important;
+}
+
+/* --- Glass card → solid white card --- */
+[data-theme="light"] .glass-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    backdrop-filter: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .glass-card:hover {
+    background: #ffffff;
+    border-color: #d1d5db;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* --- Glass nav: keep dark, slightly more opaque --- */
+[data-theme="light"] .glass-nav {
+    background: rgba(30, 30, 40, 0.95);
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+/* --- Glow effects toned down --- */
+[data-theme="light"] .glow-accent { text-shadow: none; }
+[data-theme="light"] .glow-box { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
+
+/* --- Text color overrides in content areas --- */
+[data-theme="light"] main .text-white,
+[data-theme="light"] footer .text-white { color: #1f2937; }
+[data-theme="light"] main .text-gray-200 { color: #374151; }
+[data-theme="light"] main .text-gray-300 { color: #4b5563; }
+
+/* Preserve white text in nav and on colored backgrounds */
+[data-theme="light"] .glass-nav .text-white { color: #fff !important; }
+[data-theme="light"] [class*="bg-accent"] .text-white,
+[data-theme="light"] [class*="bg-accent"].text-white,
+[data-theme="light"] [class*="bg-gradient"] .text-white,
+[data-theme="light"] [class*="bg-gradient"].text-white,
+[data-theme="light"] [class*="bg-red"] .text-white,
+[data-theme="light"] [class*="bg-red"].text-white,
+[data-theme="light"] [class*="bg-black"] .text-white { color: #fff !important; }
+
+/* --- Hover text overrides --- */
+[data-theme="light"] main .hover\:text-white:hover { color: #111827; }
+
+/* --- Background overrides --- */
+[data-theme="light"] main .bg-white\/5,
+[data-theme="light"] footer .bg-white\/5 { background-color: #f3f4f6; }
+[data-theme="light"] main .bg-white\/\[0\.06\] { background-color: #f3f4f6; }
+[data-theme="light"] main .bg-white\/10 { background-color: #e5e7eb; }
+[data-theme="light"] main .bg-white\/\[0\.1\] { background-color: #e5e7eb; }
+[data-theme="light"] main .hover\:bg-white\/5:hover { background-color: #f3f4f6; }
+[data-theme="light"] main .hover\:bg-white\/10:hover { background-color: #e5e7eb; }
+
+/* --- Border overrides --- */
+[data-theme="light"] main .border-white\/5,
+[data-theme="light"] footer.border-white\/5 { border-color: #e5e7eb; }
+[data-theme="light"] main .border-white\/10 { border-color: #e5e7eb; }
+[data-theme="light"] main .border-white\/15 { border-color: #d1d5db; }
+[data-theme="light"] main .border-white\/20 { border-color: #d1d5db; }
+[data-theme="light"] main .border-t.border-white\/5 { border-color: #e5e7eb; }
+[data-theme="light"] main .hover\:border-white\/20:hover { border-color: #d1d5db; }
+[data-theme="light"] main .border-b.border-white\/5 { border-color: #e5e7eb; }
+[data-theme="light"] .border-t.border-white\/5 { border-color: #e5e7eb; }
+
+/* --- Ring overrides --- */
+[data-theme="light"] main .ring-space-900 { --tw-ring-color: #fff; }
+
+/* --- Shadow overrides --- */
+[data-theme="light"] main .shadow-black\/50 { --tw-shadow-color: rgba(0, 0, 0, 0.1); }
+
+/* --- Prose (typography) light overrides --- */
+[data-theme="light"] main .prose-invert {
+    --tw-prose-body: #4b5563;
+    --tw-prose-headings: #111827;
+    --tw-prose-lead: #6b7280;
+    --tw-prose-links: #e74c3c;
+    --tw-prose-bold: #111827;
+    --tw-prose-counters: #6b7280;
+    --tw-prose-bullets: #9ca3af;
+    --tw-prose-hr: #e5e7eb;
+    --tw-prose-quotes: #6b7280;
+    --tw-prose-quote-borders: rgba(231, 76, 60, 0.3);
+    --tw-prose-captions: #6b7280;
+    --tw-prose-code: #e74c3c;
+    --tw-prose-pre-code: #e5e7eb;
+    --tw-prose-pre-bg: #1f2937;
+    --tw-prose-th-borders: #d1d5db;
+    --tw-prose-td-borders: #e5e7eb;
+}
+
+/* --- Misc element overrides --- */
+[data-theme="light"] main .bg-gray-600 { background-color: #9ca3af; }
+[data-theme="light"] main .bg-gray-700 { background-color: #d1d5db; }
+[data-theme="light"] main .bg-space-900 { background-color: #f8f9fa; }
+[data-theme="light"] main .bg-space-800 { background-color: #f1f3f5; }
+
+/* --- Search input in light mode (inside nav, keep readable) --- */
+[data-theme="light"] .glass-nav input[type="search"] {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.2);
 }
