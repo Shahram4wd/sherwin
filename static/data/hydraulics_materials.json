@@ -1,0 +1,58 @@
+{
+  "metadata": {
+    "source": "Curated educational engineering reference ranges",
+    "note": "Strength thresholds are nominal working values for simulation use, not design certification values. Pressure and stress values are in MPa unless noted otherwise."
+  },
+  "materials": {
+    "sponge": {
+      "name": "Sponge",
+      "code": "SPG",
+      "color": "#facc15",
+      "elasticMpa": 0.03,
+      "yieldMpa": 0.08,
+      "crushMpa": 0.18,
+      "deformationBias": 1.8,
+      "source": "Typical soft foam compression behavior"
+    },
+    "pine_wood": {
+      "name": "Pine Wood",
+      "code": "PW",
+      "color": "#c08457",
+      "elasticMpa": 18,
+      "yieldMpa": 33,
+      "crushMpa": 49,
+      "deformationBias": 1.0,
+      "source": "Typical compressive strength range parallel to grain"
+    },
+    "aluminum_6061": {
+      "name": "Aluminum 6061",
+      "code": "AL 6061",
+      "color": "#93c5fd",
+      "elasticMpa": 80,
+      "yieldMpa": 110,
+      "crushMpa": 240,
+      "deformationBias": 0.75,
+      "source": "Typical yield and compressive range for 6061 alloy"
+    },
+    "ductile_iron": {
+      "name": "Ductile Iron",
+      "code": "DI",
+      "color": "#9ca3af",
+      "elasticMpa": 240,
+      "yieldMpa": 320,
+      "crushMpa": 420,
+      "deformationBias": 0.45,
+      "source": "Typical ductile iron compressive/yield-like working range"
+    },
+    "tungsten": {
+      "name": "Tungsten",
+      "code": "W",
+      "color": "#e5e7eb",
+      "elasticMpa": 520,
+      "yieldMpa": 700,
+      "crushMpa": 900,
+      "deformationBias": 0.2,
+      "source": "High-strength refractory metal reference range"
+    }
+  }
+}

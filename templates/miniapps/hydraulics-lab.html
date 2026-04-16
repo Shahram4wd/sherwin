@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ miniapp.name }} — Lab — Sherwin Universe{% endblock %}
+{% block meta_description %}{{ miniapp.description|truncatewords:25 }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/miniapps.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="relative pt-6 pb-12">
+    <div class="max-w-7xl mx-auto px-4">
+        <nav class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+            <a href="{% url 'miniapps:lab' %}" class="hover:text-accent-400 transition-colors">Lab</a>
+            <span>/</span>
+            <span class="text-gray-300">{{ miniapp.name }}</span>
+        </nav>
+
+        <div id="simulation" class="miniapp-container"></div>
+
+        <div class="glass-card rounded-xl p-6 mt-6 max-w-3xl">
+            <h2 class="text-lg font-display font-semibold text-white mb-2">{{ miniapp.name }}</h2>
+            <p class="text-gray-400 text-sm leading-relaxed">{{ miniapp.description }}</p>
+            <div class="mt-4 flex flex-wrap gap-3 text-xs text-gray-500">
+                <span>🖱️ Drag to orbit</span>
+                <span>🔍 Scroll to zoom</span>
+                <span>⚙️ Tune pressure, valve, and piston size</span>
+                <span>📈 Watch the live pressure graph</span>
+                <span>🎤 Ask the AI assistant about the current experiment</span>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"
+    }
+}
+</script>
+
+<script type="module">
+    import { HydraulicsLabApp } from '{% static "js/miniapps/hydraulics-lab.js" %}';
+    import { VoiceAssistant } from '{% static "js/miniapps/voice-assistant.js" %}';
+
+    const app = new HydraulicsLabApp('simulation');
+    await app.init();
+
+    new VoiceAssistant({
+        container: document.getElementById('simulation'),
+        appSlug: 'hydraulics-lab',
+        apiUrl: '{% url "ai_tools:assistant_chat" %}',
+        getStateFn: () => app.getState(),
+        csrfToken: '{{ csrf_token }}',
+    });
+</script>
+{% endblock %}
