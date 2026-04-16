@@ -14,6 +14,11 @@ env_file = BASE_DIR / ".env"
 if env_file.exists():
     environ.Env.read_env(env_file)
 
+# Also read sherwin-universe.env if it exists
+universe_env = BASE_DIR / "sherwin-universe.env"
+if universe_env.exists():
+    environ.Env.read_env(universe_env)
+
 SECRET_KEY = env("SECRET_KEY", default="change-me-in-production")
 
 DEBUG = env("DEBUG")
@@ -132,6 +137,10 @@ DEFAULT_FROM_EMAIL = "Sherwin Universe <noreply@sherwinuniverse.com>"
 # Notifications
 PARENT_NOTIFICATION_EMAIL = env("PARENT_NOTIFICATION_EMAIL", default="")
 SITE_URL = env("SITE_URL", default="http://localhost:8080")
+
+# AI / OpenAI
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-4o-mini")
 
 # Session (30-day PIN sessions)
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30

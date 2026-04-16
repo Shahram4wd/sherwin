@@ -13,6 +13,8 @@ services:
       - DJANGO_SUPERUSER_USERNAME=admin
       - DJANGO_SUPERUSER_PASSWORD=admin
       - DJANGO_SUPERUSER_EMAIL=admin@localhost
+    env_file:
+      - sherwin-universe.env
     command: >
       sh -c "pip install -r requirements/dev.txt --quiet &&
              python manage.py migrate --noinput &&
