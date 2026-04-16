@@ -31,7 +31,7 @@ import {
 /* ================================================================== */
 
 const PROTON_COLOR  = 0xe74c3c;   // red
-const NEUTRON_COLOR = 0x3498db;   // blue
+const NEUTRON_COLOR = 0x9ca3af;   // neutral gray
 const PROTON_RADIUS  = 0.6;
 const NEUTRON_RADIUS = 0.6;
 const MAX_NUCLEONS   = 300;
@@ -39,6 +39,24 @@ const SPRING_K       = 4.0;      // spring stiffness toward target
 const DAMPING        = 0.92;     // velocity damping
 const REPULSION      = 0.3;     // inter-nucleon push to prevent overlap
 const MAGIC_NUMBERS  = [2, 8, 20, 28, 50, 82, 126];
+
+function nucleusRadiusFromCounts(z, n) {
+  const total = Math.max(1, z + n);
+  const nucleonRadius = PROTON_RADIUS * 1.1;
+  return nucleonRadius * Math.pow(total, 1 / 3) * 1.2;
+}
+
+function randomEmissionOrigin(radius) {
+  const dir = randomOnSphere(1).normalize();
+  const shellFactor = randRange(0.6, 1.02); // within/surface of nucleus
+  return dir.multiplyScalar(radius * shellFactor);
+}
+
+function emissionDirectionFrom(origin, spread = 0.22) {
+  const out = origin.clone().normalize();
+  out.add(randomOnSphere(spread)).normalize();
+  return out;
+}
 
 /**
  * Approximate maximum neutron count for a given Z.
@@ -170,6 +188,11 @@ function evaluateStability(z, n) {
     decayModes.push('double_beta_minus');
   }
 
+  // Double beta-plus: proton-rich even-even nuclei where single beta-plus is disfavored
+  if (z % 2 === 0 && n % 2 === 0 && ratio < 0.8 && z > 16 && !decayModes.includes('beta_plus')) {
+    decayModes.push('double_beta_plus');
+  }
+
   // Cluster decay: very heavy nuclei (Z >= 87), emits C-14 or similar
   if (z >= 87 && a >= 220 && z <= 96) decayModes.push('cluster_decay');
 
@@ -223,6 +246,8 @@ function applyDecay(z, n, mode) {
       return { z, n: n - 1, emitted: 'n (neutron)' };
     case 'double_beta_minus':
       return { z: z + 2, n: n - 2, emitted: '2β⁻ (2 electrons + 2 antineutrinos)' };
+    case 'double_beta_plus':
+      return { z: z - 2, n: n + 2, emitted: '2β⁺ (2 positrons + 2 neutrinos)' };
     case 'cluster_decay': {
       // Emits C-14 (most common cluster emission)
       return { z: z - 6, n: n - 8, emitted: '¹⁴C (carbon-14 cluster)' };
@@ -246,10 +271,15 @@ class Nucleus3D {
     this._types = []; // 'p' or 'n'
     this.z = 0;
     this.n = 0;
+    this._recoilOffset = new THREE.Vector3();
+    this._recoilVelocity = new THREE.Vector3();
+    this._shakeTime = 0;
+    this._shakeIntensity = 0;
   }
 
   /** Rebuild the nucleus for given z, n */
-  build(z, n) {
+  build(z, n, opts = {}) {
+    const { scatter = true } = opts;
     this.protons.clear();
     this.neutrons.clear();
     this._targets = [];
@@ -278,7 +308,7 @@ class Nucleus3D {
 
     for (let i = 0; i < total; i++) {
       const pos = positions[i];
-      const startPos = randomOnSphere(coreRadius * 2); // start scattered
+      const startPos = scatter ? randomOnSphere(coreRadius * 2) : pos.clone();
       const isProton = types[i] === 'p';
 
       if (isProton) {
@@ -340,6 +370,27 @@ class Nucleus3D {
 
     this.protons.mesh.instanceMatrix.needsUpdate = true;
     this.neutrons.mesh.instanceMatrix.needsUpdate = true;
+
+    this._recoilOffset.addScaledVector(this._recoilVelocity, dt);
+    this._recoilVelocity.multiplyScalar(Math.exp(-6 * dt));
+    this._recoilOffset.multiplyScalar(Math.exp(-4 * dt));
+
+    let sx = 0;
+    let sy = 0;
+    let sz = 0;
+    if (this._shakeTime > 0) {
+      this._shakeTime -= dt;
+      const amp = this._shakeIntensity * Math.max(0, this._shakeTime);
+      sx = randRange(-amp, amp);
+      sy = randRange(-amp, amp);
+      sz = randRange(-amp, amp);
+    }
+
+    const px = this._recoilOffset.x + sx;
+    const py = this._recoilOffset.y + sy;
+    const pz = this._recoilOffset.z + sz;
+    this.protons.mesh.position.set(px, py, pz);
+    this.neutrons.mesh.position.set(px, py, pz);
   }
 
   /** Gentle continuous rotation */
@@ -348,6 +399,16 @@ class Nucleus3D {
     // We rotate the particle meshes themselves
     this.protons.mesh.rotation.y += dt * 0.15;
     this.neutrons.mesh.rotation.y += dt * 0.15;
+  }
+
+  applyRecoil(emissionDir, strength = 0.9) {
+    const recoil = emissionDir.clone().normalize().multiplyScalar(-strength);
+    this._recoilVelocity.add(recoil);
+  }
+
+  shake(intensity = 0.35, duration = 0.4) {
+    this._shakeIntensity = intensity;
+    this._shakeTime = Math.max(this._shakeTime, duration);
   }
 }
 
@@ -359,25 +420,58 @@ class DecayEffects {
   constructor(scene) {
     this.scene = scene;
     this._particles = [];
+    this._projectiles = [];
+    this._flashes = [];
+    this._trailMotes = [];
   }
 
-  /** Burst of particles flying outward */
-  emit(type, origin = new THREE.Vector3()) {
+  _spawnFlash(origin, color, radius = 2.2, life = 0.22) {
+    const geo = new THREE.SphereGeometry(radius, 16, 16);
+    const mat = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.55,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(origin);
+    this.scene.add(mesh);
+    this._flashes.push({ mesh, life, maxLife: life });
+  }
+
+  _spawnTrailMote(position, color, radius = 0.08, life = 0.28) {
+    const geo = new THREE.SphereGeometry(radius, 8, 8);
+    const mat = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(position);
+    this.scene.add(mesh);
+    this._trailMotes.push({ mesh, life, maxLife: life });
+  }
+
+  _spawnBurst(type, origin) {
     const colorMap = {
       alpha: 0xffd700,
-      beta_minus: 0x00ffcc,
-      beta_plus: 0xff66ff,
+      beta_minus: 0x66ccff,
+      beta_plus: 0xff5f7a,
       electron_capture: 0x66ccff,
       gamma: 0xffff00,
       spontaneous_fission: 0xff4400,
       proton_emission: 0xe74c3c,
-      neutron_emission: 0x3498db,
+      neutron_emission: 0x9ca3af,
       double_beta_minus: 0x00ff88,
+      double_beta_plus: 0xff66aa,
       cluster_decay: 0xff8800,
     };
     const color = colorMap[type] || 0xffffff;
-    const count = type === 'alpha' ? 4 : type === 'spontaneous_fission' ? 20 : type === 'cluster_decay' ? 14 : 8;
-    const geo = new THREE.SphereGeometry(0.2, 8, 8);
+    const count = type === 'alpha' ? 5 : type === 'spontaneous_fission' ? 16 : type === 'cluster_decay' ? 10 : 7;
+    const geo = new THREE.SphereGeometry(0.12, 8, 8);
     const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 });
 
     for (let i = 0; i < count; i++) {
@@ -387,11 +481,356 @@ class DecayEffects {
       this.scene.add(mesh);
       this._particles.push({
         mesh,
-        velocity: dir.multiplyScalar(randRange(8, 20)),
-        life: 1.0,
+        velocity: dir.multiplyScalar(randRange(6, 16)),
+        life: 0.6,
         decay: randRange(0.8, 1.5),
       });
     }
+  }
+
+  _createClusterMesh(type) {
+    const group = new THREE.Group();
+    if (type === 'alpha') {
+      const protonMat = new THREE.MeshStandardMaterial({ color: PROTON_COLOR, emissive: PROTON_COLOR, emissiveIntensity: 0.2 });
+      const neutronMat = new THREE.MeshStandardMaterial({ color: NEUTRON_COLOR, emissive: NEUTRON_COLOR, emissiveIntensity: 0.12 });
+      const geo = new THREE.SphereGeometry(0.23, 14, 14);
+      const offsets = [
+        new THREE.Vector3(0.18, 0.08, 0.0),
+        new THREE.Vector3(-0.18, -0.08, 0.0),
+        new THREE.Vector3(0.08, -0.18, 0.12),
+        new THREE.Vector3(-0.08, 0.18, -0.12),
+      ];
+      offsets.forEach((off, i) => {
+        const part = new THREE.Mesh(geo, i < 2 ? protonMat : neutronMat);
+        part.position.copy(off);
+        group.add(part);
+      });
+      return group;
+    }
+
+    const clusterGeo = new THREE.SphereGeometry(0.62, 16, 16);
+    const clusterMat = new THREE.MeshStandardMaterial({ color: 0xffa34d, emissive: 0xff6a00, emissiveIntensity: 0.2 });
+    const mesh = new THREE.Mesh(clusterGeo, clusterMat);
+    group.add(mesh);
+    return group;
+  }
+
+  _fibonacciSphere(count, radius) {
+    const points = [];
+    const golden = (1 + Math.sqrt(5)) / 2;
+    for (let i = 0; i < count; i++) {
+      const theta = 2 * Math.PI * i / golden;
+      const phi = Math.acos(1 - 2 * (i + 0.5) / count);
+      const r = radius * (0.35 + 0.65 * Math.pow((i + 1) / count, 0.33));
+      points.push(new THREE.Vector3(
+        r * Math.sin(phi) * Math.cos(theta),
+        r * Math.sin(phi) * Math.sin(theta),
+        r * Math.cos(phi),
+      ));
+    }
+    return points;
+  }
+
+  _createNucleusFragment(z, n, opts = {}) {
+    const { scale = 0.58 } = opts;
+    const group = new THREE.Group();
+    const total = Math.max(1, z + n);
+    const nucleonRadius = 0.16 * scale;
+    const coreRadius = nucleonRadius * Math.pow(total, 1 / 3) * 2.4;
+
+    const protonGeo = new THREE.SphereGeometry(nucleonRadius, 12, 12);
+    const neutronGeo = new THREE.SphereGeometry(nucleonRadius, 12, 12);
+    const protonMat = new THREE.MeshStandardMaterial({ color: PROTON_COLOR, emissive: PROTON_COLOR, emissiveIntensity: 0.2, roughness: 0.35 });
+    const neutronMat = new THREE.MeshStandardMaterial({ color: NEUTRON_COLOR, emissive: NEUTRON_COLOR, emissiveIntensity: 0.12, roughness: 0.4 });
+
+    const protonMesh = new THREE.InstancedMesh(protonGeo, protonMat, Math.max(1, z));
+    const neutronMesh = new THREE.InstancedMesh(neutronGeo, neutronMat, Math.max(1, n));
+    protonMesh.count = z;
+    neutronMesh.count = n;
+
+    const positions = this._fibonacciSphere(total, coreRadius);
+    const types = Array.from({ length: total }, (_, i) => (i < z ? 'p' : 'n'));
+    for (let i = types.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [types[i], types[j]] = [types[j], types[i]];
+    }
+
+    const dummy = new THREE.Object3D();
+    let pIdx = 0;
+    let nIdx = 0;
+    for (let i = 0; i < total; i++) {
+      dummy.position.copy(positions[i]);
+      dummy.updateMatrix();
+      if (types[i] === 'p') protonMesh.setMatrixAt(pIdx++, dummy.matrix);
+      else neutronMesh.setMatrixAt(nIdx++, dummy.matrix);
+    }
+    protonMesh.instanceMatrix.needsUpdate = true;
+    neutronMesh.instanceMatrix.needsUpdate = true;
+
+    group.add(protonMesh);
+    group.add(neutronMesh);
+    return group;
+  }
+
+  _spawnProjectile(opts) {
+    const {
+      mesh,
+      origin,
+      velocity,
+      drag = 0.06,
+      life = 1.2,
+      trailColor = 0xffffff,
+      trailSize = 0.08,
+      trailRate = 0.03,
+      spin = null,
+      fadeOpacity = true,
+    } = opts;
+    mesh.position.copy(origin);
+    this.scene.add(mesh);
+    this._projectiles.push({
+      mesh,
+      velocity,
+      drag,
+      life,
+      maxLife: life,
+      trailColor,
+      trailSize,
+      trailRate,
+      trailClock: 0,
+      spin,
+      fadeOpacity,
+    });
+  }
+
+  _emitElectron(origin, direction, isPositron = false, speed = randRange(22, 32)) {
+    const color = isPositron ? 0xff5f7a : 0x66ccff;
+    const geo = new THREE.SphereGeometry(0.16, 10, 10);
+    const mat = new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.95,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    this._spawnProjectile({
+      mesh,
+      origin,
+      velocity: direction.clone().multiplyScalar(speed),
+      drag: 0.01,
+      life: 1.35,
+      trailColor: color,
+      trailSize: 0.07,
+      trailRate: 0.018,
+    });
+  }
+
+  _emitNeutrino(origin, direction) {
+    const geo = new THREE.SphereGeometry(0.08, 8, 8);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xe0f7ff,
+      transparent: true,
+      opacity: 0.32,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+    const mesh = new THREE.Mesh(geo, mat);
+    this._spawnProjectile({
+      mesh,
+      origin,
+      velocity: direction.clone().multiplyScalar(randRange(30, 38)),
+      drag: 0,
+      life: 0.55,
+      trailColor: 0xe0f7ff,
+      trailSize: 0.03,
+      trailRate: 0.025,
+    });
+  }
+
+  _emitGammaPair(origin, axisDir) {
+    const axis = axisDir.clone().normalize();
+    const makeGamma = (dir) => {
+      const geo = new THREE.SphereGeometry(0.1, 8, 8);
+      const mat = new THREE.MeshBasicMaterial({ color: 0xfff07a, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+      const mesh = new THREE.Mesh(geo, mat);
+      this._spawnProjectile({
+        mesh,
+        origin,
+        velocity: dir.multiplyScalar(randRange(30, 40)),
+        drag: 0,
+        life: 0.45,
+        trailColor: 0xfff07a,
+        trailSize: 0.035,
+        trailRate: 0.014,
+      });
+    };
+    makeGamma(axis.clone());
+    makeGamma(axis.clone().multiplyScalar(-1));
+  }
+
+  _emitFissionFragments(context) {
+    const { origin, result } = context;
+    const secondary = result.fissionProduct;
+    if (!secondary) return null;
+
+    const a1 = result.z + result.n;
+    const a2 = secondary.z + secondary.n;
+    const total = Math.max(1, a1 + a2);
+    const splitDir = randomOnSphere(1).normalize();
+
+    // The parent nucleus remains as daughter A in place; only daughter B is emitted.
+    const fragB = this._createNucleusFragment(secondary.z, secondary.n, { scale: 0.64 });
+    fragB.position.copy(origin);
+    this.scene.add(fragB);
+
+    const speedB = randRange(6, 8) * (a1 / total);
+
+    this._projectiles.push({
+      mesh: fragB,
+      velocity: splitDir.clone().multiplyScalar(speedB),
+      drag: 0.03,
+      life: 5,
+      trailColor: 0xffdd91,
+      trailSize: 0.07,
+      trailRate: 0.08,
+      trailClock: 0,
+      spin: new THREE.Vector3(randRange(0.8, 1.6), randRange(0.8, 1.6), randRange(0.8, 1.6)),
+      isFragment: true,
+      fadeOpacity: false,
+    });
+
+    const freeNeutrons = Math.min(3, Math.max(2, result.fissionProduct.n > 2 ? 3 : 2));
+    for (let i = 0; i < freeNeutrons; i++) {
+      const nOrigin = origin.clone().add(randomOnSphere(0.8));
+      const nDir = randomOnSphere(1).normalize();
+      const geo = new THREE.SphereGeometry(0.16, 10, 10);
+      const mat = new THREE.MeshBasicMaterial({ color: NEUTRON_COLOR, transparent: true, opacity: 0.9 });
+      const mesh = new THREE.Mesh(geo, mat);
+      this._spawnProjectile({
+        mesh,
+        origin: nOrigin,
+        velocity: nDir.multiplyScalar(randRange(14, 20)),
+        drag: 0.03,
+        life: 5,
+        trailColor: 0xb9c0cc,
+        trailSize: 0.06,
+        trailRate: 0.02,
+      });
+    }
+
+    return { trackFragment: fragB, direction: splitDir };
+  }
+
+  /** Mode-specific physically-inspired emissions */
+  emit(type, context = {}) {
+    const origin = context.origin || new THREE.Vector3();
+    const recoilDirection = context.recoilDirection || emissionDirectionFrom(origin);
+
+    this._spawnFlash(origin, type === 'spontaneous_fission' ? 0xff9d43 : 0xffdd88, type === 'spontaneous_fission' ? 3.4 : 2.0, 0.18);
+    this._spawnBurst(type, origin);
+
+    if (type === 'alpha') {
+      const alphaMesh = this._createClusterMesh('alpha');
+      this._spawnProjectile({
+        mesh: alphaMesh,
+        origin,
+        velocity: recoilDirection.clone().multiplyScalar(randRange(8, 11)),
+        drag: 0.22,
+        life: 1.35,
+        trailColor: 0xffd470,
+        trailSize: 0.09,
+        trailRate: 0.03,
+        spin: new THREE.Vector3(0.8, 0.9, 0.7),
+      });
+      return { recoilDirection, recoilStrength: 1.2 };
+    }
+
+    if (type === 'beta_minus') {
+      this._emitElectron(origin, recoilDirection, false);
+      this._emitNeutrino(origin, emissionDirectionFrom(origin, 0.34));
+      return { recoilDirection, recoilStrength: 0.55 };
+    }
+
+    if (type === 'beta_plus') {
+      this._emitElectron(origin, recoilDirection, true);
+      this._emitNeutrino(origin, emissionDirectionFrom(origin, 0.34));
+
+      if (Math.random() < 0.38) {
+        const annihilationPoint = origin.clone().add(recoilDirection.clone().multiplyScalar(randRange(7, 11)));
+        setTimeout(() => {
+          this._spawnFlash(annihilationPoint, 0xffb3c1, 1.6, 0.14);
+          this._emitGammaPair(annihilationPoint, randomOnSphere(1));
+        }, randRange(180, 340));
+      }
+      return { recoilDirection, recoilStrength: 0.55 };
+    }
+
+    if (type === 'double_beta_minus' || type === 'double_beta_plus') {
+      const positron = type === 'double_beta_plus';
+      const o1 = origin.clone().add(randomOnSphere(0.28));
+      const o2 = origin.clone().add(randomOnSphere(0.28));
+      const d1 = emissionDirectionFrom(o1, 0.2);
+      const d2 = emissionDirectionFrom(o2, 0.2);
+      this._emitElectron(o1, d1, positron, randRange(21, 30));
+      this._emitElectron(o2, d2, positron, randRange(21, 30));
+      this._emitNeutrino(o1, emissionDirectionFrom(o1, 0.32));
+      this._emitNeutrino(o2, emissionDirectionFrom(o2, 0.32));
+      return { recoilDirection, recoilStrength: 0.75 };
+    }
+
+    if (type === 'cluster_decay') {
+      const emittedZ = Math.max(1, (context.z ?? 0) - (context.result?.z ?? 0));
+      const emittedN = Math.max(0, (context.n ?? 0) - (context.result?.n ?? 0));
+      const clusterMesh = this._createNucleusFragment(emittedZ, emittedN, { scale: 0.7 });
+      this._spawnProjectile({
+        mesh: clusterMesh,
+        origin,
+        velocity: recoilDirection.clone().multiplyScalar(randRange(7, 9.5)),
+        drag: 0.04,
+        life: 5,
+        trailColor: 0xff9f4d,
+        trailSize: 0.07,
+        trailRate: 0.08,
+        spin: new THREE.Vector3(0.5, 0.8, 0.6),
+        fadeOpacity: false,
+      });
+      return { recoilDirection, recoilStrength: 1.05 };
+    }
+
+    if (type === 'spontaneous_fission') {
+      const fissionMeta = this._emitFissionFragments({ ...context, origin });
+      return {
+        recoilDirection,
+        recoilStrength: 1.3,
+        cameraTrack: fissionMeta ? fissionMeta.trackFragment : null,
+      };
+    }
+
+    if (type === 'proton_emission' || type === 'neutron_emission') {
+      const isProton = type === 'proton_emission';
+      const geo = new THREE.SphereGeometry(0.2, 12, 12);
+      const color = isProton ? PROTON_COLOR : NEUTRON_COLOR;
+      const mat = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 0.2 });
+      const mesh = new THREE.Mesh(geo, mat);
+      this._spawnProjectile({
+        mesh,
+        origin,
+        velocity: recoilDirection.clone().multiplyScalar(randRange(11, 16)),
+        drag: 0.09,
+        life: 1.15,
+        trailColor: color,
+        trailSize: 0.07,
+        trailRate: 0.022,
+      });
+      return { recoilDirection, recoilStrength: 0.7 };
+    }
+
+    if (type === 'gamma' || type === 'electron_capture') {
+      this._emitGammaPair(origin, recoilDirection);
+      return { recoilDirection, recoilStrength: 0.3 };
+    }
+
+    return { recoilDirection, recoilStrength: 0.5 };
   }
 
   tick(dt) {
@@ -406,6 +845,66 @@ class DecayEffects {
         p.mesh.geometry.dispose();
         p.mesh.material.dispose();
         this._particles.splice(i, 1);
+      }
+    }
+
+    for (let i = this._projectiles.length - 1; i >= 0; i--) {
+      const p = this._projectiles[i];
+      p.velocity.multiplyScalar(Math.max(0, 1 - p.drag * dt));
+      p.mesh.position.addScaledVector(p.velocity, dt);
+      if (p.spin) {
+        p.mesh.rotation.x += p.spin.x * dt;
+        p.mesh.rotation.y += p.spin.y * dt;
+        p.mesh.rotation.z += p.spin.z * dt;
+      }
+
+      p.trailClock += dt;
+      if (p.trailClock >= p.trailRate) {
+        p.trailClock = 0;
+        this._spawnTrailMote(p.mesh.position, p.trailColor, p.trailSize, p.isFragment ? 0.4 : 0.24);
+      }
+
+      p.life -= dt;
+      if (p.fadeOpacity && p.mesh.material && p.mesh.material.opacity !== undefined) {
+        p.mesh.material.opacity = Math.max(0, p.life / p.maxLife);
+      }
+      if (p.life <= 0) {
+        this.scene.remove(p.mesh);
+        p.mesh.traverse((obj) => {
+          if (obj.geometry) obj.geometry.dispose();
+          if (obj.material) {
+            if (Array.isArray(obj.material)) obj.material.forEach((m) => m.dispose());
+            else obj.material.dispose();
+          }
+        });
+        this._projectiles.splice(i, 1);
+      }
+    }
+
+    for (let i = this._flashes.length - 1; i >= 0; i--) {
+      const f = this._flashes[i];
+      f.life -= dt;
+      const t = Math.max(0, f.life / f.maxLife);
+      f.mesh.material.opacity = 0.55 * t;
+      f.mesh.scale.setScalar(1 + (1 - t) * 0.8);
+      if (f.life <= 0) {
+        this.scene.remove(f.mesh);
+        f.mesh.geometry.dispose();
+        f.mesh.material.dispose();
+        this._flashes.splice(i, 1);
+      }
+    }
+
+    for (let i = this._trailMotes.length - 1; i >= 0; i--) {
+      const t = this._trailMotes[i];
+      t.life -= dt;
+      t.mesh.material.opacity = Math.max(0, 0.8 * (t.life / t.maxLife));
+      t.mesh.scale.setScalar(0.85 + (1 - (t.life / t.maxLife)) * 1.5);
+      if (t.life <= 0) {
+        this.scene.remove(t.mesh);
+        t.mesh.geometry.dispose();
+        t.mesh.material.dispose();
+        this._trailMotes.splice(i, 1);
       }
     }
   }
@@ -425,6 +924,8 @@ export class NuclearDecayApp {
     this.decayHistory = [];
     this.autoDecay = false;
     this._autoDecayTimer = null;
+    this._cameraTween = null;
+    this._cameraTrack = null;
   }
 
   async init() {
@@ -455,6 +956,7 @@ export class NuclearDecayApp {
       this.nucleus.tick(dt);
       this.nucleus.rotate(dt);
       this.effects.tick(dt);
+      this._tickCamera(dt);
     });
     this.engine.start();
   }
@@ -469,13 +971,13 @@ export class NuclearDecayApp {
     this._zSlider = panel.addSlider('Protons (Z)', 1, 118, this.z, (v) => {
       this.z = clamp(v, 1, 118);
       this._clampNeutrons();
-      this._rebuildAndUpdate();
+      this._rebuildAndUpdate(false);
     });
 
     this._nDisplay = panel.addDisplay('n-val', '');
     this._nSlider = panel.addSlider('Neutrons (N)', minNeutronsForZ(this.z), maxNeutronsForZ(this.z), this.n, (v) => {
       this.n = v;
-      this._rebuildAndUpdate();
+      this._rebuildAndUpdate(false);
     });
 
     panel.addButton('+ Proton', () => this._addProton(), 'miniapp-btn--proton');
@@ -595,7 +1097,7 @@ export class NuclearDecayApp {
     this._nSlider.max = maxNeutronsForZ(z);
     this._nSlider.setValue(n);
     this.decayHistory = [];
-    this._rebuildAndUpdate();
+    this._rebuildAndUpdate(false);
   }
 
   _triggerDecay(mode) {
@@ -612,15 +1114,101 @@ export class NuclearDecayApp {
       emitted: result.emitted,
     });
 
-    // Visual effect
-    this.effects.emit(mode);
+    const nucleusRadius = nucleusRadiusFromCounts(this.z, this.n);
+    const origin = randomEmissionOrigin(nucleusRadius);
+    const recoilDirection = emissionDirectionFrom(origin, 0.18);
+
+    if (mode === 'spontaneous_fission') {
+      this.nucleus.shake(0.55, 0.42);
+      const fx = this.effects.emit(mode, {
+        origin,
+        recoilDirection,
+        nucleusRadius,
+        z: this.z,
+        n: this.n,
+        result,
+      });
+      if (fx?.recoilDirection) this.nucleus.applyRecoil(fx.recoilDirection, fx.recoilStrength || 1.1);
+      if (fx?.cameraTrack) this._trackCameraTarget(fx.cameraTrack, 1.6, 24);
+
+      setTimeout(() => {
+        this.z = result.z;
+        this.n = result.n;
+        this._zSlider.setValue(this.z);
+        this._clampNeutrons();
+        this._nSlider.setValue(this.n);
+        this._rebuildAndUpdate(false);
+      }, 420);
+      return;
+    }
+
+    const fx = this.effects.emit(mode, {
+      origin,
+      recoilDirection,
+      nucleusRadius,
+      z: this.z,
+      n: this.n,
+      result,
+    });
+    if (fx?.recoilDirection) this.nucleus.applyRecoil(fx.recoilDirection, fx.recoilStrength || 0.7);
 
     this.z = result.z;
     this.n = result.n;
     this._zSlider.setValue(this.z);
     this._clampNeutrons();
     this._nSlider.setValue(this.n);
-    this._rebuildAndUpdate();
+    this._rebuildAndUpdate(false);
+  }
+
+  _focusCamera(target, distance = 28, duration = 1.0) {
+    const camera = this.engine.camera;
+    const controls = this.engine.controls;
+    const currentTarget = controls ? controls.target.clone() : new THREE.Vector3();
+    const viewDir = camera.position.clone().sub(currentTarget).normalize();
+    const destination = target.clone().addScaledVector(viewDir, distance);
+
+    this._cameraTween = {
+      t: 0,
+      duration,
+      fromPos: camera.position.clone(),
+      toPos: destination,
+      fromTarget: currentTarget,
+      toTarget: target.clone(),
+    };
+  }
+
+  _trackCameraTarget(object3D, duration = 1.4, distance = 24) {
+    this._cameraTrack = { object3D, duration, distance, elapsed: 0 };
+  }
+
+  _tickCamera(dt) {
+    const camera = this.engine.camera;
+    const controls = this.engine.controls;
+
+    if (this._cameraTrack) {
+      this._cameraTrack.elapsed += dt;
+      const target = this._cameraTrack.object3D.position.clone();
+      const currentTarget = controls ? controls.target : new THREE.Vector3();
+      const viewDir = camera.position.clone().sub(currentTarget).normalize();
+      const desiredPos = target.clone().addScaledVector(viewDir, this._cameraTrack.distance);
+
+      camera.position.lerp(desiredPos, 1 - Math.exp(-4 * dt));
+      if (controls) controls.target.lerp(target, 1 - Math.exp(-5 * dt));
+
+      if (this._cameraTrack.elapsed >= this._cameraTrack.duration) {
+        this._cameraTrack = null;
+      }
+    }
+
+    if (!this._cameraTween) return;
+
+    this._cameraTween.t += dt / this._cameraTween.duration;
+    const k = clamp(this._cameraTween.t, 0, 1);
+    const eased = 1 - Math.pow(1 - k, 3);
+    camera.position.lerpVectors(this._cameraTween.fromPos, this._cameraTween.toPos, eased);
+    if (controls) controls.target.lerpVectors(this._cameraTween.fromTarget, this._cameraTween.toTarget, eased);
+
+    if (k >= 1) this._cameraTween = null;
   }
 
   _runAutoDecay() {
@@ -640,8 +1228,8 @@ export class NuclearDecayApp {
     }, 1200);
   }
 
-  _rebuildAndUpdate() {
-    this.nucleus.build(this.z, this.n);
+  _rebuildAndUpdate(scatter = true) {
+    this.nucleus.build(this.z, this.n, { scatter });
     this._updateAllUI();
   }
 
@@ -695,6 +1283,7 @@ export class NuclearDecayApp {
         proton_emission: 'p Proton',
         neutron_emission: 'n Neutron',
         double_beta_minus: '2β⁻ Double Beta',
+        double_beta_plus: '2β⁺ Double Beta+',
         cluster_decay: '☢ Cluster',
       };
       this._decayBtnsEl.innerHTML = info.decayModes
