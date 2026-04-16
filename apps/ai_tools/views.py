@@ -124,12 +124,19 @@ def assistant_chat(request):
         import openai
 
         client = openai.OpenAI(api_key=api_key)
-        response = client.chat.completions.create(
-            model=getattr(settings, "OPENAI_MODEL", "gpt-4o-mini"),
-            messages=llm_messages,
-            max_tokens=200,
-            temperature=0.7,
-        )
+        model = getattr(settings, "OPENAI_MODEL", "gpt-5-mini")
+        request_kwargs = {
+            "model": model,
+            "messages": llm_messages,
+        }
+        if model.startswith("gpt-5"):
+            # gpt-5 models use reasoning tokens and only support default temperature.
+            request_kwargs["max_completion_tokens"] = 2000
+        else:
+            request_kwargs["max_tokens"] = 300
+            request_kwargs["temperature"] = 0.7
+
+        response = client.chat.completions.create(**request_kwargs)
         reply = response.choices[0].message.content.strip()
         return JsonResponse({"reply": reply})
     except Exception:

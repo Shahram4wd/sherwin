@@ -140,7 +140,7 @@ SITE_URL = env("SITE_URL", default="http://localhost:8080")
 
 # AI / OpenAI
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
-OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-4o-mini")
+OPENAI_MODEL = env("OPENAI_MODEL", default="gpt-5-mini")
 
 # Session (30-day PIN sessions)
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
