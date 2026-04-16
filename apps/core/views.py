@@ -2,12 +2,10 @@ from django.core.paginator import Paginator
 from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import render
-
 from taggit.models import Tag
 
 from apps.accounts.models import UserProfile
-from apps.blog.models import Post, PostMedia
-from apps.timeline.models import TimelineEvent
+from apps.blog.models import Post
 
 from .models import AboutPage
 

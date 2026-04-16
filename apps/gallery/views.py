@@ -1,4 +1,3 @@
-from itertools import chain
 
 from django.core.paginator import Paginator
 from django.shortcuts import render

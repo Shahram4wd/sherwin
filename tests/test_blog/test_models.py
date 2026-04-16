@@ -1,4 +1,5 @@
 import pytest
+
 from apps.blog.models import Post, PostCategory
 
 

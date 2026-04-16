@@ -4,7 +4,7 @@ from django.contrib import admin
 from django.contrib.sitemaps.views import sitemap
 from django.urls import include, path
 
-from apps.blog.feeds import LatestPostsFeed, LatestSnapsFeed
+from apps.blog.feeds import LatestSnapsFeed
 from apps.core.sitemaps import PostSitemap, StaticViewSitemap
 
 sitemaps = {

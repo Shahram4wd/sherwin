@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone
-from unfold.admin import ModelAdmin, StackedInline, TabularInline
+from unfold.admin import ModelAdmin, TabularInline
 
 from .models import Post, PostCategory, PostMedia
 

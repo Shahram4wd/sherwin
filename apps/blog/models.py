@@ -175,7 +175,7 @@ class Post(models.Model):
             if len(self.body) > 50:
                 self.title += "…"
         if not self.title:
-            self.title = f"Snap"
+            self.title = "Snap"
         if not self.slug:
             base = slugify(self.title) or "snap"
             slug = base
