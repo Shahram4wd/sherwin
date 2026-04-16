@@ -22,6 +22,7 @@ urlpatterns = [
     path("timeline/", include("apps.timeline.urls")),
     path("highlights/", include("apps.gallery.urls")),
     path("lab/", include("apps.miniapps.urls")),
+    path("ai/", include("apps.ai_tools.urls")),
     path(
         "sitemap.xml",
         sitemap,

@@ -10,3 +10,4 @@ django-unfold>=0.30
 Pillow>=10.0
 django-imagekit>=5.0
 django-environ>=0.11
+openai>=1.0

@@ -1,0 +1,466 @@
+/* ================================================================
+   Sherwin Universe — Mini-App Shared Styles
+   Base styles used by ALL mini-apps / simulations.
+   Each game can add scoped overrides via its own class.
+   ================================================================ */
+
+/* --- Canvas container -------------------------------------------- */
+.miniapp-container {
+  position: relative;
+  width: 100%;
+  height: 75vh;
+  min-height: 500px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #080810;
+}
+@media (min-width: 768px) {
+  .miniapp-container { height: 80vh; }
+}
+
+/* --- Overlay panels ---------------------------------------------- */
+.miniapp-panel {
+  position: absolute;
+  z-index: 20;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(10, 10, 20, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #e5e7eb;
+  font-size: 13px;
+  max-height: 50%;
+  overflow-y: auto;
+  pointer-events: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+.miniapp-panel--top-left     { top: 12px;  left: 12px;  max-width: 240px; }
+.miniapp-panel--top-right    { top: 12px;  right: 12px; max-width: 220px; }
+.miniapp-panel--bottom-left  { bottom: 12px; left: 12px;  max-width: 260px; }
+.miniapp-panel--bottom-right { bottom: 12px; right: 12px; max-width: 240px; }
+
+@media (max-width: 640px) {
+  .miniapp-panel { font-size: 11px; padding: 8px 10px; max-width: 48% !important; }
+}
+
+/* --- Title / subtitle -------------------------------------------- */
+.miniapp-title {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 16px;
+  color: #fff;
+  margin-bottom: 10px;
+}
+.miniapp-subtitle {
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: #d1d5db;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* --- Buttons ----------------------------------------------------- */
+.miniapp-btn {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin: 3px 4px 3px 0;
+}
+.miniapp-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.miniapp-btn--proton  { border-color: rgba(231,76,60,0.4); color: #f87171; }
+.miniapp-btn--proton:hover { background: rgba(231,76,60,0.15); }
+.miniapp-btn--neutron { border-color: rgba(52,152,219,0.4); color: #60a5fa; }
+.miniapp-btn--neutron:hover { background: rgba(52,152,219,0.15); }
+.miniapp-btn--reset   { border-color: rgba(255,255,255,0.2); color: #9ca3af; }
+.miniapp-btn--decay   { margin-bottom: 4px; }
+.miniapp-btn--alpha            { border-color: rgba(255,215,0,0.4);  color: #fbbf24; }
+.miniapp-btn--beta_minus       { border-color: rgba(0,255,204,0.4);  color: #34d399; }
+.miniapp-btn--beta_plus        { border-color: rgba(255,102,255,0.4);color: #e879f9; }
+.miniapp-btn--electron_capture { border-color: rgba(102,204,255,0.4);color: #7dd3fc; }
+.miniapp-btn--gamma            { border-color: rgba(255,255,0,0.4);  color: #fde047; }
+
+/* --- Slider ------------------------------------------------------ */
+.miniapp-slider-group {
+  margin: 6px 0;
+}
+.miniapp-slider-group label {
+  display: block;
+  font-size: 12px;
+  color: #9ca3af;
+  margin-bottom: 2px;
+}
+.miniapp-slider-group label span {
+  color: #e5e7eb;
+  font-weight: 600;
+}
+.miniapp-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+}
+.miniapp-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ef4444;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.2);
+}
+.miniapp-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ef4444;
+  cursor: pointer;
+  border: 2px solid rgba(255,255,255,0.2);
+}
+
+/* --- Display fields ---------------------------------------------- */
+.miniapp-display {
+  margin: 4px 0;
+}
+
+/* --- Info grid (nuclear sim specific but generic enough) ---------- */
+.miniapp-info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.miniapp-info-big {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 2px;
+}
+.miniapp-info-symbol {
+  font-family: 'Space Grotesk', monospace;
+  font-size: 32px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+.miniapp-info-mass {
+  font-size: 14px;
+  color: #9ca3af;
+  vertical-align: super;
+}
+.miniapp-info-name {
+  font-size: 14px;
+  color: #d1d5db;
+  margin-bottom: 6px;
+}
+.miniapp-info-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  padding: 1px 0;
+}
+.miniapp-info-row span:first-child { color: #9ca3af; }
+.miniapp-info-note {
+  font-size: 11px;
+  color: #6b7280;
+  font-style: italic;
+  margin-top: 4px;
+}
+.miniapp-info-heuristic {
+  color: #92400e;
+}
+
+/* --- Badges ------------------------------------------------------ */
+.miniapp-badges { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
+.miniapp-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.miniapp-badge--magic  { background: rgba(139,92,246,0.15); color: #a78bfa; border: 1px solid rgba(139,92,246,0.3); }
+.miniapp-badge--double { background: rgba(250,204,21,0.15); color: #fbbf24; border: 1px solid rgba(250,204,21,0.3); }
+
+/* --- History list ------------------------------------------------ */
+.miniapp-history-step {
+  font-size: 11px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: #d1d5db;
+}
+.miniapp-history-idx { color: #6b7280; margin-right: 4px; }
+.miniapp-history-mode {
+  font-size: 10px;
+  background: rgba(255,255,255,0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  color: #9ca3af;
+}
+
+/* --- Preset bar -------------------------------------------------- */
+.miniapp-presets {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(10, 10, 20, 0.8);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.miniapp-presets-label {
+  font-size: 11px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.miniapp-preset-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: transparent;
+  color: #d1d5db;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.miniapp-preset-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fff;
+}
+
+/* --- Checkbox toggle --------------------------------------------- */
+.miniapp-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #9ca3af;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.miniapp-checkbox input[type="checkbox"] {
+  accent-color: #ef4444;
+  width: 14px;
+  height: 14px;
+}
+
+/* --- AI Assistant floating button -------------------------------- */
+.miniapp-ai-fab {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.4);
+  transition: all 0.2s;
+}
+.miniapp-ai-fab:hover {
+  box-shadow: 0 6px 30px rgba(99, 102, 241, 0.6);
+  transform: translateX(-50%) translateY(-2px);
+}
+.miniapp-ai-fab svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* --- AI Chat panel ----------------------------------------------- */
+.miniapp-ai-panel {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  width: 90%;
+  max-width: 420px;
+  max-height: 50vh;
+  border-radius: 16px;
+  background: rgba(10, 10, 24, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(99, 102, 241, 0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+}
+.miniapp-ai-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.miniapp-ai-header span {
+  font-weight: 600;
+  font-size: 14px;
+  color: #a5b4fc;
+}
+.miniapp-ai-close {
+  background: none;
+  border: none;
+  color: #6b7280;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+.miniapp-ai-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,0.1) transparent;
+}
+.miniapp-ai-msg {
+  max-width: 85%;
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.miniapp-ai-msg--user {
+  align-self: flex-end;
+  background: rgba(99, 102, 241, 0.2);
+  color: #c7d2fe;
+  border-bottom-right-radius: 4px;
+}
+.miniapp-ai-msg--assistant {
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e5e7eb;
+  border-bottom-left-radius: 4px;
+}
+.miniapp-ai-msg--thinking {
+  align-self: flex-start;
+  color: #6b7280;
+  font-style: italic;
+}
+.miniapp-ai-input-row {
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.miniapp-ai-input {
+  flex: 1;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e5e7eb;
+  font-size: 13px;
+  outline: none;
+}
+.miniapp-ai-input::placeholder { color: #6b7280; }
+.miniapp-ai-input:focus { border-color: rgba(99, 102, 241, 0.4); }
+.miniapp-ai-voice-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #9ca3af;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.miniapp-ai-voice-btn:hover { background: rgba(99, 102, 241, 0.15); color: #a5b4fc; }
+.miniapp-ai-voice-btn.recording {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+  animation: pulse-recording 1.5s ease-in-out infinite;
+}
+@keyframes pulse-recording {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+}
+.miniapp-ai-send-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.miniapp-ai-send-btn:hover { opacity: 0.85; }
+
+/* ================================================================
+   Light theme overrides for mini-app panels
+   ================================================================ */
+[data-theme="light"] .miniapp-container {
+  background: #f0f0f5;
+}
+[data-theme="light"] .miniapp-panel {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: #374151;
+}
+[data-theme="light"] .miniapp-title { color: #111827; }
+[data-theme="light"] .miniapp-subtitle { color: #4b5563; }
+[data-theme="light"] .miniapp-btn {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #374151;
+}
+[data-theme="light"] .miniapp-btn:hover { background: rgba(0, 0, 0, 0.08); }
+[data-theme="light"] .miniapp-info-symbol { color: #111827; }
+[data-theme="light"] .miniapp-info-name { color: #374151; }
+[data-theme="light"] .miniapp-info-row span:first-child { color: #6b7280; }
+[data-theme="light"] .miniapp-presets {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+[data-theme="light"] .miniapp-preset-btn { color: #374151; border-color: rgba(0,0,0,0.1); }
+[data-theme="light"] .miniapp-preset-btn:hover { background: rgba(239,68,68,0.1); }
+[data-theme="light"] .miniapp-ai-panel {
+  background: rgba(255, 255, 255, 0.97);
+  border-color: rgba(99, 102, 241, 0.15);
+}
+[data-theme="light"] .miniapp-ai-msg--assistant { background: rgba(0,0,0,0.04); color: #374151; }
+[data-theme="light"] .miniapp-ai-msg--user { background: rgba(99,102,241,0.1); color: #4338ca; }
+[data-theme="light"] .miniapp-ai-input { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); color: #374151; }
