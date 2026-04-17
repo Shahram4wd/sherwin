@@ -5,6 +5,7 @@ import {
   clamp,
   lerp,
 } from './engine.js';
+import { DestructibleMesh, FractureOptions } from '@dgreenheck/three-pinata';
 
 const GRAPH_WINDOW_SEC = 45;
 const DEFAULT_PRESSURE_MPA = 12;
@@ -13,6 +14,12 @@ const SI_UNITS = 'si';
 const MAX_PISTON_DIAMETER_M = 0.32;
 const MAX_FORCE_KN = 780_000;
 const MAX_PRESSURE_PA = (MAX_FORCE_KN * 1000) / areaFromDiameter(MAX_PISTON_DIAMETER_M);
+const FRACTURE_BASE_FRAGMENT_COUNT = 16;
+const FRACTURE_MAX_FRAGMENT_COUNT = 30;
+const FLOOR_TOP_Y = -4.2;
+const FRAGMENT_BOUNCE = 0.35;
+const FRAGMENT_FLOOR_FRICTION = 0.84;
+const FRAGMENT_SLEEP_SPEED = 0.18;
 
 function areaFromDiameter(diameterM) {
   return Math.PI * Math.pow(diameterM / 2, 2);
@@ -161,6 +168,9 @@ export class HydraulicsLabApp {
     this.materialCompression = 0;
     this.pressureDropPulse = 0;
     this._graphSampleAccumulator = 0;
+    this.materialFragments = [];
+    this.materialFragmentVelocities = [];
+    this.materialFractured = false;
   }
 
   async init() {
@@ -235,9 +245,12 @@ export class HydraulicsLabApp {
     this.pressPlate.position.set(0, -1.75, 0);
     scene.add(this.pressPlate);
 
-    this.materialMesh = new THREE.Mesh(
+    const outerMaterial = new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: 0.8 });
+    const innerMaterial = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.9, metalness: 0.05 });
+    this.materialMesh = new DestructibleMesh(
       new THREE.BoxGeometry(2.4, 2.2, 2.4),
-      new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: 0.8 })
+      outerMaterial,
+      innerMaterial
     );
     this.materialMesh.position.set(0, -3.1, 0);
     scene.add(this.materialMesh);
@@ -275,6 +288,8 @@ export class HydraulicsLabApp {
       this.materialKey,
       (value) => {
         this.materialKey = value;
+        this._clearFractureFragments();
+        this._restoreMaterialBlock();
         this._updateMaterialAppearance();
         this._updateAllUI();
       }
@@ -361,6 +376,8 @@ export class HydraulicsLabApp {
     this._valveSlider.setValue(Math.round(preset.valve * 100));
     this._diameterSlider.setValue(Math.round(preset.diameterM * 1000));
     this._materialSelect.value = preset.material;
+    this._clearFractureFragments();
+    this._restoreMaterialBlock();
     this._updateMaterialAppearance();
     this._pushEvent(`Loaded ${preset.label} preset`, 'preset');
     this._updateAllUI();
@@ -412,6 +429,8 @@ export class HydraulicsLabApp {
     this.materialCompression = 0;
     this.pressureDropPulse = 0;
     this._graphSampleAccumulator = 0;
+    this._clearFractureFragments();
+    this._restoreMaterialBlock();
     this.graph.clear();
     this._pressureSlider.setValue(DEFAULT_PRESSURE_MPA);
     this._valveSlider.setValue(70);
@@ -489,6 +508,7 @@ export class HydraulicsLabApp {
     if (this.stage === 'Crush' && this.lastEvent !== 'Material crush threshold reached') {
       this.pressureDropPulse = 1;
       this.running = false;
+      this._fractureMaterial();
       this._pushEvent('Material crush threshold reached', 'crush');
       return;
     }
@@ -522,16 +542,137 @@ export class HydraulicsLabApp {
     this.ram.position.y = lerp(this.ram.position.y, targetPlateY + 2.35, 1 - Math.exp(-4 * dt));
 
     const emissive = clamp(this.currentPressurePa / MAX_PRESSURE_PA, 0, 1) * 0.35;
-    this.materialMesh.material.emissive = new THREE.Color(material.color);
-    this.materialMesh.material.emissiveIntensity = emissive;
+    const meshMaterial = this.materialMesh.material;
+    if (Array.isArray(meshMaterial)) {
+      if (meshMaterial[0]) {
+        meshMaterial[0].emissive = new THREE.Color(material.color);
+        meshMaterial[0].emissiveIntensity = emissive;
+      }
+      if (meshMaterial[1]) {
+        meshMaterial[1].emissiveIntensity = emissive * 0.3;
+      }
+    } else {
+      meshMaterial.emissive = new THREE.Color(material.color);
+      meshMaterial.emissiveIntensity = emissive;
+    }
+
+    if (this.materialFragments.length > 0) {
+      this.materialFragments.forEach((fragment, index) => {
+        const velocity = this.materialFragmentVelocities[index];
+        if (!velocity) return;
+        velocity.y -= 6.2 * dt;
+        velocity.multiplyScalar(Math.exp(-0.65 * dt));
+        fragment.position.addScaledVector(velocity, dt);
+
+        const fragmentRadius = Number(fragment.userData.floorRadius || 0.14);
+        const minY = FLOOR_TOP_Y + fragmentRadius;
+        if (fragment.position.y < minY) {
+          fragment.position.y = minY;
+          if (velocity.y < 0) {
+            velocity.y = -velocity.y * FRAGMENT_BOUNCE;
+          }
+          velocity.x *= FRAGMENT_FLOOR_FRICTION;
+          velocity.z *= FRAGMENT_FLOOR_FRICTION;
+          if (velocity.lengthSq() < FRAGMENT_SLEEP_SPEED * FRAGMENT_SLEEP_SPEED) {
+            velocity.set(0, 0, 0);
+          }
+        }
+
+        fragment.rotation.x += (0.8 + index * 0.015) * dt;
+        fragment.rotation.y += (0.5 + index * 0.01) * dt;
+      });
+    }
   }
 
   _updateMaterialAppearance() {
     const material = this.materials[this.materialKey];
     if (!material || !this.materialMesh) return;
-    this.materialMesh.material.color = new THREE.Color(material.color);
-    this.materialMesh.material.emissive = new THREE.Color(material.color);
-    this.materialMesh.material.emissiveIntensity = 0;
+    const outerColor = new THREE.Color(material.color);
+    const innerColor = outerColor.clone().multiplyScalar(0.28);
+
+    const meshMaterial = this.materialMesh.material;
+    if (Array.isArray(meshMaterial)) {
+      if (meshMaterial[0]) meshMaterial[0].color = outerColor;
+      if (meshMaterial[0]) meshMaterial[0].emissive = outerColor.clone();
+      if (meshMaterial[0]) meshMaterial[0].emissiveIntensity = 0;
+      if (meshMaterial[1]) meshMaterial[1].color = innerColor;
+      if (meshMaterial[1]) meshMaterial[1].emissive = innerColor.clone();
+      if (meshMaterial[1]) meshMaterial[1].emissiveIntensity = 0;
+      return;
+    }
+
+    meshMaterial.color = outerColor;
+    meshMaterial.emissive = outerColor;
+    meshMaterial.emissiveIntensity = 0;
+  }
+
+  _fractureMaterial() {
+    if (!this.materialMesh || this.materialFractured) return;
+
+    const pressureRatio = clamp(this.currentPressurePa / MAX_PRESSURE_PA, 0, 1);
+    const fragmentCount = Math.round(
+      lerp(FRACTURE_BASE_FRAGMENT_COUNT, FRACTURE_MAX_FRAGMENT_COUNT, pressureRatio)
+    );
+    const fractureOptions = new FractureOptions({
+      fractureMethod: 'voronoi',
+      fragmentCount,
+      voronoiOptions: {
+        mode: '3D',
+        impactPoint: new THREE.Vector3(0, 0.5, 0),
+        impactRadius: 0.7,
+      },
+      seed: Math.floor((this.timeSec * 1000) + pressureRatio * 1000),
+    });
+
+    const sourcePosition = this.materialMesh.position.clone();
+    const baseImpulse = lerp(1.2, 3.6, pressureRatio);
+
+    this.materialFragments = this.materialMesh.fracture(fractureOptions, (fragment) => {
+      const direction = fragment.position.clone().sub(sourcePosition).normalize();
+      direction.y = Math.abs(direction.y) + 0.35;
+      direction.normalize();
+      const randomImpulse = 0.65 + Math.random() * 0.8;
+      this.materialFragmentVelocities.push(direction.multiplyScalar(baseImpulse * randomImpulse));
+
+      fragment.geometry.computeBoundingSphere();
+      const localRadius = fragment.geometry.boundingSphere?.radius || 0.2;
+      const averageScale = (fragment.scale.x + fragment.scale.y + fragment.scale.z) / 3;
+      fragment.userData.floorRadius = localRadius * averageScale;
+
+      fragment.castShadow = true;
+      fragment.receiveShadow = true;
+      this.engine.scene.add(fragment);
+    });
+
+    this.materialMesh.visible = false;
+    this.materialFractured = true;
+  }
+
+  _clearFractureFragments() {
+    if (!this.engine?.scene || this.materialFragments.length === 0) {
+      this.materialFragments = [];
+      this.materialFragmentVelocities = [];
+      this.materialFractured = false;
+      return;
+    }
+
+    this.materialFragments.forEach((fragment) => {
+      this.engine.scene.remove(fragment);
+      if (fragment.geometry) {
+        fragment.geometry.dispose();
+      }
+    });
+
+    this.materialFragments = [];
+    this.materialFragmentVelocities = [];
+    this.materialFractured = false;
+  }
+
+  _restoreMaterialBlock() {
+    if (!this.materialMesh) return;
+    this.materialMesh.visible = true;
+    this.materialMesh.position.set(0, -3.1, 0);
+    this.materialMesh.scale.set(1, 1, 1);
   }
 
   _pushEvent(note, type) {
@@ -546,7 +687,7 @@ export class HydraulicsLabApp {
     const material = this.materials[this.materialKey];
     const pressureMpa = this.currentPressurePa / 1_000_000;
     const stageDescription = this.stage === 'Crush'
-      ? 'Structure has failed and pressure will collapse.'
+      ? 'Structure has failed and fragments have separated from the core block.'
       : this.stage === 'Yield'
         ? 'Permanent deformation is underway.'
         : 'Material is still in the elastic response range.';
@@ -627,6 +768,7 @@ export class HydraulicsLabApp {
   }
 
   dispose() {
+    this._clearFractureFragments();
     this.engine.dispose();
   }
 }
