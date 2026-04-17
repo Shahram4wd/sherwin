@@ -53,6 +53,76 @@
       "crushMpa": 900,
       "deformationBias": 0.2,
       "source": "High-strength refractory metal reference range"
+    },
+    "steel_4340": {
+      "name": "Steel 4340 (Heat-Treated)",
+      "code": "4340",
+      "color": "#94a3b8",
+      "elasticMpa": 760,
+      "yieldMpa": 980,
+      "crushMpa": 1300,
+      "deformationBias": 0.24,
+      "source": "Typical high-strength alloy steel condition range"
+    },
+    "maraging_steel": {
+      "name": "Maraging Steel (Grade 300)",
+      "code": "M300",
+      "color": "#cbd5e1",
+      "elasticMpa": 1200,
+      "yieldMpa": 1700,
+      "crushMpa": 2200,
+      "deformationBias": 0.18,
+      "source": "Common maraging steel strength reference values"
+    },
+    "titanium_ti64": {
+      "name": "Titanium Ti-6Al-4V",
+      "code": "Ti-64",
+      "color": "#a5b4fc",
+      "elasticMpa": 640,
+      "yieldMpa": 880,
+      "crushMpa": 1180,
+      "deformationBias": 0.26,
+      "source": "Typical aerospace titanium alloy mechanical property range"
+    },
+    "si_carbide": {
+      "name": "Silicon Carbide Ceramic",
+      "code": "SiC",
+      "color": "#d1d5db",
+      "elasticMpa": 1800,
+      "yieldMpa": 2600,
+      "crushMpa": 3600,
+      "deformationBias": 0.08,
+      "source": "Engineering ceramic compressive strength references"
+    },
+    "tungsten_carbide": {
+      "name": "Tungsten Carbide",
+      "code": "WC",
+      "color": "#f1f5f9",
+      "elasticMpa": 2400,
+      "yieldMpa": 3300,
+      "crushMpa": 4500,
+      "deformationBias": 0.06,
+      "source": "Cemented carbide compressive strength references"
+    },
+    "carbon_composite": {
+      "name": "High-Modulus Carbon Composite",
+      "code": "CFRP-HM",
+      "color": "#64748b",
+      "elasticMpa": 900,
+      "yieldMpa": 1400,
+      "crushMpa": 2100,
+      "deformationBias": 0.16,
+      "source": "Composite laminate compression-dominant test range"
+    },
+    "graphene_ceramic_hybrid": {
+      "name": "Graphene-Ceramic Hybrid (Lab Grade)",
+      "code": "GCH",
+      "color": "#7dd3fc",
+      "elasticMpa": 3200,
+      "yieldMpa": 5200,
+      "crushMpa": 7600,
+      "deformationBias": 0.03,
+      "source": "Emerging lab-scale composite benchmark estimates"
     }
   }
 }

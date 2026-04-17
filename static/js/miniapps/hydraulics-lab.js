@@ -10,6 +10,9 @@ const GRAPH_WINDOW_SEC = 45;
 const DEFAULT_PRESSURE_MPA = 12;
 const PRACTICAL_UNITS = 'practical';
 const SI_UNITS = 'si';
+const MAX_PISTON_DIAMETER_M = 0.32;
+const MAX_FORCE_KN = 780_000;
+const MAX_PRESSURE_PA = (MAX_FORCE_KN * 1000) / areaFromDiameter(MAX_PISTON_DIAMETER_M);
 
 function areaFromDiameter(diameterM) {
   return Math.PI * Math.pow(diameterM / 2, 2);
@@ -212,10 +215,9 @@ export class HydraulicsLabApp {
     scene.add(topBeam);
 
     this.cylinder = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.1, 1.1, 1.8, 32),
+      new THREE.CylinderGeometry(1.1, 1.1, 3.6, 32),
       new THREE.MeshStandardMaterial({ color: 0x60a5fa, metalness: 0.5, roughness: 0.35 })
     );
-    this.cylinder.rotation.z = Math.PI / 2;
     this.cylinder.position.set(0, 2.4, 0);
     scene.add(this.cylinder);
 
@@ -252,7 +254,7 @@ export class HydraulicsLabApp {
     const panel = new UIPanel(this.container, 'top-left');
     panel.addHTML('<div class="miniapp-title">🛠 Hydraulics Controls</div>');
 
-    this._pressureSlider = panel.addSlider('Target Pressure (MPa)', 0, 40, DEFAULT_PRESSURE_MPA, (v) => {
+    this._pressureSlider = panel.addSlider('Target Pressure (MPa)', 0, Math.round(MAX_PRESSURE_PA / 1_000_000), DEFAULT_PRESSURE_MPA, (v) => {
       this.targetPressurePa = Number(v) * 1_000_000;
       this._updateAllUI();
     });
@@ -427,7 +429,7 @@ export class HydraulicsLabApp {
     const rampFactor = 0.95 * (0.35 + this.valveOpening * 0.85);
     const leakTerm = this.activeFault === 'seal_leak' ? this.currentPressurePa * 0.18 : 0;
     const deltaPressure = (target - this.currentPressurePa) * rampFactor * dt - leakTerm * dt;
-    this.currentPressurePa = clamp(this.currentPressurePa + deltaPressure, 0, 40_000_000);
+    this.currentPressurePa = clamp(this.currentPressurePa + deltaPressure, 0, MAX_PRESSURE_PA);
 
     if (this.pressureDropPulse > 0) {
       this.currentPressurePa *= lerp(1, 0.78, this.pressureDropPulse);
@@ -519,11 +521,9 @@ export class HydraulicsLabApp {
     this.pressPlate.position.y = lerp(this.pressPlate.position.y, targetPlateY, 1 - Math.exp(-4.8 * dt));
     this.ram.position.y = lerp(this.ram.position.y, targetPlateY + 2.35, 1 - Math.exp(-4 * dt));
 
-    const emissive = clamp(this.currentPressurePa / 40_000_000, 0, 1) * 0.35;
+    const emissive = clamp(this.currentPressurePa / MAX_PRESSURE_PA, 0, 1) * 0.35;
     this.materialMesh.material.emissive = new THREE.Color(material.color);
     this.materialMesh.material.emissiveIntensity = emissive;
-
-    this.cylinder.rotation.z += dt * 0.12 * (this.running ? 1 : 0.2);
   }
 
   _updateMaterialAppearance() {

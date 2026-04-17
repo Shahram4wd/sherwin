@@ -154,6 +154,10 @@
 .miniapp-select:focus {
   border-color: rgba(99, 102, 241, 0.4);
 }
+.miniapp-select option {
+  color: #111827;
+  background: #ffffff;
+}
 
 /* --- Display fields ---------------------------------------------- */
 .miniapp-display {
