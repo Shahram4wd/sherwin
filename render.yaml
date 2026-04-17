@@ -13,19 +13,19 @@ services:
       - key: DJANGO_SETTINGS_MODULE
         value: config.settings.prod
       - key: ALLOWED_HOSTS
-        value: ".onrender.com"
+        value: ".onrender.com,.sherwinuniverse.com"
       - key: SENTRY_DSN
         value: ""
       - key: R2_ACCESS_KEY
-        value: ""
+        sync: false
       - key: R2_SECRET_KEY
-        value: ""
+        sync: false
       - key: R2_BUCKET_NAME
         value: "sherwin-universe"
       - key: R2_ENDPOINT_URL
-        value: ""
+        value: "https://271388cde850315619dde5dea546e5b0.r2.cloudflarestorage.com"
       - key: R2_CUSTOM_DOMAIN
-        value: ""
+        value: "pub-4d9aa5b7930d4de29219109086c15130.r2.dev"
       - key: DJANGO_SUPERUSER_USERNAME
         value: "admin"
       - key: DJANGO_SUPERUSER_EMAIL
