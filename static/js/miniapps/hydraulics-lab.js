@@ -14,6 +14,93 @@ const MAX_PISTON_DIAMETER_M = 0.32;
 const MAX_FORCE_KN = 780_000;
 const MAX_PRESSURE_PA = (MAX_FORCE_KN * 1000) / areaFromDiameter(MAX_PISTON_DIAMETER_M);
 
+function createCautionTapeTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const image = ctx.createImageData(canvas.width, canvas.height);
+  const period = 64;
+  const stripeWidth = 24;
+
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      const i = (y * canvas.width + x) * 4;
+      const stripe = ((x + y) % period) < stripeWidth;
+      if (stripe) {
+        image.data[i] = 17;
+        image.data[i + 1] = 24;
+        image.data[i + 2] = 39;
+      } else {
+        image.data[i] = 250;
+        image.data[i + 1] = 204;
+        image.data[i + 2] = 21;
+      }
+      image.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.repeat.set(1, 1);
+  return texture;
+}
+
+function createElementEngraveTexture(material) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const symbol = material.symbol || material.code;
+  const atomicNumber = String(material.atomicNumber || '');
+  const atomicMass = Number(material.atomicMass || 0)
+    .toFixed(3)
+    .replace(/\.0+$/, '')
+    .replace(/(\.\d*?)0+$/, '$1');
+
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(44, 44, 424, 424);
+
+  ctx.font = '700 54px Space Grotesk, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.23)';
+  ctx.fillText(atomicNumber, 77, 117);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+  ctx.fillText(atomicNumber, 72, 112);
+
+  ctx.font = '700 192px Space Grotesk, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.fillText(symbol, 262, 268);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.46)';
+  ctx.fillText(symbol, 256, 262);
+
+  ctx.font = '700 44px Space Grotesk, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.fillText(atomicMass, 438, 458);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+  ctx.fillText(atomicMass, 432, 452);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
+
 function areaFromDiameter(diameterM) {
   return Math.PI * Math.pow(diameterM / 2, 2);
 }
@@ -229,14 +316,18 @@ export class HydraulicsLabApp {
     scene.add(this.ram);
 
     this.pressPlate = new THREE.Mesh(
-      new THREE.BoxGeometry(2.9, 0.45, 2.9),
-      new THREE.MeshStandardMaterial({ color: 0x9ca3af, metalness: 0.55, roughness: 0.28 })
+      new THREE.CylinderGeometry(1.45, 1.45, 0.45, 40),
+      [
+        new THREE.MeshStandardMaterial({ map: createCautionTapeTexture(), metalness: 0.25, roughness: 0.65 }),
+        new THREE.MeshStandardMaterial({ color: 0x9ca3af, metalness: 0.55, roughness: 0.28 }),
+        new THREE.MeshStandardMaterial({ color: 0x9ca3af, metalness: 0.55, roughness: 0.28 }),
+      ]
     );
     this.pressPlate.position.set(0, -1.75, 0);
     scene.add(this.pressPlate);
 
     this.materialMesh = new THREE.Mesh(
-      new THREE.BoxGeometry(2.4, 2.2, 2.4),
+      new THREE.BoxGeometry(2.0, 2.2, 2.0),
       new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: 0.8 })
     );
     this.materialMesh.position.set(0, -3.1, 0);
@@ -529,9 +620,20 @@ export class HydraulicsLabApp {
   _updateMaterialAppearance() {
     const material = this.materials[this.materialKey];
     if (!material || !this.materialMesh) return;
-    this.materialMesh.material.color = new THREE.Color(material.color);
-    this.materialMesh.material.emissive = new THREE.Color(material.color);
-    this.materialMesh.material.emissiveIntensity = 0;
+    const meshMaterial = this.materialMesh.material;
+    meshMaterial.color = new THREE.Color(material.color);
+    meshMaterial.emissive = new THREE.Color(material.color);
+    meshMaterial.emissiveIntensity = 0;
+
+    if (meshMaterial.map) {
+      meshMaterial.map.dispose();
+      meshMaterial.map = null;
+    }
+
+    if (material.isElement && material.atomicNumber && material.atomicMass) {
+      meshMaterial.map = createElementEngraveTexture(material);
+    }
+    meshMaterial.needsUpdate = true;
   }
 
   _pushEvent(note, type) {
@@ -545,21 +647,38 @@ export class HydraulicsLabApp {
     const forceN = this.currentPressurePa * area;
     const material = this.materials[this.materialKey];
     const pressureMpa = this.currentPressurePa / 1_000_000;
+    const isElement = Boolean(material.isElement && material.atomicNumber && material.atomicMass);
+    const atomicMassText = isElement ? Number(material.atomicMass).toFixed(3).replace(/\.0+$/, '').replace(/(\.\d*?)0+$/, '$1') : '';
     const stageDescription = this.stage === 'Crush'
       ? 'Structure has failed and pressure will collapse.'
       : this.stage === 'Yield'
         ? 'Permanent deformation is underway.'
         : 'Material is still in the elastic response range.';
 
-    this._infoEl.innerHTML = `
-      <div class="miniapp-info-grid">
+    const materialHeader = isElement
+      ? `
+        <div class="miniapp-element-tile" aria-label="Periodic table style material card">
+          <span class="miniapp-element-number">${material.atomicNumber}</span>
+          <span class="miniapp-element-symbol">${material.symbol || material.code}</span>
+          <span class="miniapp-element-mass">${atomicMassText}</span>
+        </div>
+        <div class="miniapp-info-name">${material.scientificName || material.name}</div>
+      `
+      : `
         <div class="miniapp-info-big">
           <span class="miniapp-info-symbol">${material.code}</span>
           <span class="miniapp-info-mass">${this.stage}</span>
         </div>
         <div class="miniapp-info-name">${material.name}</div>
+      `;
+
+    this._infoEl.innerHTML = `
+      <div class="miniapp-info-grid">
+        ${materialHeader}
+        ${isElement ? '<div class="miniapp-info-note">Periodic data shown for elemental material.</div>' : ''}
         <div class="miniapp-info-row"><span>Pressure:</span><span>${formatPressure(this.currentPressurePa, this.units)}</span></div>
         <div class="miniapp-info-row"><span>Force:</span><span>${formatForce(forceN, this.units)}</span></div>
+        <div class="miniapp-info-row"><span>Stage:</span><span>${this.stage}</span></div>
         <div class="miniapp-info-row"><span>Piston:</span><span>${formatDiameter(this.pistonDiameterM, this.units)}</span></div>
         <div class="miniapp-info-row"><span>Efficiency:</span><span>${(this.efficiency * 100).toFixed(0)}%</span></div>
         <div class="miniapp-info-row"><span>Risk:</span><span><span class="miniapp-status-chip miniapp-status-chip--${riskClass(this.riskScore)}">${riskLabel(this.riskScore)}</span></span></div>
