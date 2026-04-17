@@ -24,10 +24,9 @@ const MATERIAL_HALF_HEIGHT = 1.1;
 const MATERIAL_PLATE_CONTACT_OVERLAP = 0.015;
 const FRACTURE_BASE_FRAGMENT_COUNT = 16;
 const FRACTURE_MAX_FRAGMENT_COUNT = 30;
-const FLOOR_TOP_Y = -4.2;
-const FRAGMENT_BOUNCE = 0.35;
-const FRAGMENT_FLOOR_FRICTION = 0.84;
-const FRAGMENT_SLEEP_SPEED = 0.18;
+const FRACTURE_CRACK_GAP_M = 0.035;
+const PRESSURE_RAMP_BASE_MPA_PER_SEC = 14;
+const PRESSURE_RAMP_VALVE_GAIN_MPA_PER_SEC = 42;
 
 function createCautionTapeTexture() {
   const canvas = document.createElement('canvas');
@@ -345,7 +344,6 @@ export class HydraulicsLabApp {
     this._themeFillLight = null;
 
     this.materialFragments = [];
-    this.materialFragmentVelocities = [];
     this.materialFractured = false;
   }
 
@@ -780,10 +778,13 @@ export class HydraulicsLabApp {
     this.timeSec += dt;
     this.previousPressurePa = this.currentPressurePa;
     const target = this.running ? this.targetPressurePa : 0;
-    const rampFactor = 0.95 * (0.35 + this.valveOpening * 0.85);
-    const leakTerm = this.activeFault === 'seal_leak' ? this.currentPressurePa * 0.18 : 0;
-    const deltaPressure = (target - this.currentPressurePa) * rampFactor * dt - leakTerm * dt;
-    this.currentPressurePa = clamp(this.currentPressurePa + deltaPressure, 0, MAX_PRESSURE_PA);
+    const pressureGap = target - this.currentPressurePa;
+    const rampRateMpaPerSec = PRESSURE_RAMP_BASE_MPA_PER_SEC + this.valveOpening * PRESSURE_RAMP_VALVE_GAIN_MPA_PER_SEC;
+    const rampStepPa = rampRateMpaPerSec * 1_000_000 * dt;
+    const appliedStepPa = Math.min(Math.abs(pressureGap), rampStepPa);
+    const leakTerm = this.activeFault === 'seal_leak' ? this.currentPressurePa * 0.18 * dt : 0;
+    const signedStep = Math.sign(pressureGap) * appliedStepPa;
+    this.currentPressurePa = clamp(this.currentPressurePa + signedStep - leakTerm, 0, MAX_PRESSURE_PA);
 
     if (this.pressureDropPulse > 0) {
       this.currentPressurePa *= lerp(1, 0.78, this.pressureDropPulse);
@@ -839,11 +840,16 @@ export class HydraulicsLabApp {
   _maybeTriggerEvents(pressureRateMpa) {
     const material = this.materials[this.materialKey];
     const pressureMpa = this.currentPressurePa / 1_000_000;
+    const canFracture = this._materialCanFracture(material);
 
     if (this.stage === 'Crush' && this.lastEvent !== 'Material crush threshold reached') {
       this.pressureDropPulse = 1;
       this.running = false;
-      this._fractureMaterial();
+      if (canFracture) {
+        this._fractureMaterial();
+      } else {
+        this._clearFractureFragments();
+      }
       this._pushEvent('Material crush threshold reached', 'crush');
       return;
     }
@@ -862,6 +868,12 @@ export class HydraulicsLabApp {
       this.activeFault = 'seal_leak';
       this._pushEvent('Seal leak started', 'seal_leak');
     }
+  }
+
+  _materialCanFracture(material) {
+    if (!material) return false;
+    if (material.noFracture === true) return false;
+    return this.materialKey !== 'sponge';
   }
 
   _tickVisuals(dt) {
@@ -898,33 +910,6 @@ export class HydraulicsLabApp {
     } else {
       meshMaterial.emissive = new THREE.Color(material.color);
       meshMaterial.emissiveIntensity = emissive;
-    }
-
-    if (this.materialFragments.length > 0) {
-      this.materialFragments.forEach((fragment, index) => {
-        const velocity = this.materialFragmentVelocities[index];
-        if (!velocity) return;
-        velocity.y -= 6.2 * dt;
-        velocity.multiplyScalar(Math.exp(-0.65 * dt));
-        fragment.position.addScaledVector(velocity, dt);
-
-        const fragmentRadius = Number(fragment.userData.floorRadius || 0.14);
-        const minY = FLOOR_TOP_Y + fragmentRadius;
-        if (fragment.position.y < minY) {
-          fragment.position.y = minY;
-          if (velocity.y < 0) {
-            velocity.y = -velocity.y * FRAGMENT_BOUNCE;
-          }
-          velocity.x *= FRAGMENT_FLOOR_FRICTION;
-          velocity.z *= FRAGMENT_FLOOR_FRICTION;
-          if (velocity.lengthSq() < FRAGMENT_SLEEP_SPEED * FRAGMENT_SLEEP_SPEED) {
-            velocity.set(0, 0, 0);
-          }
-        }
-
-        fragment.rotation.x += (0.8 + index * 0.015) * dt;
-        fragment.rotation.y += (0.5 + index * 0.01) * dt;
-      });
     }
 
     // Smoke intensity ramps from riskScore 50 (High) to 100 (Critical)
@@ -987,19 +972,15 @@ export class HydraulicsLabApp {
     });
 
     const sourcePosition = this.materialMesh.position.clone();
-    const baseImpulse = lerp(1.2, 3.6, pressureRatio);
+    const crackGap = FRACTURE_CRACK_GAP_M * (0.85 + pressureRatio * 0.3);
 
     this.materialFragments = this.materialMesh.fracture(fractureOptions, (fragment) => {
-      const direction = fragment.position.clone().sub(sourcePosition).normalize();
-      direction.y = Math.abs(direction.y) + 0.35;
-      direction.normalize();
-      const randomImpulse = 0.65 + Math.random() * 0.8;
-      this.materialFragmentVelocities.push(direction.multiplyScalar(baseImpulse * randomImpulse));
-
-      fragment.geometry.computeBoundingSphere();
-      const localRadius = fragment.geometry.boundingSphere?.radius || 0.2;
-      const averageScale = (fragment.scale.x + fragment.scale.y + fragment.scale.z) / 3;
-      fragment.userData.floorRadius = localRadius * averageScale;
+      const explodeDir = fragment.position.clone().sub(sourcePosition);
+      if (explodeDir.lengthSq() < 1e-6) {
+        explodeDir.set(randRange(-1, 1), randRange(-1, 1), randRange(-1, 1));
+      }
+      explodeDir.normalize();
+      fragment.position.addScaledVector(explodeDir, crackGap);
 
       fragment.castShadow = true;
       fragment.receiveShadow = true;
@@ -1013,7 +994,6 @@ export class HydraulicsLabApp {
   _clearFractureFragments() {
     if (!this.engine?.scene || this.materialFragments.length === 0) {
       this.materialFragments = [];
-      this.materialFragmentVelocities = [];
       this.materialFractured = false;
       return;
     }
@@ -1026,7 +1006,6 @@ export class HydraulicsLabApp {
     });
 
     this.materialFragments = [];
-    this.materialFragmentVelocities = [];
     this.materialFractured = false;
   }
 
@@ -1049,7 +1028,9 @@ export class HydraulicsLabApp {
     const material = this.materials[this.materialKey];
     const pressureMpa = this.currentPressurePa / 1_000_000;
     const stageDescription = this.stage === 'Crush'
-      ? 'Structure has failed and fragments have separated from the core block.'
+      ? this.materialFractured
+        ? 'Structure has failed and fragments have separated from the core block.'
+        : 'Structure has failed in heavy compression without brittle cracking.'
       : this.stage === 'Yield'
         ? 'Permanent deformation is underway.'
         : 'Material is still in the elastic response range.';
