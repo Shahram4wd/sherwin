@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Simulation Tags - Sherwin Universe{% endblock %}
+
+{% block content %}
+<section class="relative pt-10 pb-16">
+    <div class="max-w-3xl mx-auto px-4 md:px-6">
+        <a href="{% url 'miniapps:manage_simulation_tags' %}" class="text-sm text-gray-400 hover:text-accent-400 transition-colors">&larr; Back to Simulations</a>
+
+        <div class="glass-card rounded-xl p-6 mt-4">
+            <h1 class="text-2xl font-display font-bold text-white">Edit Tags</h1>
+            <p class="text-sm text-gray-400 mt-1">Assign or remove tags for <span class="text-gray-200">{{ miniapp.name }}</span>.</p>
+
+            <form method="post" class="mt-6">
+                {% csrf_token %}
+
+                <div class="space-y-2">
+                    {% for checkbox in form.tags %}
+                    <label class="flex items-center gap-3 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-gray-200 hover:border-white/25 transition-colors">
+                        {{ checkbox.tag }}
+                        <span>{{ checkbox.choice_label }}</span>
+                    </label>
+                    {% empty %}
+                    <p class="text-sm text-gray-500">No tags exist yet. Create tags first.</p>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-6 flex flex-wrap gap-3">
+                    <button type="submit" class="rounded-lg bg-accent-500 px-4 py-2 text-sm font-semibold text-white hover:bg-accent-600 transition-colors">Save Assignments</button>
+                    <a href="{% url 'miniapps:manage_tags' %}" class="rounded-lg border border-white/15 px-4 py-2 text-sm text-gray-300 hover:border-white/30 hover:text-white transition-colors">Manage Tags</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

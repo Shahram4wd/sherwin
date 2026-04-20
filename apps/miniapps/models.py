@@ -20,6 +20,24 @@ class MiniAppCategory(models.Model):
         super().save(*args, **kwargs)
 
 
+class MiniAppTag(models.Model):
+    """Tag used for filtering and organizing lab simulations."""
+
+    name = models.CharField(max_length=100, unique=True)
+    slug = models.SlugField(max_length=100, unique=True, blank=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+
 class MiniApp(models.Model):
     """Interactive mini-app / simulation registered in the Lab."""
 
@@ -46,6 +64,11 @@ class MiniApp(models.Model):
     )
     is_active = models.BooleanField(default=True)
     embed_url = models.URLField(blank=True)
+    tags = models.ManyToManyField(
+        MiniAppTag,
+        blank=True,
+        related_name="miniapps",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -63,3 +86,8 @@ class MiniApp(models.Model):
         from django.urls import reverse
 
         return reverse("miniapps:miniapp_detail", kwargs={"slug": self.slug})
+
+    @property
+    def visible_tags(self):
+        category_name = self.category.name.casefold() if self.category else None
+        return [tag for tag in self.tags.all() if tag.name.casefold() != category_name]

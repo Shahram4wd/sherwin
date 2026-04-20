@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Lab Tags - Sherwin Universe{% endblock %}
+
+{% block content %}
+<section class="relative pt-10 pb-16">
+    <div class="max-w-5xl mx-auto px-4 md:px-6">
+        <div class="mb-6">
+            <a href="{% url 'miniapps:lab' %}" class="text-sm text-gray-400 hover:text-accent-400 transition-colors">&larr; Back to Lab</a>
+            <h1 class="text-3xl md:text-4xl font-display font-bold text-white mt-3">Manage Lab Tags</h1>
+            <p class="text-gray-400 mt-2">Create and edit tags that can later be used as filters on the Lab page.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-[340px_minmax(0,1fr)] gap-6">
+            <div class="glass-card rounded-xl p-5">
+                <h2 class="text-lg font-semibold text-white mb-4">Add New Tag</h2>
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    <div>
+                        <label for="{{ form.name.id_for_label }}" class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Name</label>
+                        {{ form.name }}
+                        {% if form.name.errors %}<p class="text-red-400 text-xs mt-2">{{ form.name.errors.0 }}</p>{% endif %}
+                    </div>
+                    <div>
+                        <label for="{{ form.slug.id_for_label }}" class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Slug (Optional)</label>
+                        {{ form.slug }}
+                        {% if form.slug.errors %}<p class="text-red-400 text-xs mt-2">{{ form.slug.errors.0 }}</p>{% endif %}
+                    </div>
+                    <button type="submit" class="w-full rounded-lg bg-accent-500 px-4 py-2 text-sm font-semibold text-white hover:bg-accent-600 transition-colors">Create Tag</button>
+                </form>
+            </div>
+
+            <div class="glass-card rounded-xl p-5">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-white">Existing Tags</h2>
+                    <a href="{% url 'miniapps:manage_simulation_tags' %}" class="text-xs text-accent-300 hover:text-accent-200">Assign Tags To Simulations &rarr;</a>
+                </div>
+
+                {% if tags %}
+                <div class="divide-y divide-white/10">
+                    {% for tag in tags %}
+                    <div class="py-3 flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-white font-medium">{{ tag.name }}</p>
+                            <p class="text-xs text-gray-500">{{ tag.slug }}</p>
+                        </div>
+                        <a href="{% url 'miniapps:edit_tag' slug=tag.slug %}" class="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-200 hover:border-white/30 hover:text-white transition-colors">Edit</a>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-sm text-gray-500">No tags yet.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

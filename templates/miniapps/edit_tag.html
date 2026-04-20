@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Tag - Sherwin Universe{% endblock %}
+
+{% block content %}
+<section class="relative pt-10 pb-16">
+    <div class="max-w-2xl mx-auto px-4 md:px-6">
+        <a href="{% url 'miniapps:manage_tags' %}" class="text-sm text-gray-400 hover:text-accent-400 transition-colors">&larr; Back to Tags</a>
+
+        <div class="glass-card rounded-xl p-6 mt-4">
+            <h1 class="text-2xl font-display font-bold text-white">Edit Tag</h1>
+            <p class="text-sm text-gray-400 mt-1">Update details for <span class="text-gray-200">{{ tag.name }}</span>.</p>
+
+            <form method="post" class="space-y-4 mt-6">
+                {% csrf_token %}
+                <div>
+                    <label for="{{ form.name.id_for_label }}" class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Name</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}<p class="text-red-400 text-xs mt-2">{{ form.name.errors.0 }}</p>{% endif %}
+                </div>
+                <div>
+                    <label for="{{ form.slug.id_for_label }}" class="block text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">Slug</label>
+                    {{ form.slug }}
+                    {% if form.slug.errors %}<p class="text-red-400 text-xs mt-2">{{ form.slug.errors.0 }}</p>{% endif %}
+                </div>
+                <button type="submit" class="rounded-lg bg-accent-500 px-4 py-2 text-sm font-semibold text-white hover:bg-accent-600 transition-colors">Save Tag</button>
+            </form>
+        </div>
+    </div>
+</section>
+{% endblock %}

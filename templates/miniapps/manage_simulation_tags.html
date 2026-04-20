@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Assign Simulation Tags - Sherwin Universe{% endblock %}
+
+{% block content %}
+<section class="relative pt-10 pb-16">
+    <div class="max-w-5xl mx-auto px-4 md:px-6">
+        <div class="mb-6">
+            <a href="{% url 'miniapps:lab' %}" class="text-sm text-gray-400 hover:text-accent-400 transition-colors">&larr; Back to Lab</a>
+            <h1 class="text-3xl md:text-4xl font-display font-bold text-white mt-3">Assign Tags To Simulations</h1>
+            <p class="text-gray-400 mt-2">Open a simulation to add or remove tags.</p>
+        </div>
+
+        <div class="glass-card rounded-xl p-5">
+            {% if miniapps %}
+            <div class="divide-y divide-white/10">
+                {% for app in miniapps %}
+                <div class="py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                        <p class="text-white font-semibold">{{ app.name }}</p>
+                        <div class="mt-2 flex flex-wrap gap-2">
+                            {% for tag in app.tags.all %}
+                            <span class="inline-block text-[10px] bg-accent-500/15 text-accent-300 px-3 py-1 rounded-full font-medium uppercase tracking-wider">{{ tag.name }}</span>
+                            {% empty %}
+                            <span class="text-xs text-gray-500">No tags assigned</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <a href="{% url 'miniapps:edit_simulation_tags' slug=app.slug %}" class="w-fit rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-200 hover:border-white/30 hover:text-white transition-colors">Edit Tags</a>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-sm text-gray-500">No simulations found.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
