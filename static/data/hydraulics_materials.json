@@ -209,6 +209,36 @@
       "deformationBias": 0.16,
       "source": "Composite laminate compression-dominant test range"
     },
+    "carbon_nanofiber_composite": {
+      "name": "Carbon Nanofiber Composite",
+      "code": "CNF-C",
+      "color": "#475569",
+      "elasticMpa": 1450,
+      "yieldMpa": 2250,
+      "crushMpa": 3200,
+      "deformationBias": 0.1,
+      "source": "Engineered CNF-reinforced composite compression benchmarks"
+    },
+    "graphene_aluminum_composite": {
+      "name": "Graphene-Reinforced Aluminum",
+      "code": "GR-Al",
+      "color": "#93c5fd",
+      "elasticMpa": 680,
+      "yieldMpa": 1020,
+      "crushMpa": 1550,
+      "deformationBias": 0.2,
+      "source": "Graphene nanoplatelet reinforced aluminum alloy studies"
+    },
+    "graphene_titanium_composite": {
+      "name": "Graphene-Reinforced Titanium",
+      "code": "GR-Ti",
+      "color": "#c4b5fd",
+      "elasticMpa": 1050,
+      "yieldMpa": 1620,
+      "crushMpa": 2450,
+      "deformationBias": 0.14,
+      "source": "Graphene-enhanced titanium matrix composite reference range"
+    },
     "graphene_ceramic_hybrid": {
       "name": "Graphene-Ceramic Hybrid (Lab Grade)",
       "code": "GCH",

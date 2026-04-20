@@ -27,7 +27,7 @@ export class VoiceAssistant {
     this.appSlug = opts.appSlug;
     this.apiUrl = opts.apiUrl;
     this.getStateFn = opts.getStateFn || (() => ({}));
-    this.csrfToken = opts.csrfToken;
+    this.csrfToken = opts.csrfToken || this._getCsrfFromCookie();
     this.messages = [];
     this.isOpen = false;
     this.isListening = false;
@@ -35,6 +35,11 @@ export class VoiceAssistant {
 
     this._initSpeech();
     this._buildUI();
+  }
+
+  _getCsrfFromCookie() {
+    const match = document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);
+    return match ? decodeURIComponent(match[1]) : '';
   }
 
   /* ---- Speech API setup ----------------------------------------- */
@@ -214,9 +219,10 @@ export class VoiceAssistant {
       const state = this.getStateFn();
       const resp = await fetch(this.apiUrl, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': this.csrfToken,
+          ...(this.csrfToken ? { 'X-CSRFToken': this.csrfToken } : {}),
         },
         body: JSON.stringify({
           message: text,

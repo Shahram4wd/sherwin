@@ -4,6 +4,7 @@ import {
   UIPanel,
   clamp,
   lerp,
+  randRange,
 } from './engine.js';
 import { DestructibleMesh, FractureOptions } from '@dgreenheck/three-pinata';
 
@@ -14,12 +15,161 @@ const SI_UNITS = 'si';
 const MAX_PISTON_DIAMETER_M = 0.32;
 const MAX_FORCE_KN = 780_000;
 const MAX_PRESSURE_PA = (MAX_FORCE_KN * 1000) / areaFromDiameter(MAX_PISTON_DIAMETER_M);
+const CANVAS_BG_DARK = '#080810';
+const CANVAS_BG_LIGHT = '#ffffff';
+const RAM_HALF_HEIGHT = 2.1;
+const PRESS_PLATE_HALF_HEIGHT = 0.225;
+const RAM_PLATE_CONTACT_OVERLAP = 0.02;
+const MATERIAL_HALF_HEIGHT = 1.1;
+const MATERIAL_PLATE_CONTACT_OVERLAP = 0.015;
 const FRACTURE_BASE_FRAGMENT_COUNT = 16;
 const FRACTURE_MAX_FRAGMENT_COUNT = 30;
-const FLOOR_TOP_Y = -4.2;
-const FRAGMENT_BOUNCE = 0.35;
-const FRAGMENT_FLOOR_FRICTION = 0.84;
-const FRAGMENT_SLEEP_SPEED = 0.18;
+const FRACTURE_CRACK_GAP_M = 0.035;
+const PRESSURE_RAMP_BASE_MPA_PER_SEC = 14;
+const PRESSURE_RAMP_VALVE_GAIN_MPA_PER_SEC = 42;
+
+function createCautionTapeTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 64;
+  const ctx = canvas.getContext('2d');
+  const image = ctx.createImageData(canvas.width, canvas.height);
+  const period = 64;
+  const stripeWidth = 24;
+
+  for (let y = 0; y < canvas.height; y++) {
+    for (let x = 0; x < canvas.width; x++) {
+      const i = (y * canvas.width + x) * 4;
+      const stripe = ((x + y) % period) < stripeWidth;
+      if (stripe) {
+        image.data[i] = 17;
+        image.data[i + 1] = 24;
+        image.data[i + 2] = 39;
+      } else {
+        image.data[i] = 250;
+        image.data[i + 1] = 204;
+        image.data[i + 2] = 21;
+      }
+      image.data[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(image, 0, 0);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.repeat.set(1, 1);
+  return texture;
+}
+
+function createElementEngraveTexture(material) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  const symbol = material.symbol || material.code;
+  const atomicNumber = String(material.atomicNumber || '');
+  const atomicMass = Number(material.atomicMass || 0)
+    .toFixed(3)
+    .replace(/\.0+$/, '')
+    .replace(/(\.\d*?)0+$/, '$1');
+
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(44, 44, 424, 424);
+
+  ctx.font = '700 54px Space Grotesk, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.23)';
+  ctx.fillText(atomicNumber, 77, 117);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+  ctx.fillText(atomicNumber, 72, 112);
+
+  ctx.font = '700 192px Space Grotesk, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.fillText(symbol, 262, 268);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.46)';
+  ctx.fillText(symbol, 256, 262);
+
+  ctx.font = '700 44px Space Grotesk, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.fillText(atomicMass, 438, 458);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.42)';
+  ctx.fillText(atomicMass, 432, 452);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
+
+function createMaterialNameEngraveTexture(material) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
+  ctx.lineWidth = 8;
+  ctx.strokeRect(44, 44, 424, 424);
+
+  const label = String(material.name || material.code || 'Material').trim();
+  const words = label.split(/\s+/).filter(Boolean);
+  const lines = [];
+  if (words.length <= 2) {
+    lines.push(words.join(' '));
+  } else {
+    const mid = Math.ceil(words.length / 2);
+    lines.push(words.slice(0, mid).join(' '));
+    lines.push(words.slice(mid).join(' '));
+  }
+
+  const mainCode = String(material.code || '').trim();
+  if (mainCode) {
+    ctx.font = '700 58px Space Grotesk, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+    ctx.fillText(mainCode, 261, 130);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+    ctx.fillText(mainCode, 256, 124);
+  }
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const lineHeight = 96;
+  const startY = lines.length > 1 ? 228 : 260;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    ctx.font = '700 70px Space Grotesk, sans-serif';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.fillText(line, 260, startY + i * lineHeight);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.46)';
+    ctx.fillText(line, 256, startY - 6 + i * lineHeight);
+  }
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  return texture;
+}
 
 function areaFromDiameter(diameterM) {
   return Math.PI * Math.pow(diameterM / 2, 2);
@@ -34,10 +184,21 @@ function formatPressure(pa, units) {
 }
 
 function formatForce(newtons, units) {
-  const kn = newtons / 1000;
-  return units === PRACTICAL_UNITS
-    ? `${kn.toFixed(1)} kN (${newtons.toFixed(0)} N)`
-    : `${newtons.toFixed(0)} N (${kn.toFixed(1)} kN)`;
+  const abs = Math.abs(newtons);
+  if (abs >= 1_000_000) {
+    const mn = newtons / 1_000_000;
+    const kn = newtons / 1000;
+    return units === PRACTICAL_UNITS
+      ? `${mn.toFixed(2)} MN (${kn.toFixed(0)} kN)`
+      : `${mn.toFixed(2)} MN (${kn.toFixed(0)} kN)`;
+  }
+  if (abs >= 1000) {
+    const kn = newtons / 1000;
+    return units === PRACTICAL_UNITS
+      ? `${kn.toFixed(1)} kN (${newtons.toFixed(0)} N)`
+      : `${kn.toFixed(1)} kN (${newtons.toFixed(0)} N)`;
+  }
+  return `${newtons.toFixed(0)} N`;
 }
 
 function formatDiameter(diameterM, units) {
@@ -168,8 +329,21 @@ export class HydraulicsLabApp {
     this.materialCompression = 0;
     this.pressureDropPulse = 0;
     this._graphSampleAccumulator = 0;
+
+    // Smoke & camera shake state
+    this._smokeParticles = [];
+    this._cameraShakeOffset = new THREE.Vector3();
+    this._cameraBasePos = null;
+    this._themeObserver = null;
+
+    // Theme-reactive visual references
+    this._floorMesh = null;
+    this._frameMaterial = null;
+    this._ambientGlow = null;
+    this._themeKeyLight = null;
+    this._themeFillLight = null;
+
     this.materialFragments = [];
-    this.materialFragmentVelocities = [];
     this.materialFractured = false;
   }
 
@@ -177,10 +351,12 @@ export class HydraulicsLabApp {
     await this._loadMaterials();
 
     this.engine = new SceneManager(this.container, {
-      background: '#080810',
+      background: this._getCanvasBackground(),
       orbit: true,
     });
+    this._watchThemeChanges();
     this._buildScene();
+    this._updateMaterialAppearance();
     this._buildControls();
     this._buildInfoPanel();
     this._buildActionsPanel();
@@ -196,6 +372,53 @@ export class HydraulicsLabApp {
     this.engine.start();
   }
 
+  _getCanvasBackground() {
+    return document.documentElement.getAttribute('data-theme') === 'light'
+      ? CANVAS_BG_LIGHT
+      : CANVAS_BG_DARK;
+  }
+
+  _applyCanvasBackground() {
+    if (!this.engine || !this.engine.renderer) return;
+    this.engine.renderer.setClearColor(this._getCanvasBackground(), 1);
+  }
+
+  _applyThemeVisuals() {
+    const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+    if (!this.engine || !this.engine.renderer) return;
+
+    this.engine.renderer.toneMappingExposure = isLightTheme ? 1.14 : 1;
+
+    if (this._ambientGlow) {
+      this._ambientGlow.intensity = isLightTheme ? 0.28 : 0.45;
+    }
+    if (this._themeKeyLight) {
+      this._themeKeyLight.intensity = isLightTheme ? 1.15 : 0.32;
+    }
+    if (this._themeFillLight) {
+      this._themeFillLight.intensity = isLightTheme ? 0.85 : 0.22;
+    }
+    if (this._floorMesh) {
+      this._floorMesh.material.color.setHex(isLightTheme ? 0xd1d5db : 0x111827);
+    }
+    if (this._frameMaterial) {
+      this._frameMaterial.color.setHex(isLightTheme ? 0x6b7280 : 0x374151);
+    }
+  }
+
+  _watchThemeChanges() {
+    this._applyCanvasBackground();
+    this._applyThemeVisuals();
+    this._themeObserver = new MutationObserver(() => {
+      this._applyCanvasBackground();
+      this._applyThemeVisuals();
+    });
+    this._themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme'],
+    });
+  }
+
   async _loadMaterials() {
     const resp = await fetch('/static/data/hydraulics_materials.json');
     const data = await resp.json();
@@ -205,22 +428,22 @@ export class HydraulicsLabApp {
   _buildScene() {
     const scene = this.engine.scene;
 
-    const floor = new THREE.Mesh(
+    this._floorMesh = new THREE.Mesh(
       new THREE.CylinderGeometry(10, 10, 0.8, 48),
       new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.9 })
     );
-    floor.position.y = -4.6;
-    scene.add(floor);
+    this._floorMesh.position.y = -4.6;
+    scene.add(this._floorMesh);
 
-    const frameMat = new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.45, roughness: 0.5 });
+    this._frameMaterial = new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.45, roughness: 0.5 });
     const pillarGeo = new THREE.BoxGeometry(0.7, 7.5, 0.7);
-    this.leftPillar = new THREE.Mesh(pillarGeo, frameMat);
-    this.rightPillar = new THREE.Mesh(pillarGeo, frameMat);
+    this.leftPillar = new THREE.Mesh(pillarGeo, this._frameMaterial);
+    this.rightPillar = new THREE.Mesh(pillarGeo, this._frameMaterial);
     this.leftPillar.position.set(-3.2, -0.2, 0);
     this.rightPillar.position.set(3.2, -0.2, 0);
     scene.add(this.leftPillar, this.rightPillar);
 
-    const topBeam = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.8, 1), frameMat);
+    const topBeam = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.8, 1), this._frameMaterial);
     topBeam.position.set(0, 3.25, 0);
     scene.add(topBeam);
 
@@ -255,12 +478,122 @@ export class HydraulicsLabApp {
     this.materialMesh.position.set(0, -3.1, 0);
     scene.add(this.materialMesh);
 
-    const ambientGlow = new THREE.PointLight(0xf59e0b, 0.45, 30);
-    ambientGlow.position.set(0, -1.2, 4);
-    scene.add(ambientGlow);
+    this._ambientGlow = new THREE.PointLight(0xf59e0b, 0.45, 30);
+    this._ambientGlow.position.set(0, -1.2, 4);
+    scene.add(this._ambientGlow);
+
+    // Extra fill in light theme to keep details visible on bright backgrounds.
+    this._themeKeyLight = new THREE.DirectionalLight(0xffffff, 0.32);
+    this._themeKeyLight.position.set(5, 7, 6);
+    scene.add(this._themeKeyLight);
+
+    this._themeFillLight = new THREE.HemisphereLight(0xffffff, 0xdbeafe, 0.22);
+    scene.add(this._themeFillLight);
+
+    // Smoke particle system
+    this._initSmoke(scene);
 
     this.engine.camera.position.set(0, 1.5, 17);
     this.engine.controls.target.set(0, -1.2, 0);
+    this._cameraBasePos = this.engine.camera.position.clone();
+    this._applyThemeVisuals();
+  }
+
+  _initSmoke(scene) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    gradient.addColorStop(0, 'rgba(200,200,200,0.6)');
+    gradient.addColorStop(0.4, 'rgba(160,160,160,0.3)');
+    gradient.addColorStop(1, 'rgba(100,100,100,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 64, 64);
+
+    this._smokeTexture = new THREE.CanvasTexture(canvas);
+    this._smokeGroup = new THREE.Group();
+    scene.add(this._smokeGroup);
+  }
+
+  _spawnSmokePuff(origin, intensity) {
+    const mat = new THREE.SpriteMaterial({
+      map: this._smokeTexture,
+      transparent: true,
+      opacity: 0.25 + intensity * 0.35,
+      depthWrite: false,
+    });
+    const sprite = new THREE.Sprite(mat);
+    const spread = 1.2 + intensity * 0.8;
+    sprite.position.set(
+      origin.x + randRange(-spread, spread),
+      origin.y + randRange(0, 0.5),
+      origin.z + randRange(-spread, spread)
+    );
+    const size = randRange(0.6, 1.2) + intensity * 0.6;
+    sprite.scale.set(size, size, 1);
+    this._smokeGroup.add(sprite);
+    this._smokeParticles.push({
+      sprite,
+      vel: new THREE.Vector3(
+        randRange(-0.3, 0.3),
+        randRange(1.2, 2.8),
+        randRange(-0.3, 0.3)
+      ),
+      life: 0,
+      maxLife: randRange(1.2, 2.5),
+      growRate: randRange(0.6, 1.4),
+    });
+  }
+
+  _tickSmoke(dt, intensity) {
+    // Spawn new puffs based on intensity (0..1)
+    if (intensity > 0) {
+      const spawnRate = 2 + intensity * 14;
+      const count = Math.floor(spawnRate * dt + (Math.random() < (spawnRate * dt % 1) ? 1 : 0));
+      const origin = this.pressPlate.position;
+      for (let i = 0; i < count; i++) {
+        this._spawnSmokePuff(origin, intensity);
+      }
+    }
+
+    // Update existing particles
+    for (let i = this._smokeParticles.length - 1; i >= 0; i--) {
+      const p = this._smokeParticles[i];
+      p.life += dt;
+      if (p.life >= p.maxLife) {
+        this._smokeGroup.remove(p.sprite);
+        p.sprite.material.dispose();
+        this._smokeParticles.splice(i, 1);
+        continue;
+      }
+      const t = p.life / p.maxLife;
+      p.sprite.position.addScaledVector(p.vel, dt);
+      p.sprite.scale.x += p.growRate * dt;
+      p.sprite.scale.y += p.growRate * dt;
+      p.sprite.material.opacity = (1 - t) * (0.25 + intensity * 0.35);
+    }
+  }
+
+  _tickCameraShake(dt) {
+    const cam = this.engine.camera;
+    // Restore previous offset
+    cam.position.sub(this._cameraShakeOffset);
+
+    // Compute shake magnitude from risk score
+    // Starts at riskScore 50 (High), maxes out at 100 (Critical)
+    const shakeStrength = clamp((this.riskScore - 50) / 50, 0, 1);
+    if (shakeStrength > 0) {
+      const magnitude = shakeStrength * 0.18;
+      this._cameraShakeOffset.set(
+        randRange(-magnitude, magnitude),
+        randRange(-magnitude, magnitude),
+        randRange(-magnitude * 0.5, magnitude * 0.5)
+      );
+    } else {
+      this._cameraShakeOffset.set(0, 0, 0);
+    }
+    cam.position.add(this._cameraShakeOffset);
   }
 
   _buildControls() {
@@ -445,10 +778,13 @@ export class HydraulicsLabApp {
     this.timeSec += dt;
     this.previousPressurePa = this.currentPressurePa;
     const target = this.running ? this.targetPressurePa : 0;
-    const rampFactor = 0.95 * (0.35 + this.valveOpening * 0.85);
-    const leakTerm = this.activeFault === 'seal_leak' ? this.currentPressurePa * 0.18 : 0;
-    const deltaPressure = (target - this.currentPressurePa) * rampFactor * dt - leakTerm * dt;
-    this.currentPressurePa = clamp(this.currentPressurePa + deltaPressure, 0, MAX_PRESSURE_PA);
+    const pressureGap = target - this.currentPressurePa;
+    const rampRateMpaPerSec = PRESSURE_RAMP_BASE_MPA_PER_SEC + this.valveOpening * PRESSURE_RAMP_VALVE_GAIN_MPA_PER_SEC;
+    const rampStepPa = rampRateMpaPerSec * 1_000_000 * dt;
+    const appliedStepPa = Math.min(Math.abs(pressureGap), rampStepPa);
+    const leakTerm = this.activeFault === 'seal_leak' ? this.currentPressurePa * 0.18 * dt : 0;
+    const signedStep = Math.sign(pressureGap) * appliedStepPa;
+    this.currentPressurePa = clamp(this.currentPressurePa + signedStep - leakTerm, 0, MAX_PRESSURE_PA);
 
     if (this.pressureDropPulse > 0) {
       this.currentPressurePa *= lerp(1, 0.78, this.pressureDropPulse);
@@ -504,11 +840,16 @@ export class HydraulicsLabApp {
   _maybeTriggerEvents(pressureRateMpa) {
     const material = this.materials[this.materialKey];
     const pressureMpa = this.currentPressurePa / 1_000_000;
+    const canFracture = this._materialCanFracture(material);
 
     if (this.stage === 'Crush' && this.lastEvent !== 'Material crush threshold reached') {
       this.pressureDropPulse = 1;
       this.running = false;
-      this._fractureMaterial();
+      if (canFracture) {
+        this._fractureMaterial();
+      } else {
+        this._clearFractureFragments();
+      }
       this._pushEvent('Material crush threshold reached', 'crush');
       return;
     }
@@ -529,17 +870,32 @@ export class HydraulicsLabApp {
     }
   }
 
+  _materialCanFracture(material) {
+    if (!material) return false;
+    if (material.noFracture === true) return false;
+    return this.materialKey !== 'sponge';
+  }
+
   _tickVisuals(dt) {
     const material = this.materials[this.materialKey];
     if (!material) return;
 
     const targetScaleY = clamp(1 - this.materialCompression * material.deformationBias, 0.18, 1);
+    const lateralStretch = clamp(this.materialCompression * material.deformationBias * 1.65, 0, 1.35);
+    const targetScaleXZ = 1 + lateralStretch;
+
+    this.materialMesh.scale.x = lerp(this.materialMesh.scale.x, targetScaleXZ, 1 - Math.exp(-4.6 * dt));
     this.materialMesh.scale.y = lerp(this.materialMesh.scale.y, targetScaleY, 1 - Math.exp(-5 * dt));
+    this.materialMesh.scale.z = lerp(this.materialMesh.scale.z, targetScaleXZ, 1 - Math.exp(-4.6 * dt));
     this.materialMesh.position.y = -4.1 + this.materialMesh.scale.y * 1.1;
 
-    const targetPlateY = this.materialMesh.position.y + this.materialMesh.scale.y * 1.2 + 0.25;
+    // Keep plate in contact with the material top face (with a tiny overlap to avoid seams).
+    const materialTopY = this.materialMesh.position.y + this.materialMesh.scale.y * MATERIAL_HALF_HEIGHT;
+    const targetPlateY = materialTopY + PRESS_PLATE_HALF_HEIGHT - MATERIAL_PLATE_CONTACT_OVERLAP;
     this.pressPlate.position.y = lerp(this.pressPlate.position.y, targetPlateY, 1 - Math.exp(-4.8 * dt));
-    this.ram.position.y = lerp(this.ram.position.y, targetPlateY + 2.35, 1 - Math.exp(-4 * dt));
+    // Keep a tiny overlap so the ram and plate always read as one connected assembly.
+    const ramPlateOffset = RAM_HALF_HEIGHT + PRESS_PLATE_HALF_HEIGHT - RAM_PLATE_CONTACT_OVERLAP;
+    this.ram.position.y = this.pressPlate.position.y + ramPlateOffset;
 
     const emissive = clamp(this.currentPressurePa / MAX_PRESSURE_PA, 0, 1) * 0.35;
     const meshMaterial = this.materialMesh.material;
@@ -556,32 +912,10 @@ export class HydraulicsLabApp {
       meshMaterial.emissiveIntensity = emissive;
     }
 
-    if (this.materialFragments.length > 0) {
-      this.materialFragments.forEach((fragment, index) => {
-        const velocity = this.materialFragmentVelocities[index];
-        if (!velocity) return;
-        velocity.y -= 6.2 * dt;
-        velocity.multiplyScalar(Math.exp(-0.65 * dt));
-        fragment.position.addScaledVector(velocity, dt);
-
-        const fragmentRadius = Number(fragment.userData.floorRadius || 0.14);
-        const minY = FLOOR_TOP_Y + fragmentRadius;
-        if (fragment.position.y < minY) {
-          fragment.position.y = minY;
-          if (velocity.y < 0) {
-            velocity.y = -velocity.y * FRAGMENT_BOUNCE;
-          }
-          velocity.x *= FRAGMENT_FLOOR_FRICTION;
-          velocity.z *= FRAGMENT_FLOOR_FRICTION;
-          if (velocity.lengthSq() < FRAGMENT_SLEEP_SPEED * FRAGMENT_SLEEP_SPEED) {
-            velocity.set(0, 0, 0);
-          }
-        }
-
-        fragment.rotation.x += (0.8 + index * 0.015) * dt;
-        fragment.rotation.y += (0.5 + index * 0.01) * dt;
-      });
-    }
+    // Smoke intensity ramps from riskScore 50 (High) to 100 (Critical)
+    const smokeIntensity = clamp((this.riskScore - 50) / 50, 0, 1);
+    this._tickSmoke(dt, smokeIntensity);
+    this._tickCameraShake(dt);
   }
 
   _updateMaterialAppearance() {
@@ -591,6 +925,8 @@ export class HydraulicsLabApp {
     const innerColor = outerColor.clone().multiplyScalar(0.28);
 
     const meshMaterial = this.materialMesh.material;
+    const outerMaterial = Array.isArray(meshMaterial) ? meshMaterial[0] : meshMaterial;
+
     if (Array.isArray(meshMaterial)) {
       if (meshMaterial[0]) meshMaterial[0].color = outerColor;
       if (meshMaterial[0]) meshMaterial[0].emissive = outerColor.clone();
@@ -598,12 +934,23 @@ export class HydraulicsLabApp {
       if (meshMaterial[1]) meshMaterial[1].color = innerColor;
       if (meshMaterial[1]) meshMaterial[1].emissive = innerColor.clone();
       if (meshMaterial[1]) meshMaterial[1].emissiveIntensity = 0;
-      return;
+    } else {
+      meshMaterial.color = outerColor;
+      meshMaterial.emissive = outerColor;
+      meshMaterial.emissiveIntensity = 0;
     }
 
-    meshMaterial.color = outerColor;
-    meshMaterial.emissive = outerColor;
-    meshMaterial.emissiveIntensity = 0;
+    if (outerMaterial.map) {
+      outerMaterial.map.dispose();
+      outerMaterial.map = null;
+    }
+
+    if (material.isElement && material.atomicNumber && material.atomicMass) {
+      outerMaterial.map = createElementEngraveTexture(material);
+    } else {
+      outerMaterial.map = createMaterialNameEngraveTexture(material);
+    }
+    outerMaterial.needsUpdate = true;
   }
 
   _fractureMaterial() {
@@ -625,19 +972,15 @@ export class HydraulicsLabApp {
     });
 
     const sourcePosition = this.materialMesh.position.clone();
-    const baseImpulse = lerp(1.2, 3.6, pressureRatio);
+    const crackGap = FRACTURE_CRACK_GAP_M * (0.85 + pressureRatio * 0.3);
 
     this.materialFragments = this.materialMesh.fracture(fractureOptions, (fragment) => {
-      const direction = fragment.position.clone().sub(sourcePosition).normalize();
-      direction.y = Math.abs(direction.y) + 0.35;
-      direction.normalize();
-      const randomImpulse = 0.65 + Math.random() * 0.8;
-      this.materialFragmentVelocities.push(direction.multiplyScalar(baseImpulse * randomImpulse));
-
-      fragment.geometry.computeBoundingSphere();
-      const localRadius = fragment.geometry.boundingSphere?.radius || 0.2;
-      const averageScale = (fragment.scale.x + fragment.scale.y + fragment.scale.z) / 3;
-      fragment.userData.floorRadius = localRadius * averageScale;
+      const explodeDir = fragment.position.clone().sub(sourcePosition);
+      if (explodeDir.lengthSq() < 1e-6) {
+        explodeDir.set(randRange(-1, 1), randRange(-1, 1), randRange(-1, 1));
+      }
+      explodeDir.normalize();
+      fragment.position.addScaledVector(explodeDir, crackGap);
 
       fragment.castShadow = true;
       fragment.receiveShadow = true;
@@ -651,7 +994,6 @@ export class HydraulicsLabApp {
   _clearFractureFragments() {
     if (!this.engine?.scene || this.materialFragments.length === 0) {
       this.materialFragments = [];
-      this.materialFragmentVelocities = [];
       this.materialFractured = false;
       return;
     }
@@ -664,7 +1006,6 @@ export class HydraulicsLabApp {
     });
 
     this.materialFragments = [];
-    this.materialFragmentVelocities = [];
     this.materialFractured = false;
   }
 
@@ -687,7 +1028,9 @@ export class HydraulicsLabApp {
     const material = this.materials[this.materialKey];
     const pressureMpa = this.currentPressurePa / 1_000_000;
     const stageDescription = this.stage === 'Crush'
-      ? 'Structure has failed and fragments have separated from the core block.'
+      ? this.materialFractured
+        ? 'Structure has failed and fragments have separated from the core block.'
+        : 'Structure has failed in heavy compression without brittle cracking.'
       : this.stage === 'Yield'
         ? 'Permanent deformation is underway.'
         : 'Material is still in the elastic response range.';
@@ -768,6 +1111,11 @@ export class HydraulicsLabApp {
   }
 
   dispose() {
+    if (this._themeObserver) {
+      this._themeObserver.disconnect();
+      this._themeObserver = null;
+    }
+
     this._clearFractureFragments();
     this.engine.dispose();
   }
