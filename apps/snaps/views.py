@@ -1,6 +1,8 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.db.models import Count
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
@@ -13,6 +15,49 @@ from .forms import SnapForm
 
 # Pre-defined tags for the chip selector
 DEFAULT_TAGS = ["Science", "Art", "Nature", "Building", "Cooking", "Adventure", "School", "Fun"]
+
+
+def _get_popular_snap_tags(*, include=None):
+    """Return all snap tags ordered by usage count, then name."""
+    include = {t.strip() for t in (include or []) if t and t.strip()}
+    post_ct = ContentType.objects.get_for_model(Post)
+    through = Post.tags.through
+
+    tag_counts = (
+        through.objects
+        .filter(content_type=post_ct, object_id__in=Post.snaps.values("id"))
+        .values("tag__name")
+        .annotate(usage_count=Count("tag_id"))
+        .order_by("-usage_count", "tag__name")
+    )
+
+    tags = []
+    seen = set()
+    seen_lower = set()
+    for row in tag_counts:
+        name = row["tag__name"]
+        if not name or name.lower() in seen_lower:
+            continue
+        tags.append(name)
+        seen.add(name)
+        seen_lower.add(name.lower())
+
+    for name in sorted(include, key=str.lower):
+        if name.lower() not in seen_lower:
+            tags.append(name)
+            seen.add(name)
+            seen_lower.add(name.lower())
+
+    # Keep the original baseline tags available even if they are not yet popular.
+    for name in DEFAULT_TAGS:
+        if name.lower() not in seen_lower:
+            tags.append(name)
+            seen.add(name)
+            seen_lower.add(name.lower())
+
+    if not tags:
+        tags = DEFAULT_TAGS
+    return tags
 
 
 @login_required(login_url="accounts:login")
@@ -51,7 +96,7 @@ def snap_create(request):
 
     return render(request, "snaps/snap_form.html", {
         "form": form,
-        "default_tags": DEFAULT_TAGS,
+        "default_tags": _get_popular_snap_tags(),
     })
 
 
@@ -97,7 +142,7 @@ def snap_edit(request, slug):
         "form": form,
         "snap": snap,
         "editing": True,
-        "default_tags": DEFAULT_TAGS,
+        "default_tags": _get_popular_snap_tags(include=snap.tags.names()),
     })
 
 

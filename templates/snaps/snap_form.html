@@ -256,6 +256,7 @@ function snapForm() {
         caption: '{{ form.caption.value|default:""|escapejs }}',
         youtubeUrl: '{{ form.youtube_url.value|default:""|escapejs }}',
         selectedTags: '{{ form.initial.tag_list|default:""|escapejs }}'.split(',').filter(t => t.trim()).map(t => t.trim()),
+        popularTags: [{% for tag in default_tags %}'{{ tag|escapejs }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
         customTags: [],
         showCustomTag: false,
         showEmojis: false,
@@ -328,14 +329,21 @@ function snapForm() {
             for (const f of this.files) dt.items.add(f);
             this.$refs.imageInput.files = dt.files;
         },
+        init() {
+            const popularLower = new Set(this.popularTags.map(t => t.toLowerCase()));
+            this.customTags = this.selectedTags.filter(t => !popularLower.has(t.toLowerCase()));
+        },
         toggleTag(tag) {
-            const i = this.selectedTags.indexOf(tag);
+            const norm = tag.toLowerCase();
+            const i = this.selectedTags.findIndex(t => t.toLowerCase() === norm);
             if (i > -1) this.selectedTags.splice(i, 1);
             else this.selectedTags.push(tag);
         },
         addCustomTag() {
             const val = this.$refs.customTag.value.trim();
-            if (val && !this.selectedTags.includes(val)) {
+            const norm = val.toLowerCase();
+            const exists = this.selectedTags.some(t => t.toLowerCase() === norm);
+            if (val && !exists) {
                 this.customTags.push(val);
                 this.selectedTags.push(val);
             }

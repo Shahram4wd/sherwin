@@ -9,7 +9,7 @@
     <!-- ===== Mobile: Profile banner + horizontal tag chips ===== -->
     <div class="lg:hidden mb-6 max-w-xl mx-auto space-y-4">
         <!-- Compact profile banner -->
-        <div class="glass-card rounded-2xl p-4 flex items-center gap-4">
+        <a href="{% url 'core:about' %}" class="glass-card rounded-2xl p-4 flex items-center gap-4 hover:bg-white/[0.04] transition-colors">
             {% if profile.avatar %}
             <img src="{{ profile.avatar.url }}" alt="{{ about.title }}" class="w-14 h-14 rounded-full object-cover ring-2 ring-accent-500/30 shrink-0">
             {% elif about.profile_photo %}
@@ -21,7 +21,7 @@
                 <h2 class="text-white font-display font-bold text-base truncate">{{ about.title|default:"Sherwin" }}</h2>
                 {% if about.subtitle %}<p class="text-gray-400 text-xs truncate">{{ about.subtitle }}</p>{% endif %}
             </div>
-        </div>
+        </a>
 
         <!-- Horizontal tag chips -->
         {% if all_tags %}
@@ -43,7 +43,7 @@
         <aside class="hidden lg:block w-[220px] shrink-0">
             <div class="sticky top-24 space-y-4">
                 <!-- Profile card -->
-                <div class="glass-card rounded-2xl overflow-hidden">
+                <a href="{% url 'core:about' %}" class="glass-card rounded-2xl overflow-hidden block hover:bg-white/[0.04] transition-colors">
                     <!-- Cover gradient -->
                     <div class="h-16 bg-gradient-to-r from-accent-600/40 to-accent-400/20"></div>
                     <div class="px-4 pb-4 -mt-8 text-center">
@@ -59,7 +59,7 @@
                         <p class="text-gray-400 text-xs mt-0.5 leading-snug">{{ about.subtitle }}</p>
                         {% endif %}
                     </div>
-                </div>
+                </a>
 
                 <!-- Quick nav -->
                 <div class="glass-card rounded-2xl py-2">
