@@ -1,18 +1,36 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.core.paginator import Paginator
+from django.db.models import Count
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.views.decorators.http import require_POST
+from taggit.models import TaggedItem
 
 from apps.blog.models import Post
 from apps.core.utils.exif import strip_exif
 
 from .forms import SnapForm
 
-# Pre-defined tags for the chip selector
-DEFAULT_TAGS = ["Science", "Art", "Nature", "Building", "Cooking", "Adventure", "School", "Fun"]
+FALLBACK_TAGS = ["Science", "Art", "Nature", "Building", "Cooking", "Adventure", "School", "Fun"]
+
+
+def get_popular_snap_tags():
+    """Return snap tags ordered by popularity, then alphabetically."""
+    post_content_type = ContentType.objects.get_for_model(Post)
+    popular_tags = list(
+        TaggedItem.objects.filter(
+            content_type=post_content_type,
+            object_id__in=Post.snaps.values("pk"),
+        )
+        .values("tag__name")
+        .annotate(usage_count=Count("id"))
+        .order_by("-usage_count", "tag__name")
+        .values_list("tag__name", flat=True)
+    )
+    return popular_tags or FALLBACK_TAGS
 
 
 @login_required(login_url="accounts:login")
@@ -51,7 +69,7 @@ def snap_create(request):
 
     return render(request, "snaps/snap_form.html", {
         "form": form,
-        "default_tags": DEFAULT_TAGS,
+        "default_tags": get_popular_snap_tags(),
     })
 
 
@@ -97,7 +115,7 @@ def snap_edit(request, slug):
         "form": form,
         "snap": snap,
         "editing": True,
-        "default_tags": DEFAULT_TAGS,
+        "default_tags": get_popular_snap_tags(),
     })
 
 

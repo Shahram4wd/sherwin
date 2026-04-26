@@ -35,6 +35,36 @@ class SnapCreateViewTests(TestCase):
         assert response.status_code == 200
         assert b"Share something" in response.content
 
+    def test_get_form_uses_popular_tags_order(self):
+        self.client.login(username="sherwin", password="testpass")
+
+        first = Post.objects.create(
+            title="Popular One",
+            slug="popular-one",
+            body="",
+            post_type=Post.PostType.SNAP,
+            status=Post.Status.PUBLISHED,
+            created_by=self.user,
+        )
+        first.tags.add("gaming", "ksp")
+
+        second = Post.objects.create(
+            title="Popular Two",
+            slug="popular-two",
+            body="",
+            post_type=Post.PostType.SNAP,
+            status=Post.Status.PUBLISHED,
+            created_by=self.user,
+        )
+        second.tags.add("gaming")
+
+        response = self.client.get(self.url)
+        assert response.status_code == 200
+        default_tags = response.context["default_tags"]
+        assert "gaming" in default_tags
+        assert "ksp" in default_tags
+        assert default_tags.index("gaming") < default_tags.index("ksp")
+
     def test_create_snap_with_image(self):
         self.client.login(username="sherwin", password="testpass")
         image = _create_test_image()
@@ -172,6 +202,27 @@ class SnapEditViewTests(TestCase):
         assert response.status_code == 200
         assert b"Edit Snap" in response.content
         assert b"Old caption" in response.content
+
+    def test_edit_form_includes_newly_created_tags(self):
+        self.client.login(username="sherwin", password="testpass")
+
+        self.snap.tags.add("gaming", "ksp")
+        other_snap = Post.objects.create(
+            title="Another snap",
+            slug="another-snap",
+            body="",
+            post_type=Post.PostType.SNAP,
+            status=Post.Status.PUBLISHED,
+            created_by=self.user,
+        )
+        other_snap.tags.add("gaming")
+
+        response = self.client.get(self.url)
+        assert response.status_code == 200
+        default_tags = response.context["default_tags"]
+        assert "gaming" in default_tags
+        assert "ksp" in default_tags
+        assert default_tags.index("gaming") < default_tags.index("ksp")
 
     def test_edit_caption(self):
         self.client.login(username="sherwin", password="testpass")

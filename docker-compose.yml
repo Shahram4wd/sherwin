@@ -10,6 +10,7 @@ services:
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings.dev
       - SECRET_KEY=local-dev-secret-key
+      - BASE_URL=http://127.0.0.1:8000
       - DJANGO_SUPERUSER_USERNAME=admin
       - DJANGO_SUPERUSER_PASSWORD=admin
       - DJANGO_SUPERUSER_EMAIL=admin@localhost
@@ -17,6 +18,7 @@ services:
       - sherwin-universe.env
     command: >
       sh -c "pip install -r requirements/dev.txt --quiet &&
+             python -c 'from pathlib import Path; import sys; cache_dir = Path.home() / ".cache" / "ms-playwright"; sys.exit(0 if list(cache_dir.glob("chromium*")) else 1)' || python -m playwright install chromium &&
              python manage.py migrate --noinput &&
              python manage.py createsuperuser --noinput 2>/dev/null || true &&
              python manage.py runserver 0.0.0.0:8000"

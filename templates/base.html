@@ -67,6 +67,7 @@
     </script>
     <style>
         [x-cloak] { display: none !important; }
+        html, body { overflow-x: hidden; }
         body { background: #050508; }
         .glass-card {
             background: rgba(255, 255, 255, 0.03);
@@ -103,7 +104,7 @@
     {% block extra_head %}{% endblock %}
 </head>
 {% load static %}
-<body class="min-h-screen text-white font-sans flex flex-col star-field" x-data="{ mobileMenu: false }">
+<body class="min-h-screen overflow-x-hidden text-white font-sans flex flex-col star-field" x-data="{ mobileMenu: false }">
 
     <!-- Desktop Navigation -->
     <header class="hidden md:block glass-nav sticky top-0 z-50">
@@ -218,32 +219,32 @@
         </div>
     </footer>
 
-    <link rel="stylesheet" href="{% static 'css/main.css' %}">
-    <script src="{% static 'js/main.js' %}" defer></script>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=20260426-navfix">
+    <script src="{% static 'js/main.js' %}?v=20260426-navfix" defer></script>
 
     <!-- Mobile Bottom Navigation -->
     <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav z-50 border-t border-white/5">
-        <div class="flex justify-around items-end py-2">
-            <a href="{% url 'core:home' %}" class="flex flex-col items-center text-xs text-gray-500 hover:text-accent-400 transition-colors py-1">
+        <div class="mobile-bottom-nav-grid">
+            <a href="{% url 'core:home' %}" class="mobile-bottom-nav-link">
                 <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-                Home
+                <span class="mobile-bottom-nav-label">Home</span>
             </a>
-            <a href="{% url 'timeline:timeline' %}" class="flex flex-col items-center text-xs text-gray-500 hover:text-accent-400 transition-colors py-1">
+            <a href="{% url 'timeline:timeline' %}" class="mobile-bottom-nav-link">
                 <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                Timeline
+                <span class="mobile-bottom-nav-label">Timeline</span>
             </a>
-            <a href="{% if user.is_authenticated %}{% url 'snaps:snap_create' %}{% else %}{% url 'accounts:login' %}{% endif %}" class="flex flex-col items-center -mt-4">
+            <a href="{% if user.is_authenticated %}{% url 'snaps:snap_create' %}{% else %}{% url 'accounts:login' %}{% endif %}" class="mobile-bottom-nav-create">
                 <div class="w-14 h-14 rounded-full bg-accent-500 flex items-center justify-center shadow-lg shadow-accent-500/30 hover:bg-accent-600 transition-all active:scale-95">
                     <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
                 </div>
             </a>
-            <a href="{% url 'gallery:highlights' %}" class="flex flex-col items-center text-xs text-gray-500 hover:text-accent-400 transition-colors py-1">
+            <a href="{% url 'gallery:highlights' %}" class="mobile-bottom-nav-link">
                 <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                Gallery
+                <span class="mobile-bottom-nav-label">Gallery</span>
             </a>
-            <a href="{% url 'miniapps:lab' %}" class="flex flex-col items-center text-xs text-gray-500 hover:text-accent-400 transition-colors py-1">
+            <a href="{% url 'miniapps:lab' %}" class="mobile-bottom-nav-link">
                 <svg class="w-5 h-5 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/></svg>
-                Lab
+                <span class="mobile-bottom-nav-label">Lab</span>
             </a>
         </div>
     </nav>

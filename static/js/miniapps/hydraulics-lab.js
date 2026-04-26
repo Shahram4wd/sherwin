@@ -597,7 +597,7 @@ export class HydraulicsLabApp {
   }
 
   _buildControls() {
-    const panel = new UIPanel(this.container, 'top-left');
+    const panel = new UIPanel(this.container, 'top-left', 'Controls');
     panel.addHTML('<div class="miniapp-title">🛠 Hydraulics Controls</div>');
 
     this._pressureSlider = panel.addSlider('Target Pressure (MPa)', 0, Math.round(MAX_PRESSURE_PA / 1_000_000), DEFAULT_PRESSURE_MPA, (v) => {
@@ -647,12 +647,12 @@ export class HydraulicsLabApp {
   }
 
   _buildInfoPanel() {
-    const panel = new UIPanel(this.container, 'top-right');
+    const panel = new UIPanel(this.container, 'top-right', 'Status');
     this._infoEl = panel.addDisplay('hydraulics-info', '');
   }
 
   _buildActionsPanel() {
-    const panel = new UIPanel(this.container, 'bottom-left');
+    const panel = new UIPanel(this.container, 'bottom-left', 'Actions');
     panel.addHTML('<div class="miniapp-subtitle">Experiment Controls</div>');
     panel.addButton('Start Press', () => this._startPress());
     panel.addButton('Release Pressure', () => this._releasePressure());
@@ -662,7 +662,7 @@ export class HydraulicsLabApp {
   }
 
   _buildGraphPanel() {
-    const panel = new UIPanel(this.container, 'bottom-right');
+    const panel = new UIPanel(this.container, 'bottom-right', 'Graph');
     panel.addHTML('<div class="miniapp-subtitle">Pressure vs Time</div>');
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `

@@ -239,10 +239,118 @@ export class ParticlePool {
 /* ------------------------------------------------------------------ */
 
 export class UIPanel {
-  constructor(container, position = 'top-left') {
+  constructor(container, position = 'top-left', mobileLabel = '') {
     this.el = document.createElement('div');
     this.el.className = `miniapp-panel miniapp-panel--${position}`;
+    this.el.dataset.panelPosition = position;
     container.appendChild(this.el);
+    this._attachMobileToggle(container, position, mobileLabel);
+  }
+
+  _attachMobileToggle(container, position, mobileLabel) {
+    const labelMap = {
+      'top-left': 'Controls',
+      'top-right': 'Status',
+      'bottom-left': 'Actions',
+      'bottom-right': 'History',
+    };
+    const iconMap = {
+      'top-left': this._buildTabIcon('controls'),
+      'top-right': this._buildTabIcon('status'),
+      'bottom-left': this._buildTabIcon('actions'),
+      'bottom-right': this._buildTabIcon('history'),
+    };
+    const label = mobileLabel || labelMap[position] || 'Panel';
+    this.el.dataset.mobileLabel = label;
+
+    let dock = container.querySelector('.miniapp-mobile-dock');
+    if (!dock) {
+      dock = document.createElement('div');
+      dock.className = 'miniapp-mobile-dock';
+      container.appendChild(dock);
+      this._ensureMobileHint(container, dock);
+    }
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'miniapp-mobile-tab';
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = `
+      <span class="miniapp-mobile-tab-icon" aria-hidden="true">${iconMap[position] || iconMap['top-left']}</span>
+      <span class="miniapp-sr-only">${label}</span>
+    `;
+    btn.addEventListener('click', () => {
+      const shouldActivate = !this.el.classList.contains('is-active');
+      container.querySelectorAll('.miniapp-panel.is-active').forEach((panel) => {
+        panel.classList.remove('is-active');
+      });
+      dock.querySelectorAll('.miniapp-mobile-tab.is-active').forEach((tab) => {
+        tab.classList.remove('is-active');
+        tab.setAttribute('aria-expanded', 'false');
+      });
+
+      if (shouldActivate) {
+        this.el.classList.add('is-active');
+        btn.classList.add('is-active');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    dock.appendChild(btn);
+    this._mobileToggle = btn;
+  }
+
+  _buildTabIcon(kind) {
+    const icons = {
+      controls: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><circle cx="9" cy="6" r="2"/><line x1="4" y1="12" x2="20" y2="12"/><circle cx="15" cy="12" r="2"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="11" cy="18" r="2"/></svg>',
+      status: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19V9"/><path d="M12 19V5"/><path d="M19 19v-7"/></svg>',
+      actions: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>',
+      history: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6h12"/><path d="M6 12h12"/><path d="M6 18h8"/></svg>',
+    };
+    return icons[kind] || icons.controls;
+  }
+
+  _ensureMobileHint(container, dock) {
+    const hint = document.createElement('div');
+    hint.className = 'miniapp-mobile-hint';
+    hint.textContent = 'Tap a tab to open controls without covering the experiment.';
+    container.appendChild(hint);
+
+    const hideHint = () => {
+      hint.classList.remove('is-visible');
+      try {
+        window.sessionStorage.setItem('miniapp-mobile-hint-dismissed', '1');
+      } catch {
+        // Ignore session storage failures.
+      }
+    };
+
+    dock.addEventListener('click', hideHint, { once: true });
+
+    const showHint = () => {
+      const isMobile = window.matchMedia('(max-width: 640px), (max-width: 960px) and (max-height: 540px) and (orientation: landscape)').matches;
+      if (!isMobile) return;
+
+      let dismissed = false;
+      try {
+        dismissed = window.sessionStorage.getItem('miniapp-mobile-hint-dismissed') === '1';
+      } catch {
+        dismissed = false;
+      }
+      if (dismissed) return;
+
+      hint.classList.add('is-visible');
+      window.setTimeout(() => {
+        hint.classList.remove('is-visible');
+      }, 4800);
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', showHint, { once: true });
+    } else {
+      showHint();
+    }
   }
 
   addHTML(html) {

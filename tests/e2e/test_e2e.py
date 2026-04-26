@@ -17,12 +17,13 @@ Run:
   pytest tests/e2e/             (headless)
 """
 
+import os
 import re
 
 import pytest
 from playwright.sync_api import Page, expect
 
-BASE_URL = "http://localhost:8088"
+BASE_URL = os.getenv("BASE_URL", "http://localhost:8088")
 
 
 @pytest.fixture(scope="session")
@@ -165,3 +166,49 @@ class TestSearch:
         page.goto("/")
         search = page.locator("input[name='q']")
         expect(search.first).to_be_visible()
+
+
+class TestMiniappResponsive:
+    def test_nuclear_decay_uses_compact_dock_in_landscape_mobile(self, page: Page):
+        page.set_viewport_size({"width": 844, "height": 390})
+        page.goto("/lab/nuclear-decay/")
+
+        dock = page.locator(".miniapp-mobile-dock")
+        expect(dock).to_be_visible()
+
+        tabs = page.locator(".miniapp-mobile-tab")
+        expect(tabs).to_have_count(4)
+        expect(tabs.first).to_have_attribute("aria-label", "Builder")
+
+        active_panels = page.locator(".miniapp-panel.is-active")
+        expect(active_panels).to_have_count(0)
+
+        tabs.nth(1).click()
+        expect(page.locator(".miniapp-mobile-tab.is-active")).to_have_count(1)
+        expect(page.locator(".miniapp-panel.is-active")).to_have_count(1)
+
+
+class TestMobileBottomNav:
+    def test_highlights_and_timeline_show_all_bottom_nav_items(self, page: Page):
+        page.set_viewport_size({"width": 320, "height": 844})
+
+        for route in ("/highlights/", "/timeline/"):
+            page.goto(route)
+            nav = page.locator("nav:has(.mobile-bottom-nav-grid)")
+            expect(nav).to_be_visible()
+            expect(page.locator(".mobile-bottom-nav-link")).to_have_count(4)
+            expect(page.locator(".mobile-bottom-nav-link", has_text="Home")).to_be_visible()
+            expect(page.locator(".mobile-bottom-nav-link", has_text="Timeline")).to_be_visible()
+            expect(page.locator(".mobile-bottom-nav-link", has_text="Gallery")).to_be_visible()
+            expect(page.locator(".mobile-bottom-nav-link", has_text="Lab")).to_be_visible()
+
+    def test_highlights_does_not_overflow_horizontally_on_mobile(self, page: Page):
+        page.set_viewport_size({"width": 320, "height": 844})
+        page.goto("/highlights/")
+
+        has_horizontal_overflow = page.evaluate(
+            "document.documentElement.scrollWidth > window.innerWidth || document.body.scrollWidth > window.innerWidth"
+        )
+        assert has_horizontal_overflow is False
+
+        expect(page.locator(".mobile-bottom-nav-link", has_text="Lab")).to_be_visible()

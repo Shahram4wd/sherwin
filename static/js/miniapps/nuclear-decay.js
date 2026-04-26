@@ -964,7 +964,7 @@ export class NuclearDecayApp {
   /* ---- UI builders ----------------------------------------------- */
 
   _buildControls() {
-    const panel = new UIPanel(this.container, 'top-left');
+    const panel = new UIPanel(this.container, 'top-left', 'Builder');
     panel.addHTML('<div class="miniapp-title">⚛ Nucleus Builder</div>');
 
     this._zDisplay = panel.addDisplay('z-val', '');
@@ -986,12 +986,12 @@ export class NuclearDecayApp {
   }
 
   _buildInfoPanel() {
-    const panel = new UIPanel(this.container, 'top-right');
+    const panel = new UIPanel(this.container, 'top-right', 'Status');
     this._infoEl = panel.addDisplay('nucleus-info', '');
   }
 
   _buildDecayPanel() {
-    const panel = new UIPanel(this.container, 'bottom-left');
+    const panel = new UIPanel(this.container, 'bottom-left', 'Decay');
     panel.addHTML('<div class="miniapp-subtitle">Decay Controls</div>');
     this._decayBtnsEl = panel.addDisplay('decay-buttons', '');
 
@@ -1011,7 +1011,7 @@ export class NuclearDecayApp {
   }
 
   _buildHistoryPanel() {
-    const panel = new UIPanel(this.container, 'bottom-right');
+    const panel = new UIPanel(this.container, 'bottom-right', 'Chain');
     panel.addHTML('<div class="miniapp-subtitle">Decay Chain</div>');
     this._historyEl = panel.addDisplay('decay-history', '<span class="text-gray-500 text-xs">No decays yet</span>');
   }
