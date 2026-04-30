@@ -5,6 +5,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 
 # Import simulation modules so they self-register on startup.
+import apps.ai_tools.simulations.gravity_gunner  # noqa: F401
 import apps.ai_tools.simulations.hydraulics_lab  # noqa: F401
 import apps.ai_tools.simulations.nuclear_decay  # noqa: F401
 from apps.ai_tools.client import OpenAIClient
