@@ -19,7 +19,9 @@ const PROJECTILE_LIFETIME = 6;
 const ENEMY_HIT_DAMAGE = 20;
 const PLAYER_SHIELD_MAX = 100;
 const STAR_COUNT = 140;
-const TRAIL_LENGTH = 22;
+const TRAIL_LENGTH = 40;
+const BLACK_HOLE_STRENGTH_MULT = 6;   // multiplier over normal gravity strength
+const BLACK_HOLE_HORIZON_RATIO = 0.55; // event horizon = radius * this ratio
 
 const PRESETS = {
   'Easy Gravity': {
@@ -27,18 +29,28 @@ const PRESETS = {
     gravityStrength: 5_000_000,
     enemyFireInterval: 3.5,
     maxVelocity: 900,
+    aimbotMode: false,
   },
   'Heavy Gravity': {
     gravityCount: 3,
     gravityStrength: 12_000_000,
     enemyFireInterval: 2.8,
     maxVelocity: 900,
+    aimbotMode: false,
   },
   'Chaos Field': {
     gravityCount: 5,
     gravityStrength: 22_000_000,
     enemyFireInterval: 2.0,
     maxVelocity: 900,
+    aimbotMode: false,
+  },
+  'AIM-BOT': {
+    gravityCount: 3,
+    gravityStrength: 12_000_000,
+    enemyFireInterval: 1.5,
+    maxVelocity: 900,
+    aimbotMode: true,
   },
 };
 
@@ -71,6 +83,7 @@ export class GravityGunnerApp {
     this._boundPointerMove = null;
     this._boundPointerUp = null;
     this._boundResize = null;
+    this._boundFullscreenChange = null;
 
     // Drag state
     this._drag = { active: false, startX: 0, startY: 0, currentX: 0, currentY: 0 };
@@ -84,6 +97,7 @@ export class GravityGunnerApp {
     this._activePresetName = 'Easy Gravity';
     this._activePreset = PRESETS['Easy Gravity'];
     this._waveCleared = false;
+    this._nextWaveCountdown = 0; // seconds remaining before auto-advance
 
     // Stars (generated once)
     this._stars = [];
@@ -161,9 +175,13 @@ export class GravityGunnerApp {
         style="top:10px;left:50%;transform:translateX(-50%);
                display:flex;flex-wrap:wrap;justify-content:center;
                gap:5px;padding:7px 10px;z-index:30;max-width:95%;">
-        ${Object.keys(PRESETS).map(name =>
-          `<button class="miniapp-btn gg-preset-btn" data-preset="${name}">${name}</button>`
-        ).join('')}
+        ${Object.keys(PRESETS).map(name => {
+          const isAimbot = name === 'AIM-BOT';
+          const extra = isAimbot
+            ? ' style="color:#ef4444;border-color:#ef4444;font-weight:700;"'
+            : '';
+          return `<button class="miniapp-btn gg-preset-btn" data-preset="${name}"${extra}>${name}</button>`;
+        }).join('')}
       </div>
 
       <!-- Top-left: Controls -->
@@ -214,6 +232,7 @@ export class GravityGunnerApp {
         <div class="miniapp-subtitle">Actions</div>
         <button class="miniapp-btn" id="gg-btn-pause">Pause</button>
         <button class="miniapp-btn miniapp-btn--reset" id="gg-btn-reset">Reset</button>
+        <button class="miniapp-btn" id="gg-btn-fullscreen">⛶ Fullscreen</button>
         <button class="miniapp-btn miniapp-btn--neutron" id="gg-btn-next-wave"
           style="display:none;">Next Wave ›</button>
       </div>
@@ -248,6 +267,31 @@ export class GravityGunnerApp {
       .addEventListener('click', () => this._reset());
     this._container.querySelector('#gg-btn-next-wave')
       .addEventListener('click', () => this._advanceWave());
+    this._container.querySelector('#gg-btn-fullscreen')
+      .addEventListener('click', () => this._toggleFullscreen());
+
+    // Update fullscreen button label when fullscreen state changes externally (Esc key)
+    this._boundFullscreenChange = () => this._onFullscreenChange();
+    document.addEventListener('fullscreenchange', this._boundFullscreenChange);
+  }
+
+  // ---- Fullscreen ---------------------------------------------
+
+  _toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      this._container.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  _onFullscreenChange() {
+    const btn = this._container?.querySelector('#gg-btn-fullscreen');
+    if (btn) {
+      btn.textContent = document.fullscreenElement ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+    }
+    // Force resize so canvas fills new dimensions
+    this._onResize();
   }
 
   // ---- Resize ---------------------------------------------------
@@ -304,6 +348,7 @@ export class GravityGunnerApp {
     this.state.enemies = [];
     this.state.projectiles = [];
     this._waveCleared = false;
+    this._nextWaveCountdown = 0;
 
     const fireInterval = Math.max(
       1.4,
@@ -341,11 +386,13 @@ export class GravityGunnerApp {
     this.state.gravityObjects = [];
     const W = this._canvas ? this._canvas.width : 800;
     const H = this._canvas ? this._canvas.height : 600;
-    const types = ['attractor', 'repulsor'];
+    // cycle: attractor, repulsor, black_hole, attractor, repulsor, black_hole…
+    const types = ['attractor', 'repulsor', 'black_hole'];
 
     for (let i = 0; i < count; i++) {
-      const type = types[i % 2];
-      const startTop = i % 2 === 0;
+      const type      = types[i % 3];
+      const isHole    = type === 'black_hole';
+      const startTop  = i % 2 === 0;
       const baseSpeed = 55 + i * 15 + Math.random() * 30;
       this.state.gravityObjects.push({
         id: this._nextGravityId++,
@@ -354,16 +401,26 @@ export class GravityGunnerApp {
         y: startTop ? -45 : H + 45,
         vx: 0,
         vy: startTop ? baseSpeed : -baseSpeed,
-        radius: 24 + Math.random() * 14,
-        mass: 1,
-        strength,
+        radius: isHole ? 32 + Math.random() * 10 : 24 + Math.random() * 14,
+        mass: isHole ? BLACK_HOLE_STRENGTH_MULT : 1,
+        strength: isHole ? strength * BLACK_HOLE_STRENGTH_MULT : strength,
       });
     }
   }
 
   _showNextWaveBtn() {
     const btn = this._container?.querySelector('#gg-btn-next-wave');
-    if (btn) btn.style.display = 'inline-block';
+    if (btn) {
+      btn.style.display = 'inline-block';
+      btn.textContent = 'Next Wave in 3…';
+    }
+  }
+
+  _updateNextWaveBtn() {
+    const btn = this._container?.querySelector('#gg-btn-next-wave');
+    if (btn && this._waveCleared && this._nextWaveCountdown > 0) {
+      btn.textContent = `Next Wave in ${Math.ceil(this._nextWaveCountdown)}…`;
+    }
   }
 
   _hideNextWaveBtn() {
@@ -398,7 +455,7 @@ export class GravityGunnerApp {
     this._updateProjectiles(dt);
     this._updateEnemies(dt);
     this._checkCollisions();
-    this._checkWaveClear();
+    this._checkWaveClear(dt);
     this._updateUI();
   }
 
@@ -420,21 +477,30 @@ export class GravityGunnerApp {
       if (!p.alive) continue;
 
       p.lifetime += dt;
-      if (p.lifetime > PROJECTILE_LIFETIME) { p.alive = false; continue; }
+      if (p.lifetime > (p.maxLifetime ?? PROJECTILE_LIFETIME)) { p.alive = false; continue; }
 
       // Gravity influence
       let ax = 0, ay = 0;
+      let absorbed = false;
       for (const obj of this.state.gravityObjects) {
         const dx = obj.x - p.x;
         const dy = obj.y - p.y;
         const distSq = Math.max(dx * dx + dy * dy, MIN_GRAV_DIST_SQ);
         const dist   = Math.sqrt(distSq);
+
+        // Black hole event horizon — absorb projectile
+        if (obj.type === 'black_hole') {
+          const horizon = obj.radius * BLACK_HOLE_HORIZON_RATIO;
+          if (dist <= horizon) { p.alive = false; absorbed = true; break; }
+        }
+
         let force = obj.strength * obj.mass / distSq;
         force = Math.min(force, MAX_GRAV_ACCEL);
-        const sign = obj.type === 'repulsor' ? -1 : 1;
+        const sign = obj.type === 'repulsor' ? -1 : 1; // black_hole treated as attractor
         ax += sign * (dx / dist) * force;
         ay += sign * (dy / dist) * force;
       }
+      if (absorbed) continue;
 
       p.vx += ax * dt;
       p.vy += ay * dt;
@@ -446,11 +512,20 @@ export class GravityGunnerApp {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
 
-      // Off-screen cull
+      // Off-screen handling: allow long arcs/orbits to leave view and return.
+      // Only cull if a projectile stays very far outside for too long.
       const W = this._canvas.width;
       const H = this._canvas.height;
-      if (p.x < -30 || p.x > W + 30 || p.y < -30 || p.y > H + 30) {
-        p.alive = false;
+      const returnMargin = Math.max(W, H) * 0.8;
+      const farOut = p.x < -returnMargin || p.x > W + returnMargin ||
+                     p.y < -returnMargin || p.y > H + returnMargin;
+
+      p.offscreenTime = p.offscreenTime ?? 0;
+      if (farOut) {
+        p.offscreenTime += dt;
+        if (p.offscreenTime > 2.8) p.alive = false;
+      } else {
+        p.offscreenTime = 0;
       }
     }
 
@@ -468,9 +543,14 @@ export class GravityGunnerApp {
       if (!enemy.alive) continue;
 
       // Position: fixed right side, bob in lane
+      // Keep 260px from right edge so the enemy clears the metrics panel overlay
       enemy.bobTimer += dt * 0.7;
-      enemy.x = W - 90;
+      enemy.x = W - 260;
       enemy.y = H * enemy.laneYRatio + Math.sin(enemy.bobTimer) * 16;
+
+      // Track barrel angle toward player
+      const player = this.state.player;
+      enemy.aimAngle = Math.atan2(player.y - enemy.y, player.x - enemy.x);
 
       // Fire
       enemy.fireTimer += dt;
@@ -532,13 +612,19 @@ export class GravityGunnerApp {
     }
   }
 
-  _checkWaveClear() {
+  _checkWaveClear(dt) {
     if (!this._waveCleared && this.state.enemies.length > 0 &&
         this.state.enemies.every(e => !e.alive)) {
       this._waveCleared = true;
+      this._nextWaveCountdown = 3; // auto-advance after 3 seconds
       this.state.score += 250;
       this._addHistory(`Wave ${this.state.wave} cleared! +250`);
       this._showNextWaveBtn();
+    } else if (this._waveCleared && this._nextWaveCountdown > 0) {
+      this._nextWaveCountdown -= dt;
+      if (this._nextWaveCountdown <= 0) {
+        this._advanceWave();
+      }
     }
   }
 
@@ -546,10 +632,13 @@ export class GravityGunnerApp {
 
   _firePlayerShot(powerRatio, angle) {
     const player = this.state.player;
+    const W = this._canvas?.width ?? 1200;
     const barrelLen = player.radius + 16;
     const startX = player.x + Math.cos(angle) * barrelLen;
     const startY = player.y + Math.sin(angle) * barrelLen;
     const mv = MIN_VELOCITY + powerRatio * (this._activePreset.maxVelocity - MIN_VELOCITY);
+    // Allow enough time for long arcs/orbits on large displays.
+    const maxLifetime = Math.max(PROJECTILE_LIFETIME, (W * 1.8) / Math.max(220, mv));
 
     this.state.projectiles.push({
       id: this._nextProjectileId++,
@@ -562,6 +651,7 @@ export class GravityGunnerApp {
       damage: 1,
       alive: true,
       lifetime: 0,
+      maxLifetime,
       trail: [],
     });
 
@@ -571,24 +661,188 @@ export class GravityGunnerApp {
     this._addHistory('Shot fired');
   }
 
+  /**
+   * Simulate a projectile and return the MINIMUM squared distance to the
+   * target reached at any point during flight (stops early once off-screen).
+   * gravSnap: array of { x, y, vx, vy, radius, mass, strength, type } — mutable
+   * copies that advance during simulation when advanceGravity=true.
+   */
+  _simMinDist(sx, sy, vx, vy, tx, ty, gravSnap, advanceGravity = false, maxTime = null) {
+    const W = this._canvas.width;
+    const H = this._canvas.height;
+    const SIM_DT    = 1 / 60;
+    const lifetime  = maxTime ?? PROJECTILE_LIFETIME;
+    const SIM_STEPS = Math.ceil(lifetime / SIM_DT);
+    const MARGIN    = 80;
+
+    let x = sx, y = sy, pvx = vx, pvy = vy;
+    let minDistSq = Infinity;
+
+    for (let i = 0; i < SIM_STEPS; i++) {
+      if (x < -MARGIN || x > W + MARGIN || y < -MARGIN || y > H + MARGIN) break;
+
+      const dxT = x - tx, dyT = y - ty;
+      const dSq = dxT * dxT + dyT * dyT;
+      if (dSq < minDistSq) minDistSq = dSq;
+      if (dSq < 18 * 18) break;
+
+      let ax = 0, ay = 0;
+      for (const obj of gravSnap) {
+        const dx = obj.x - x;
+        const dy = obj.y - y;
+        const distSq = Math.max(dx * dx + dy * dy, MIN_GRAV_DIST_SQ);
+        const dist   = Math.sqrt(distSq);
+
+        // Black hole event horizon check — treat absorbed path as worst-case
+        if (obj.type === 'black_hole') {
+          const horizon = obj.radius * BLACK_HOLE_HORIZON_RATIO;
+          if (dist <= horizon) { minDistSq = Infinity; break; }
+        }
+
+        let force = obj.strength * obj.mass / distSq;
+        force = Math.min(force, MAX_GRAV_ACCEL);
+        const sign = obj.type === 'repulsor' ? -1 : 1;
+        ax += sign * (dx / dist) * force;
+        ay += sign * (dy / dist) * force;
+      }
+      pvx += ax * SIM_DT;
+      pvy += ay * SIM_DT;
+      x   += pvx * SIM_DT;
+      y   += pvy * SIM_DT;
+
+      // Advance gravity object positions so they match where they'll actually be
+      if (advanceGravity) {
+        for (const obj of gravSnap) {
+          obj.y += obj.vy * SIM_DT;
+          if (obj.vy > 0 && obj.y > H + 60) obj.y = -60;
+          if (obj.vy < 0 && obj.y < -60)    obj.y = H + 60;
+          obj.x = clamp(obj.x + obj.vx * SIM_DT, W * 0.28, W * 0.72);
+        }
+      }
+    }
+
+    return minDistSq;
+  }
+
+  /** Snapshot current gravity objects into plain objects for simulation. */
+  _snapGravity() {
+    return this.state.gravityObjects.map(o => ({ ...o }));
+  }
+
+  /**
+   * Standard gravity-compensated solver (static gravity snapshot).
+   * Used for non-AIM-BOT presets.
+   */
+  _solveGravityShot(sx, sy, tx, ty, speed, maxTime) {
+    const ANGLE_SWEEP = Math.PI * 0.6;
+    const SAMPLES     = 120;
+    const snap        = this._snapGravity();
+
+    const baseAngle = Math.atan2(ty - sy, tx - sx);
+    let bestDist = Infinity, bestVx = 0, bestVy = 0, bestAngle = baseAngle;
+
+    for (let i = 0; i <= SAMPLES; i++) {
+      const a  = baseAngle - ANGLE_SWEEP + (2 * ANGLE_SWEEP * i / SAMPLES);
+      const vx = Math.cos(a) * speed;
+      const vy = Math.sin(a) * speed;
+      const d  = this._simMinDist(sx, sy, vx, vy, tx, ty, snap, false, maxTime);
+      if (d < bestDist) { bestDist = d; bestVx = vx; bestVy = vy; bestAngle = a; }
+    }
+
+    return { vx: bestVx, vy: bestVy, angle: bestAngle };
+  }
+
+  /**
+   * AIM-BOT solver: full-circle coarse sweep → fine refinement pass,
+   * simulating gravity objects as moving during flight.
+   * Tries multiple speeds and picks the closest result.
+   */
+  _solveAimbotShot(sx, sy, tx, ty, maxTime) {
+    const SPEEDS       = [320, 440, 600];   // try several speeds
+    const COARSE_N     = 180;               // 2° resolution full circle
+    const REFINE_N     = 120;               // fine pass ±3° around best
+    const REFINE_SWEEP = Math.PI * 3 / 180;
+
+    let overallBestDist = Infinity;
+    let overallBestVx = 0, overallBestVy = 0, overallBestAngle = 0;
+
+    for (const speed of SPEEDS) {
+      // --- Coarse pass: full 360° ---
+      let coarseBestDist = Infinity, coarseBestAngle = 0;
+
+      for (let i = 0; i <= COARSE_N; i++) {
+        const a  = -Math.PI + (2 * Math.PI * i / COARSE_N);
+        const vx = Math.cos(a) * speed;
+        const vy = Math.sin(a) * speed;
+        const d  = this._simMinDist(sx, sy, vx, vy, tx, ty, this._snapGravity(), true, maxTime);
+        if (d < coarseBestDist) { coarseBestDist = d; coarseBestAngle = a; }
+      }
+
+      // --- Refine pass: ±3° around coarse best ---
+      for (let i = 0; i <= REFINE_N; i++) {
+        const a  = coarseBestAngle - REFINE_SWEEP + (2 * REFINE_SWEEP * i / REFINE_N);
+        const vx = Math.cos(a) * speed;
+        const vy = Math.sin(a) * speed;
+        const d  = this._simMinDist(sx, sy, vx, vy, tx, ty, this._snapGravity(), true, maxTime);
+        if (d < overallBestDist) {
+          overallBestDist = d;
+          overallBestVx   = vx;
+          overallBestVy   = vy;
+          overallBestAngle = a;
+        }
+      }
+    }
+
+    return { vx: overallBestVx, vy: overallBestVy, angle: overallBestAngle };
+  }
+
   _fireEnemyShot(enemy) {
     const player = this.state.player;
     const dx = player.x - enemy.x;
     const dy = player.y - enemy.y;
     const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const speed = 280;
+
+    const isAimbot  = !!this._activePreset.aimbotMode;
+    const hasGravity = this.state.gravityObjects.length > 0;
+
+    // Compute a flight-time budget large enough to cross the current canvas width
+    // (enemy-to-player distance / slowest speed * 2 safety margin, min 6 s)
+    const crossDist   = Math.sqrt(dx * dx + dy * dy);
+    const minSpeed    = isAimbot ? 320 : 280;
+    const maxLifetime = Math.max(PROJECTILE_LIFETIME, (crossDist / minSpeed) * 2);
+
+    let vx, vy;
+    const sx = enemy.x - enemy.radius;
+    const sy = enemy.y;
+
+    if (isAimbot) {
+      const solved = this._solveAimbotShot(sx, sy, player.x, player.y, maxLifetime);
+      vx = solved.vx;
+      vy = solved.vy;
+      enemy.aimAngle = solved.angle;
+    } else if (hasGravity) {
+      const solved = this._solveGravityShot(sx, sy, player.x, player.y, 280, maxLifetime);
+      vx = solved.vx;
+      vy = solved.vy;
+      enemy.aimAngle = solved.angle;
+    } else {
+      vx = (dx / dist) * 280;
+      vy = (dy / dist) * 280;
+      enemy.aimAngle = Math.atan2(vy, vx);
+    }
 
     this.state.projectiles.push({
       id: this._nextProjectileId++,
       owner: 'enemy',
-      x: enemy.x - enemy.radius,
-      y: enemy.y,
-      vx: (dx / dist) * speed,
-      vy: (dy / dist) * speed,
+      x: sx,
+      y: sy,
+      vx,
+      vy,
       radius: 4,
       damage: ENEMY_HIT_DAMAGE,
       alive: true,
       lifetime: 0,
+      maxLifetime,
       trail: [],
     });
 
@@ -680,6 +934,8 @@ export class GravityGunnerApp {
       const deg = Math.round(s.player.barrelAngle * 180 / Math.PI);
       angleDisplay.textContent = `Angle: ${deg}°`;
     }
+
+    this._updateNextWaveBtn();
   }
 
   // ---- Input ----------------------------------------------------
@@ -783,6 +1039,10 @@ export class GravityGunnerApp {
   _renderGravityObjects(ctx) {
     const t = performance.now() / 1000;
     for (const obj of this.state.gravityObjects) {
+      if (obj.type === 'black_hole') {
+        this._renderBlackHole(ctx, obj, t);
+        continue;
+      }
       const isAttractor = obj.type === 'attractor';
       const innerColor  = isAttractor ? '#4338ca' : '#c2410c';
       const outerColor  = isAttractor ? '99,102,241' : '251,146,60';
@@ -819,6 +1079,64 @@ export class GravityGunnerApp {
       ctx.font = `${Math.max(9, Math.round(obj.radius * 0.38))}px sans-serif`;
       ctx.fillText(isAttractor ? 'pull' : 'push', obj.x, obj.y + obj.radius + 11);
     }
+  }
+
+  _renderBlackHole(ctx, obj, t) {
+    const horizon = obj.radius * BLACK_HOLE_HORIZON_RATIO;
+
+    // Outer accretion disk glow
+    const glow = ctx.createRadialGradient(obj.x, obj.y, horizon, obj.x, obj.y, obj.radius * 3.2);
+    glow.addColorStop(0,   'rgba(255,140,0,0.55)');
+    glow.addColorStop(0.3, 'rgba(180,0,255,0.25)');
+    glow.addColorStop(0.7, 'rgba(80,0,160,0.10)');
+    glow.addColorStop(1,   'rgba(0,0,0,0)');
+    ctx.beginPath();
+    ctx.arc(obj.x, obj.y, obj.radius * 3.2, 0, Math.PI * 2);
+    ctx.fillStyle = glow;
+    ctx.fill();
+
+    // Spinning accretion ring
+    const spin = t * 1.8;
+    ctx.save();
+    ctx.translate(obj.x, obj.y);
+    ctx.rotate(spin);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, obj.radius * 1.9, obj.radius * 0.55, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,160,30,0.70)';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    ctx.restore();
+
+    // Counter-rotating inner ring
+    ctx.save();
+    ctx.translate(obj.x, obj.y);
+    ctx.rotate(-spin * 0.6);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, obj.radius * 1.35, obj.radius * 0.38, Math.PI / 5, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(200,80,255,0.50)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+    ctx.restore();
+
+    // Event horizon — pure black disc
+    ctx.beginPath();
+    ctx.arc(obj.x, obj.y, horizon, 0, Math.PI * 2);
+    ctx.fillStyle = '#000000';
+    ctx.fill();
+
+    // Event horizon ring (pulsing orange-red)
+    ctx.beginPath();
+    ctx.arc(obj.x, obj.y, horizon, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(255,${Math.round(80 + 60 * Math.sin(t * 3))},0,0.9)`;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = 'rgba(255,255,255,0.50)';
+    ctx.font = `${Math.max(9, Math.round(obj.radius * 0.32))}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('black hole', obj.x, obj.y + obj.radius + 13);
   }
 
   _renderTrails(ctx) {
@@ -887,11 +1205,12 @@ export class GravityGunnerApp {
       ctx.lineWidth   = 2;
       ctx.stroke();
 
-      // Barrel (pointing left)
+      // Barrel (points toward player)
       const bLen = enemy.radius + 13;
+      const aim  = enemy.aimAngle ?? Math.PI; // default: straight left
       ctx.beginPath();
       ctx.moveTo(enemy.x, enemy.y);
-      ctx.lineTo(enemy.x - bLen, enemy.y);
+      ctx.lineTo(enemy.x + Math.cos(aim) * bLen, enemy.y + Math.sin(aim) * bLen);
       ctx.strokeStyle = '#fca5a5';
       ctx.lineWidth   = 5;
       ctx.lineCap     = 'round';
@@ -964,8 +1283,12 @@ export class GravityGunnerApp {
     let vx = Math.cos(angle) * mv;
     let vy = Math.sin(angle) * mv;
 
-    const simDt = 0.011;
-    const steps  = 65;
+    // Longer, finer simulation so captured orbits are visible in the preview.
+    const simDt = 1 / 90;
+    const previewMaxTime = Math.max(10, Math.min(18, W / 180));
+    const steps = Math.floor(previewMaxTime / simDt);
+    const farMargin = Math.max(W, H) * 0.75;
+    let outsideCount = 0;
 
     ctx.beginPath();
     ctx.moveTo(px, py);
@@ -977,6 +1300,17 @@ export class GravityGunnerApp {
         const dy = obj.y - py;
         const distSq = Math.max(dx * dx + dy * dy, MIN_GRAV_DIST_SQ);
         const dist   = Math.sqrt(distSq);
+
+        // Stop preview at black hole event horizon.
+        if (obj.type === 'black_hole') {
+          const horizon = obj.radius * BLACK_HOLE_HORIZON_RATIO;
+          if (dist <= horizon) {
+            ctx.lineTo(px, py);
+            i = steps;
+            break;
+          }
+        }
+
         let force = obj.strength * obj.mass / distSq;
         force = Math.min(force, MAX_GRAV_ACCEL);
         const sign = obj.type === 'repulsor' ? -1 : 1;
@@ -988,7 +1322,11 @@ export class GravityGunnerApp {
       px += vx * simDt;
       py += vy * simDt;
       ctx.lineTo(px, py);
-      if (px < -10 || px > W + 10 || py < -10 || py > H + 10) break;
+
+      // Allow temporary off-screen travel so loops can come back in view.
+      const farOut = px < -farMargin || px > W + farMargin || py < -farMargin || py > H + farMargin;
+      outsideCount = farOut ? outsideCount + 1 : 0;
+      if (outsideCount > 140) break;
     }
 
     ctx.strokeStyle = 'rgba(34,211,238,0.5)';
@@ -1095,6 +1433,9 @@ export class GravityGunnerApp {
     }
     if (this._boundResize) {
       window.removeEventListener('resize', this._boundResize);
+    }
+    if (this._boundFullscreenChange) {
+      document.removeEventListener('fullscreenchange', this._boundFullscreenChange);
     }
     if (this._container) {
       this._container.innerHTML = '';
