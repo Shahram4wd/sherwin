@@ -8,6 +8,7 @@ from django.views.decorators.http import require_POST
 import apps.ai_tools.simulations.gravity_gunner  # noqa: F401
 import apps.ai_tools.simulations.hydraulics_lab  # noqa: F401
 import apps.ai_tools.simulations.nuclear_decay  # noqa: F401
+import apps.ai_tools.simulations.tank_attack_lab  # noqa: F401
 from apps.ai_tools.client import OpenAIClient
 from apps.ai_tools.registry import registry
 
