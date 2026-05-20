@@ -13,6 +13,9 @@ const ENEMY_TANK_HIT_RADIUS_M = 95;
 const MIN_ELEVATION_DEG = 0;
 const CLOSE_RANGE_ZERO_ELEV_M = 1100;
 const CLUSTER_SHARED_FIRE_COOLDOWN_SEC = 1.25;
+const DEFAULT_VISOR_FOV = 32;
+const MIN_VISOR_FOV = 14;
+const MAX_VISOR_FOV = 58;
 
 const TANKS = {
   m109: {
@@ -67,6 +70,13 @@ const TANKS = {
     traverseDegPerSec: 9,
     elevateDegPerSec: 3.8,
   },
+};
+
+const BARREL_VISUALS = {
+  m109: { length: 2.55, breechRadius: 0.038, muzzleRadius: 0.024, segments: 16 },
+  isu152: { length: 2.25, breechRadius: 0.046, muzzleRadius: 0.03, segments: 16 },
+  karl: { length: 1.72, breechRadius: 0.085, muzzleRadius: 0.062, segments: 18 },
+  kv2: { length: 1.95, breechRadius: 0.052, muzzleRadius: 0.034, segments: 16 },
 };
 
 const SHELLS = {
@@ -134,6 +144,26 @@ function angularDifferenceDeg(a, b) {
 
 function shortestSignedAngleDeg(fromDeg, toDeg) {
   return ((toDeg - fromDeg + 540) % 360) - 180;
+}
+
+function normalizeHeadingDeg(deg) {
+  return ((deg % 360) + 360) % 360;
+}
+
+function compassLabel(deg) {
+  const normalized = normalizeHeadingDeg(deg);
+  const cardinals = [
+    { deg: 0, label: 'N' },
+    { deg: 45, label: 'NE' },
+    { deg: 90, label: 'E' },
+    { deg: 135, label: 'SE' },
+    { deg: 180, label: 'S' },
+    { deg: 225, label: 'SW' },
+    { deg: 270, label: 'W' },
+    { deg: 315, label: 'NW' },
+  ];
+  const match = cardinals.find((item) => Math.abs(shortestSignedAngleDeg(normalized, item.deg)) < 2.5);
+  return match ? match.label : String(Math.round(normalized)).padStart(3, '0');
 }
 
 function metersToUnits(meters) {
@@ -243,9 +273,9 @@ export class TankAttackLabApp {
       selectedTank: 'm109',
       selectedShell: 'AP',
       headingDeg: 0,
-      elevationDeg: 35,
+      elevationDeg: 0,
       turretHeadingDeg: 0,
-      turretElevationDeg: 35,
+      turretElevationDeg: 0,
       selectedTargetId: null,
       rangefinderMeters: null,
       tankHealth: TANKS.m109.health,
@@ -263,6 +293,9 @@ export class TankAttackLabApp {
 
     this.nextTargetId = 1;
     this.leaderboard = this._loadLeaderboard();
+    this.statusExpanded = false;
+    this._cameraShake = { time: 0, duration: 0.28, strength: 0 };
+    this._targetHitBoxes = [];
     this._domRefs = new Map();
     this._boundHandlers = [];
   }
@@ -271,7 +304,7 @@ export class TankAttackLabApp {
     this.engine = new SceneManager(this.container, {
       background: '#080810',
       orbit: true,
-      fov: 90,
+      fov: DEFAULT_VISOR_FOV,
       near: 0.05,
       far: 2500,
     });
@@ -279,7 +312,7 @@ export class TankAttackLabApp {
     // 2D target indicator overlay
     this.container.style.position = 'relative';
     this.targetOverlay = document.createElement('div');
-    this.targetOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;';
+    this.targetOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:12;';
     this.container.appendChild(this.targetOverlay);
 
     this._buildScene();
@@ -337,6 +370,16 @@ export class TankAttackLabApp {
     this.tankGroup = new THREE.Group();
     scene.add(this.tankGroup);
 
+    this.sceneryGroup = new THREE.Group();
+    scene.add(this.sceneryGroup);
+
+    this.treeMaterials = {
+      trunk: new THREE.MeshStandardMaterial({ color: 0xc97842, roughness: 0.82, metalness: 0.02 }),
+      trunkDark: new THREE.MeshStandardMaterial({ color: 0x9f5f32, roughness: 0.9, metalness: 0.02 }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x22e864, roughness: 0.72, metalness: 0.03 }),
+      leafDark: new THREE.MeshStandardMaterial({ color: 0x16c957, roughness: 0.78, metalness: 0.03 }),
+    };
+
     this.turretGroup = new THREE.Group();
     this.turretGroup.position.y = 0.87;
     this.tankGroup.add(this.turretGroup);
@@ -345,17 +388,18 @@ export class TankAttackLabApp {
     this.barrelPivot.position.set(0, 0.05, 0.62);
     this.turretGroup.add(this.barrelPivot);
 
-    // Camera mount follows turret traverse only (no barrel elevation coupling).
+    // Camera mount follows the barrel pivot so the visor behaves like a gun-mounted optic.
     this.turretCameraMount = new THREE.Group();
     this.turretCameraMount.position.set(0, 0.05, 0.62);
-    this.turretGroup.add(this.turretCameraMount);
+    this.barrelPivot.add(this.turretCameraMount);
 
+    this._barrelVisualLength = BARREL_VISUALS.m109.length;
     this.barrel = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.08, 0.10, 2.4, 14),
+      this._createBarrelGeometry(BARREL_VISUALS.m109),
       new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.4, metalness: 0.55 }),
     );
     this.barrel.rotation.x = Math.PI / 2;
-    this.barrel.position.z = 1.2;
+    this.barrel.position.z = this._barrelVisualLength * 0.5;
     this.barrelPivot.add(this.barrel);
 
     this.targetGroup = new THREE.Group();
@@ -368,6 +412,41 @@ export class TankAttackLabApp {
     scene.add(this.fxGroup);
   }
 
+  _createBarrelGeometry(profile) {
+    return new THREE.CylinderGeometry(
+      profile.muzzleRadius,
+      profile.breechRadius,
+      profile.length,
+      profile.segments,
+    );
+  }
+
+  _applyTankBarrelProfile(tankKey) {
+    if (!this.barrel) return;
+
+    const profile = BARREL_VISUALS[tankKey] || BARREL_VISUALS.m109;
+    this._barrelVisualLength = profile.length;
+    this.barrel.geometry.dispose();
+    this.barrel.geometry = this._createBarrelGeometry(profile);
+    this.barrel.position.z = profile.length * 0.5;
+  }
+
+  _setVisorFov(fov) {
+    const cam = this.engine?.camera;
+    if (!cam) return;
+
+    cam.fov = clamp(fov, MIN_VISOR_FOV, MAX_VISOR_FOV);
+    cam.updateProjectionMatrix();
+  }
+
+  _getTouchDistance(touches) {
+    if (touches.length < 2) return 0;
+
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.hypot(dx, dy);
+  }
+
   _initPeriscopeCamera() {
     // Fully remove OrbitControls: SceneManager still calls controls.update() each frame,
     // which otherwise overrides this miniapp's manual camera pose.
@@ -376,13 +455,11 @@ export class TankAttackLabApp {
       this.engine.controls = null;
     }
 
-    // Drive camera in world space from turret yaw so pitch is always fixed at 0 degrees.
-    // camera.rotation.y = PI makes the camera look along +Z because THREE cameras
-    // look along local -Z by default.
+    // Drive camera in world space from the barrel pivot so pitch follows elevation.
     const cam = this.engine.camera;
     this.engine.scene.add(cam);
-    // Fixed-0 camera mode: keep slight right offset so barrel does not block the view.
-    this._periscopeCameraOffset = new THREE.Vector3(0.13, 0.18, -0.22);
+    // Gun-mounted zoom optic: camera is parallel to the barrel, with a thin right-edge barrel reference.
+    this._periscopeCameraOffset = new THREE.Vector3(0.26, 0, -0.55);
     this._syncPeriscopeCameraPose();
 
     // Dedicated HUD layer so crosshair/indicators are not cleared by target overlay refresh.
@@ -405,12 +482,17 @@ export class TankAttackLabApp {
     this.headingHud.style.cssText = [
       'position:absolute',
       'left:50%',
-      'top:10px',
+      'top:62px',
       'transform:translateX(-50%)',
-      'color:#fbbf24',
+      'color:#111827',
+      'background:#fbbf24',
+      'border:1px solid rgba(255,255,255,0.55)',
+      'border-radius:4px',
+      'padding:4px 10px',
       'font:700 15px/1.2 monospace',
-      'text-shadow:0 0 6px rgba(0,0,0,0.6)',
-      'letter-spacing:0.8px',
+      'box-shadow:0 0 10px rgba(0,0,0,0.35)',
+      'letter-spacing:0',
+      'z-index:5',
     ].join(';');
     this.hudOverlay.appendChild(this.headingHud);
 
@@ -421,6 +503,10 @@ export class TankAttackLabApp {
       'top:50%',
       'transform:translateY(-50%)',
       'color:#fbbf24',
+      'background:rgba(0,0,0,0.42)',
+      'border:1px solid rgba(251,191,36,0.45)',
+      'border-radius:4px',
+      'padding:5px 7px',
       'font:700 14px/1.5 monospace',
       'text-shadow:0 0 6px rgba(0,0,0,0.6)',
       'text-align:right',
@@ -430,9 +516,12 @@ export class TankAttackLabApp {
 
     // Drag state
     this._drag = { active: false, lastX: 0, lastY: 0 };
-    const SENS = 0.11;
+    this._pinch = { active: false, startDistance: 0, startFov: DEFAULT_VISOR_FOV };
+    const HEADING_SENS = 0.11;
+    const ELEVATION_SENS = 0.08;
     const canvas = this.engine.renderer.domElement;
     canvas.style.cursor = 'crosshair';
+    canvas.style.touchAction = 'none';
 
     const startDrag = (x, y) => {
       this._drag.active = true;
@@ -444,41 +533,112 @@ export class TankAttackLabApp {
     const moveDrag = (x, y) => {
       if (!this._drag.active) return;
       const dx = x - this._drag.lastX;
+      const dy = y - this._drag.lastY;
       this._drag.lastX = x;
       this._drag.lastY = y;
 
-      this.state.headingDeg = ((this.state.headingDeg + dx * SENS) % 360 + 360) % 360;
+      this.state.headingDeg = ((this.state.headingDeg + dx * HEADING_SENS) % 360 + 360) % 360;
       this.state.headingDeg = Number(this.state.headingDeg.toFixed(1));
+      this.state.elevationDeg = Number(clamp(
+        this.state.elevationDeg - dy * ELEVATION_SENS,
+        MIN_ELEVATION_DEG,
+        75,
+      ).toFixed(1));
 
       if (this.headingInput) this.headingInput.value = String(this.state.headingDeg);
+      if (this.elevationInput) this.elevationInput.value = String(this.state.elevationDeg);
+      this.state.turretHeadingDeg = this.state.headingDeg;
+      this.state.turretElevationDeg = this.state.elevationDeg;
+      this._syncTurretToHeading();
+      this._syncPeriscopeCameraPose();
     };
 
     const endDrag = () => {
       this._drag.active = false;
+      this.state.headingDeg = this.state.turretHeadingDeg;
+      this.state.elevationDeg = this.state.turretElevationDeg;
       canvas.style.cursor = 'crosshair';
     };
 
-    const onMouseDown = (e) => { if (e.button === 0) startDrag(e.clientX, e.clientY); };
+    const startPinch = (touches) => {
+      const distance = this._getTouchDistance(touches);
+      if (distance <= 0) return;
+      endDrag();
+      this._pinch.active = true;
+      this._pinch.startDistance = distance;
+      this._pinch.startFov = this.engine.camera.fov;
+    };
+
+    const movePinch = (touches) => {
+      if (!this._pinch.active) return;
+      const distance = this._getTouchDistance(touches);
+      if (distance <= 0) return;
+      const ratio = distance / this._pinch.startDistance;
+      this._setVisorFov(this._pinch.startFov / ratio);
+    };
+
+    const endPinch = () => {
+      this._pinch.active = false;
+      this._pinch.startDistance = 0;
+    };
+
+    const onMouseDown = (e) => {
+      if (e.button !== 0) return;
+      if (this._selectTargetAtClientPoint(e.clientX, e.clientY)) return;
+      startDrag(e.clientX, e.clientY);
+    };
     const onMouseMove = (e) => moveDrag(e.clientX, e.clientY);
     const onMouseUp   = () => endDrag();
-    const onTouchStart = (e) => { if (e.touches.length === 1) startDrag(e.touches[0].clientX, e.touches[0].clientY); };
-    const onTouchMove  = (e) => { if (e.touches.length === 1) { e.preventDefault(); moveDrag(e.touches[0].clientX, e.touches[0].clientY); } };
-    const onTouchEnd   = () => endDrag();
+    const onWheel = (e) => {
+      e.preventDefault();
+      this._setVisorFov(this.engine.camera.fov + e.deltaY * 0.025);
+    };
+    const onTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        startPinch(e.touches);
+      } else if (e.touches.length === 1 && !this._pinch.active) {
+        if (this._selectTargetAtClientPoint(e.touches[0].clientX, e.touches[0].clientY)) return;
+        startDrag(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+    const onTouchMove = (e) => {
+      if (e.touches.length === 2) {
+        e.preventDefault();
+        movePinch(e.touches);
+      } else if (e.touches.length === 1) {
+        e.preventDefault();
+        moveDrag(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+    const onTouchEnd = (e) => {
+      if (e.touches.length === 1) {
+        endPinch();
+        startDrag(e.touches[0].clientX, e.touches[0].clientY);
+      } else {
+        endPinch();
+        endDrag();
+      }
+    };
 
     canvas.addEventListener('mousedown', onMouseDown);
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('mouseup', onMouseUp);
-    canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('touchstart', onTouchStart, { passive: false });
     canvas.addEventListener('touchmove', onTouchMove, { passive: false });
     canvas.addEventListener('touchend', onTouchEnd);
+    canvas.addEventListener('touchcancel', onTouchEnd);
 
     this._boundHandlers.push(
       { element: canvas, event: 'mousedown', handler: onMouseDown },
       { element: window, event: 'mousemove', handler: onMouseMove },
       { element: window, event: 'mouseup', handler: onMouseUp },
+      { element: canvas, event: 'wheel', handler: onWheel },
       { element: canvas, event: 'touchstart', handler: onTouchStart },
       { element: canvas, event: 'touchmove', handler: onTouchMove },
       { element: canvas, event: 'touchend', handler: onTouchEnd },
+      { element: canvas, event: 'touchcancel', handler: onTouchEnd },
     );
   }
 
@@ -486,7 +646,7 @@ export class TankAttackLabApp {
     this.topLeft = new UIPanel(this.container, 'top-left', 'Controls');
     this.topRight = new UIPanel(this.container, 'top-right', 'Status');
     this.bottomLeft = new UIPanel(this.container, 'bottom-left', 'Actions');
-    this.bottomRight = new UIPanel(this.container, 'bottom-right', 'History');
+    this.bottomRight = new UIPanel(this.container, 'bottom-right', 'Leaderboard');
 
     this._buildPresetBar();
     this._buildControlsPanel();
@@ -574,12 +734,7 @@ export class TankAttackLabApp {
     panel.appendChild(tankField);
     this.tankSelect = tankField.select;
 
-    const targetField = buildSelect('Target', [], (value) => {
-      this.state.selectedTargetId = value ? Number(value) : null;
-      this._updateUI();
-    });
-    panel.appendChild(targetField);
-    this.targetSelect = targetField.select;
+    this.targetSelect = null;
 
     const shellField = buildSelect(
       'Shell Type',
@@ -596,19 +751,8 @@ export class TankAttackLabApp {
     shellField.select.value = this.state.selectedShell;
     panel.appendChild(shellField);
 
-    const headingField = buildNumberInput('Heading (deg)', 0, 359, 1, this.state.headingDeg, (value) => {
-      this.state.headingDeg = value;
-      this._updateUI();
-    });
-    panel.appendChild(headingField);
-    this.headingInput = headingField.input;
-
-    const elevationField = buildNumberInput('Elevation (deg)', MIN_ELEVATION_DEG, 75, 0.5, this.state.elevationDeg, (value) => {
-      this.state.elevationDeg = value;
-      this._updateUI();
-    });
-    panel.appendChild(elevationField);
-    this.elevationInput = elevationField.input;
+    this.headingInput = null;
+    this.elevationInput = null;
 
     this.rangefinderReadout = document.createElement('div');
     this.rangefinderReadout.className = 'miniapp-display';
@@ -645,11 +789,26 @@ export class TankAttackLabApp {
     const panel = this.topRight.el;
     panel.innerHTML = '';
 
-    const title = document.createElement('div');
-    title.className = 'miniapp-subtitle';
-    title.textContent = 'Tank Status';
-    panel.appendChild(title);
-
+    this.statusToggle = document.createElement('button');
+    this.statusToggle.type = 'button';
+    this.statusToggle.className = 'miniapp-subtitle';
+    this.statusToggle.style.cssText = [
+      'display:flex',
+      'align-items:center',
+      'gap:6px',
+      'width:100%',
+      'padding:0',
+      'border:0',
+      'background:transparent',
+      'cursor:pointer',
+      'text-align:left',
+    ].join(';');
+    const statusHandler = () => {
+      this.statusExpanded = !this.statusExpanded;
+      this._updateUI();
+    };
+    this.statusToggle.addEventListener('click', statusHandler);
+    this._boundHandlers.push({ element: this.statusToggle, event: 'click', handler: statusHandler });
     this.healthLine = document.createElement('div');
     this.healthLine.className = 'miniapp-display';
     panel.appendChild(this.healthLine);
@@ -668,20 +827,26 @@ export class TankAttackLabApp {
     barWrap.appendChild(this.healthBar);
     panel.appendChild(barWrap);
 
+    this.statusToggle.style.marginTop = '8px';
+    panel.appendChild(this.statusToggle);
+
+    this.statusDetails = document.createElement('div');
+    panel.appendChild(this.statusDetails);
+
     this.tankSpecBox = document.createElement('div');
     this.tankSpecBox.className = 'miniapp-display';
     this.tankSpecBox.style.marginTop = '8px';
-    panel.appendChild(this.tankSpecBox);
+    this.statusDetails.appendChild(this.tankSpecBox);
 
     this.targetInfo = document.createElement('div');
     this.targetInfo.className = 'miniapp-display';
     this.targetInfo.style.marginTop = '8px';
-    panel.appendChild(this.targetInfo);
+    this.statusDetails.appendChild(this.targetInfo);
 
     this.roundInfo = document.createElement('div');
     this.roundInfo.className = 'miniapp-display';
     this.roundInfo.style.marginTop = '8px';
-    panel.appendChild(this.roundInfo);
+    this.statusDetails.appendChild(this.roundInfo);
   }
 
   _buildActionsPanel() {
@@ -706,7 +871,7 @@ export class TankAttackLabApp {
     centerBtn.textContent = 'Center Turret';
     const centerHandler = () => {
       this.state.headingDeg = 0;
-      this.headingInput.value = '0';
+      if (this.headingInput) this.headingInput.value = '0';
       this._updateUI();
     };
     centerBtn.addEventListener('click', centerHandler);
@@ -730,24 +895,12 @@ export class TankAttackLabApp {
   _buildHistoryPanel() {
     const panel = this.bottomRight.el;
     panel.innerHTML = '';
+    panel.style.display = 'none';
 
-    const title = document.createElement('div');
-    title.className = 'miniapp-subtitle';
-    title.textContent = 'History and Leaderboard';
-    panel.appendChild(title);
-
-    this.historyList = document.createElement('div');
-    this.historyList.style.fontSize = '11px';
-    this.historyList.style.color = '#cbd5e1';
-    this.historyList.style.minHeight = '88px';
-    panel.appendChild(this.historyList);
-
-    const lbTitle = document.createElement('div');
-    lbTitle.style.fontSize = '11px';
-    lbTitle.style.marginTop = '8px';
-    lbTitle.style.color = '#94a3b8';
-    lbTitle.textContent = 'Top Scores';
-    panel.appendChild(lbTitle);
+    this.leaderboardTitle = document.createElement('div');
+    this.leaderboardTitle.className = 'miniapp-subtitle';
+    this.leaderboardTitle.textContent = 'Leaderboard';
+    panel.appendChild(this.leaderboardTitle);
 
     this.leaderboardList = document.createElement('div');
     this.leaderboardList.style.fontSize = '11px';
@@ -771,6 +924,7 @@ export class TankAttackLabApp {
     this.state.measuredTargets = {};
 
     this.tankSelect.value = tankKey;
+    this._applyTankBarrelProfile(tankKey);
     this._addHistory(`${tank.name} selected (${tank.caliberMm} mm)`);
 
     if (!fromPreset) {
@@ -849,9 +1003,9 @@ export class TankAttackLabApp {
     this.state.projectiles = [];
     this.state.lastImpact = null;
     this.state.headingDeg = 0;
-    this.state.elevationDeg = 35;
+    this.state.elevationDeg = 0;
     this.state.turretHeadingDeg = 0;
-    this.state.turretElevationDeg = 35;
+    this.state.turretElevationDeg = 0;
     this._clearTargets();
     this._setTank(currentTank, true);
     this.state.tankHealth = TANKS[currentTank].health;
@@ -924,11 +1078,12 @@ export class TankAttackLabApp {
       this.state.targets.push(target);
     }
 
-    this.state.selectedTargetId = this.state.targets.find((t) => t.alive)?.id || null;
+    this.state.selectedTargetId = null;
     this.state.rangefinderMeters = null;
     this.state.measuredTargets = {};
     this._addHistory(`Round ${round}: ${count} target objectives`);
     this._updateTargetSelect();
+    this._populateTreesForTargets();
   }
 
   _createTargetMesh(target, def) {
@@ -995,6 +1150,137 @@ export class TankAttackLabApp {
     return group;
   }
 
+  _createLowPolyTree(style = 'round') {
+    const group = new THREE.Group();
+    const height = randRange(1.6, 2.8);
+    const trunkHeight = height * randRange(0.45, 0.58);
+    const trunkRadius = randRange(0.06, 0.12);
+
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(trunkRadius * 0.72, trunkRadius, trunkHeight, 6),
+      Math.random() > 0.28 ? this.treeMaterials.trunk : this.treeMaterials.trunkDark,
+    );
+    trunk.position.y = trunkHeight * 0.5;
+    group.add(trunk);
+
+    if (style === 'pine') {
+      const tiers = [0.72, 0.55, 0.4];
+      tiers.forEach((radius, index) => {
+        const crown = new THREE.Mesh(
+          new THREE.ConeGeometry(radius, height * 0.42, 5),
+          index === 1 ? this.treeMaterials.leafDark : this.treeMaterials.leaf,
+        );
+        crown.position.y = trunkHeight + index * height * 0.26;
+        group.add(crown);
+      });
+    } else if (style === 'dead') {
+      for (let i = 0; i < 3; i++) {
+        const branch = new THREE.Mesh(
+          new THREE.CylinderGeometry(trunkRadius * 0.3, trunkRadius * 0.42, height * randRange(0.28, 0.42), 5),
+          this.treeMaterials.trunk,
+        );
+        branch.position.set(randRange(-0.12, 0.12), trunkHeight * randRange(0.55, 0.9), 0);
+        branch.rotation.z = randRange(-0.75, 0.75);
+        branch.rotation.y = randRange(0, Math.PI * 2);
+        group.add(branch);
+      }
+    } else {
+      const crownCount = Math.random() > 0.35 ? 3 : 2;
+      for (let i = 0; i < crownCount; i++) {
+        const crown = new THREE.Mesh(
+          new THREE.IcosahedronGeometry(randRange(0.42, 0.72), 1),
+          i % 2 ? this.treeMaterials.leafDark : this.treeMaterials.leaf,
+        );
+        crown.position.set(
+          randRange(-0.28, 0.28),
+          trunkHeight + randRange(0.35, 0.82),
+          randRange(-0.22, 0.22),
+        );
+        crown.scale.y = randRange(0.82, 1.12);
+        group.add(crown);
+      }
+    }
+
+    group.rotation.y = randRange(0, Math.PI * 2);
+    group.scale.setScalar(randRange(0.85, 1.35));
+    return group;
+  }
+
+  _populateTreesForTargets() {
+    this._clearTrees();
+    if (!this.sceneryGroup) return;
+
+    const styles = ['round', 'round', 'round', 'pine', 'dead'];
+
+    const addTree = (position, style) => {
+      if (!this._isTreePositionClear(position)) return false;
+
+      const tree = this._createLowPolyTree(style);
+      tree.position.set(position.x, 0, position.z);
+      this.sceneryGroup.add(tree);
+      return true;
+    };
+
+    const rings = [16, 28, 44, 68, 96];
+    rings.forEach((radius, ringIndex) => {
+      const count = ringIndex < 2 ? 14 : 18;
+      const angleStep = (Math.PI * 2) / count;
+      const offset = randRange(0, angleStep);
+
+      for (let i = 0; i < count; i++) {
+        if (Math.random() < 0.18) continue;
+
+        const angle = offset + i * angleStep + randRange(-angleStep * 0.22, angleStep * 0.22);
+        const distance = radius + randRange(-radius * 0.16, radius * 0.16);
+        const position = new THREE.Vector3(
+          Math.sin(angle) * distance,
+          0,
+          Math.cos(angle) * distance,
+        );
+        addTree(position, styles[Math.floor(Math.random() * styles.length)]);
+      }
+    });
+
+    for (const target of this.state.targets) {
+      const forward = new THREE.Vector3(target.x, 0, target.z);
+      if (forward.lengthSq() < 1e-6) continue;
+      forward.normalize();
+      const side = new THREE.Vector3(forward.z, 0, -forward.x);
+
+      const targetDistance = Math.hypot(target.x, target.z);
+      const treeCount = target.type === 'cluster' ? 8 : 6;
+      for (let i = 0; i < treeCount; i++) {
+        const sideSign = i % 2 === 0 ? 1 : -1;
+        const along = randRange(-5.5, 4.8);
+        const lateral = sideSign * randRange(2.2, 6.6);
+        const distanceFromTank = clamp(targetDistance + along, 7, 235);
+        const pos = forward.clone().multiplyScalar(distanceFromTank).add(side.clone().multiplyScalar(lateral));
+
+        addTree(pos, styles[Math.floor(Math.random() * styles.length)]);
+      }
+    }
+  }
+
+  _isTreePositionClear(position) {
+    if (Math.hypot(position.x, position.z) < 8) return false;
+
+    for (const target of this.state.targets) {
+      const targetVector = new THREE.Vector3(target.x, 0, target.z);
+      const targetDistance = targetVector.length();
+      if (targetDistance < 1e-6) continue;
+
+      const targetDir = targetVector.clone().normalize();
+      const projected = position.dot(targetDir);
+      const lateral = position.clone().sub(targetDir.multiplyScalar(projected)).length();
+      const targetGap = Math.hypot(position.x - target.x, position.z - target.z);
+
+      if (targetGap < 2.8) return false;
+      if (projected > 7 && projected < targetDistance + 2.5 && lateral < 1.8) return false;
+    }
+
+    return true;
+  }
+
   _tick(dt) {
     if (!this.state.gameOver) {
       this.state.reloadRemaining = Math.max(0, this.state.reloadRemaining - dt);
@@ -1007,9 +1293,21 @@ export class TankAttackLabApp {
       this._tickEffects(dt);
     }
 
+    this._tickCameraShake(dt);
     this._syncPeriscopeCameraPose();
     this._updateUI();
     this._updateTargetOverlays();
+  }
+
+  _triggerCameraShake(strength = 0.035, duration = 0.28) {
+    this._cameraShake.time = duration;
+    this._cameraShake.duration = duration;
+    this._cameraShake.strength = strength;
+  }
+
+  _tickCameraShake(dt) {
+    if (!this._cameraShake || this._cameraShake.time <= 0) return;
+    this._cameraShake.time = Math.max(0, this._cameraShake.time - dt);
   }
 
   _tickProjectiles(dt) {
@@ -1225,6 +1523,7 @@ export class TankAttackLabApp {
     const wobble = Math.max(0.82, 1 - this.state.round * 0.005);
     const adjusted = Math.round(damage * randRange(wobble, 1.14));
     this.state.tankHealth = Math.max(0, this.state.tankHealth - adjusted);
+    this._triggerCameraShake(clamp(adjusted / 900, 0.025, 0.07), 0.32);
 
     const flash = new THREE.Mesh(
       new THREE.SphereGeometry(0.28, 12, 10),
@@ -1332,7 +1631,7 @@ export class TankAttackLabApp {
       ? MIN_ELEVATION_DEG
       : clamp(toDegrees(angle), MIN_ELEVATION_DEG, 75);
     this.state.elevationDeg = Number(elevation.toFixed(1));
-    this.elevationInput.value = String(this.state.elevationDeg);
+    if (this.elevationInput) this.elevationInput.value = String(this.state.elevationDeg);
     this._addHistory(`Elevation command set: ${this.state.elevationDeg} deg`);
     this._updateUI();
   }
@@ -1549,8 +1848,7 @@ export class TankAttackLabApp {
     this._addHistory(`${target.label} destroyed (+${target.scoreValue})`);
 
     if (this.state.selectedTargetId === target.id) {
-      const next = this.state.targets.find((t) => t.alive);
-      this.state.selectedTargetId = next ? next.id : null;
+      this.state.selectedTargetId = null;
       this.state.rangefinderMeters = null;
     }
 
@@ -1561,8 +1859,39 @@ export class TankAttackLabApp {
     return this.state.targets.find((t) => t.id === this.state.selectedTargetId) || null;
   }
 
+  _selectTarget(targetId) {
+    const target = this.state.targets.find((item) => item.id === targetId && item.alive);
+    if (!target) return false;
+
+    this.state.selectedTargetId = target.id;
+    this.state.rangefinderMeters = null;
+    this._updateUI();
+    this._updateTargetOverlays();
+    return true;
+  }
+
+  _selectTargetAtClientPoint(clientX, clientY) {
+    const canvas = this.engine?.renderer?.domElement;
+    if (!canvas || !this._targetHitBoxes?.length) return false;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
+    const hit = this._targetHitBoxes.find((box) => (
+      x >= box.left
+      && x <= box.right
+      && y >= box.top
+      && y <= box.bottom
+    ));
+    return hit ? this._selectTarget(hit.targetId) : false;
+  }
+
   _updateTargetSelect() {
     const aliveTargets = this.state.targets.filter((t) => t.alive);
+
+    if (!this.targetSelect) {
+      return;
+    }
 
     this.targetSelect.innerHTML = '';
     const blank = document.createElement('option');
@@ -1585,7 +1914,7 @@ export class TankAttackLabApp {
   }
 
   _getBarrelMuzzlePosition() {
-    const local = new THREE.Vector3(0, 0, 2.4);
+    const local = new THREE.Vector3(0, 0, this._barrelVisualLength || BARREL_VISUALS.m109.length);
     this.barrelPivot.updateMatrixWorld();
     return this.barrelPivot.localToWorld(local.clone());
   }
@@ -1600,37 +1929,42 @@ export class TankAttackLabApp {
 
   _syncPeriscopeCameraPose() {
     const cam = this.engine?.camera;
-    if (!cam || !this.turretCameraMount || !this.turretGroup) return;
+    if (!cam || !this.turretCameraMount || !this.barrelPivot) return;
 
     this.turretCameraMount.updateMatrixWorld(true);
 
     const mountWorld = new THREE.Vector3();
     this.turretCameraMount.getWorldPosition(mountWorld);
 
-    const turretWorldQ = new THREE.Quaternion();
-    this.turretGroup.getWorldQuaternion(turretWorldQ);
+    const barrelWorldQ = new THREE.Quaternion();
+    this.barrelPivot.getWorldQuaternion(barrelWorldQ);
 
-    const turretForward = new THREE.Vector3(0, 0, 1).applyQuaternion(turretWorldQ);
-    turretForward.y = 0;
-    if (turretForward.lengthSq() < 1e-8) {
-      turretForward.set(0, 0, 1);
-    } else {
-      turretForward.normalize();
-    }
-
-    const yaw = Math.atan2(turretForward.x, turretForward.z);
-    const worldOffset = this._periscopeCameraOffset
-      .clone()
-      .applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+    const barrelForward = new THREE.Vector3(0, 0, 1).applyQuaternion(barrelWorldQ).normalize();
+    const barrelUp = new THREE.Vector3(0, 1, 0).applyQuaternion(barrelWorldQ).normalize();
+    const barrelRight = new THREE.Vector3(1, 0, 0).applyQuaternion(barrelWorldQ).normalize();
+    const worldOffset = this._periscopeCameraOffset.clone().applyQuaternion(barrelWorldQ);
 
     cam.position.copy(mountWorld).add(worldOffset);
-    cam.rotation.set(0, yaw + Math.PI, 0);
+    if (this._cameraShake?.time > 0) {
+      const progress = this._cameraShake.time / this._cameraShake.duration;
+      const strength = this._cameraShake.strength * progress;
+      cam.position
+        .add(barrelRight.clone().multiplyScalar(randRange(-strength, strength)))
+        .add(barrelUp.clone().multiplyScalar(randRange(-strength, strength)));
+    }
+    cam.up.copy(barrelUp);
+    cam.lookAt(cam.position.clone().add(barrelForward));
     cam.updateMatrixWorld();
   }
 
   _tickTurretMotion(dt) {
     const tank = TANKS[this.state.selectedTank];
     if (!tank) return;
+
+    this.state.turretHeadingDeg = this.state.headingDeg;
+    this.state.turretElevationDeg = this.state.elevationDeg;
+    this._syncTurretToHeading();
+    return;
 
     const maxTraverseStep = tank.traverseDegPerSec * dt;
     const maxElevStep = tank.elevateDegPerSec * dt;
@@ -1662,6 +1996,7 @@ export class TankAttackLabApp {
   _updateTargetOverlays() {
     if (!this.targetOverlay) return;
     this.targetOverlay.innerHTML = '';
+    this._targetHitBoxes = [];
 
     const canvas = this.engine.renderer.domElement;
     const W = canvas.clientWidth;
@@ -1681,11 +2016,11 @@ export class TankAttackLabApp {
       const domeR = target.type === 'large' ? 0.5 : target.type === 'cluster' ? 0.55 : 0.35;
       const edgeNDC = new THREE.Vector3(target.x + domeR, 0.5, target.z).project(camera);
       const edgeSX = (edgeNDC.x * 0.5 + 0.5) * W;
-      const half = Math.max(12, Math.min(72, Math.abs(edgeSX - sx) * 3.5));
+      const half = Math.max(24, Math.min(78, Math.abs(edgeSX - sx) * 3.5));
 
       const isSelected = target.id === this.state.selectedTargetId;
-      const borderColor = isSelected ? '#22c55e' : 'rgba(74,222,128,0.5)';
-      const textColor = isSelected ? '#22c55e' : '#86efac';
+      const borderColor = isSelected ? '#ef4444' : 'rgba(74,222,128,0.65)';
+      const textColor = isSelected ? '#fecaca' : '#86efac';
 
       const measured = this.state.measuredTargets[target.id];
       const hpText = target.type === 'cluster'
@@ -1700,6 +2035,14 @@ export class TankAttackLabApp {
       ].filter(Boolean).join('<br>');
 
       const wrapper = document.createElement('div');
+      const hitPad = 8;
+      this._targetHitBoxes.push({
+        targetId: target.id,
+        left: sx - half - hitPad,
+        right: sx + half + hitPad,
+        top: sy - half - hitPad,
+        bottom: sy + half + hitPad,
+      });
       wrapper.style.cssText = [
         'position:absolute',
         `left:${(sx - half).toFixed(1)}px`,
@@ -1707,9 +2050,27 @@ export class TankAttackLabApp {
         `width:${(half * 2).toFixed(1)}px`,
         `height:${(half * 2).toFixed(1)}px`,
         `border:${isSelected ? 2 : 1}px solid ${borderColor}`,
-        'pointer-events:none',
+        `background:${isSelected ? 'rgba(239,68,68,0.08)' : 'rgba(34,197,94,0.04)'}`,
+        'pointer-events:auto',
+        'cursor:pointer',
         'box-sizing:border-box',
+        'z-index:13',
       ].join(';');
+      wrapper.setAttribute('role', 'button');
+      wrapper.setAttribute('tabindex', '0');
+      wrapper.setAttribute('aria-label', `Select ${target.label}`);
+
+      const selectTarget = (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        event.stopImmediatePropagation?.();
+        this._selectTarget(target.id);
+      };
+      wrapper.addEventListener('pointerdown', selectTarget);
+      wrapper.addEventListener('click', selectTarget);
+      wrapper.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') selectTarget(event);
+      });
 
       const lbl = document.createElement('div');
       lbl.style.cssText = [
@@ -1727,6 +2088,7 @@ export class TankAttackLabApp {
         'line-height:1.5',
         'text-align:center',
         `border:1px solid ${borderColor}`,
+        'pointer-events:none',
       ].join(';');
       lbl.innerHTML = lines;
 
@@ -1747,6 +2109,12 @@ export class TankAttackLabApp {
 
     const maxHealth = tank.health;
     const healthPct = clamp(this.state.tankHealth / maxHealth, 0, 1);
+    if (this.statusToggle) {
+      this.statusToggle.textContent = `${this.statusExpanded ? '▾' : '▸'} Tank Status`;
+    }
+    if (this.statusDetails) {
+      this.statusDetails.style.display = this.statusExpanded ? 'block' : 'none';
+    }
     this.healthLine.textContent = `Health: ${Math.round(this.state.tankHealth)} / ${maxHealth}`;
     this.healthBar.style.width = `${(healthPct * 100).toFixed(1)}%`;
     this.healthBar.style.background = healthPct > 0.6 ? '#4ade80' : healthPct > 0.3 ? '#facc15' : '#f87171';
@@ -1795,11 +2163,7 @@ export class TankAttackLabApp {
     const headingErr = Math.abs(shortestSignedAngleDeg(this.state.turretHeadingDeg, this.state.headingDeg));
     const elevationErr = Math.abs(this.state.elevationDeg - this.state.turretElevationDeg);
     const alignState = headingErr < 0.15 && elevationErr < 0.15 ? 'Aligned' : 'Slewing';
-    this.reloadReadout.textContent = [
-      `Gun heading: ${this.state.turretHeadingDeg.toFixed(1)} deg (cmd ${this.state.headingDeg.toFixed(1)})`,
-      `Gun elevation: ${this.state.turretElevationDeg.toFixed(1)} deg (cmd ${this.state.elevationDeg.toFixed(1)})`,
-      `Turret: ${alignState}`,
-    ].join(' | ');
+    this.reloadReadout.textContent = `Turret: ${alignState}`;
 
     if (this.headingHud) {
       this.headingHud.textContent = `HDG ${this.state.turretHeadingDeg.toFixed(1)}°`;
@@ -1834,16 +2198,21 @@ export class TankAttackLabApp {
       this.actionHint.textContent = 'Hint: rangefinder is optional. You can fire by eyeballing heading/elevation.';
     }
 
-    const historyItems = [...this.state.history].slice(-8).reverse();
-    this.historyList.innerHTML = historyItems.length
-      ? historyItems.map((item) => `- ${item}`).join('<br>')
-      : 'No events yet.';
-
-    this.leaderboardList.innerHTML = this.leaderboard.length
-      ? this.leaderboard
-        .map((entry, index) => `${index + 1}. ${entry.score} pts | Round ${entry.round} | ${entry.tank}`)
-        .join('<br>')
-      : 'No saved runs yet.';
+    const showLeaderboard = this.state.gameOver;
+    if (this.bottomRight?.el) {
+      this.bottomRight.el.style.display = showLeaderboard ? 'block' : 'none';
+    }
+    if (this.leaderboardTitle) {
+      this.leaderboardTitle.style.display = showLeaderboard ? 'block' : 'none';
+    }
+    this.leaderboardList.style.display = showLeaderboard ? 'block' : 'none';
+    this.leaderboardList.innerHTML = showLeaderboard
+      ? (this.leaderboard.length
+        ? this.leaderboard
+          .map((entry, index) => `${index + 1}. ${entry.score} pts | Round ${entry.round} | ${entry.tank}`)
+          .join('<br>')
+        : 'No saved runs yet.')
+      : '';
   }
 
   _loadLeaderboard() {
@@ -1892,6 +2261,18 @@ export class TankAttackLabApp {
       });
     }
     this._domRefs.clear();
+  }
+
+  _clearTrees() {
+    if (!this.sceneryGroup) return;
+
+    while (this.sceneryGroup.children.length) {
+      const child = this.sceneryGroup.children.pop();
+      this.sceneryGroup.remove(child);
+      child.traverse((node) => {
+        if (node.geometry) node.geometry.dispose();
+      });
+    }
   }
 
   getState() {
@@ -1962,6 +2343,7 @@ export class TankAttackLabApp {
     this._boundHandlers = [];
 
     this._clearTargets();
+  this._clearTrees();
 
     for (const projectile of this.state.projectiles) {
       this.projectileGroup.remove(projectile.mesh);
@@ -1985,6 +2367,10 @@ export class TankAttackLabApp {
     if (this.presetBar?.parentNode) this.presetBar.parentNode.removeChild(this.presetBar);
     if (this.targetOverlay?.parentNode) this.targetOverlay.parentNode.removeChild(this.targetOverlay);
     if (this.hudOverlay?.parentNode) this.hudOverlay.parentNode.removeChild(this.hudOverlay);
+
+    if (this.treeMaterials) {
+      Object.values(this.treeMaterials).forEach((mat) => mat.dispose());
+    }
 
     this.engine?.dispose();
   }
