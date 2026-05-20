@@ -8,7 +8,11 @@ import {
 
 const STORAGE_KEY = 'sherwin_tank_attack_lab_scores';
 const METERS_PER_UNIT = 100;
-const GRAVITY = 9.81;
+const GRAVITY = 9.80665;
+const ENEMY_TANK_HIT_RADIUS_M = 95;
+const MIN_ELEVATION_DEG = 0;
+const CLOSE_RANGE_ZERO_ELEV_M = 1100;
+const CLUSTER_SHARED_FIRE_COOLDOWN_SEC = 1.25;
 
 const TANKS = {
   m109: {
@@ -21,6 +25,8 @@ const TANKS = {
     reloadSec: 8.2,
     health: 320,
     dispersionM: 42,
+    traverseDegPerSec: 24,
+    elevateDegPerSec: 9,
   },
   isu152: {
     key: 'isu152',
@@ -32,6 +38,8 @@ const TANKS = {
     reloadSec: 10.5,
     health: 410,
     dispersionM: 37,
+    traverseDegPerSec: 15,
+    elevateDegPerSec: 6,
   },
   karl: {
     key: 'karl',
@@ -43,6 +51,8 @@ const TANKS = {
     reloadSec: 16.5,
     health: 520,
     dispersionM: 65,
+    traverseDegPerSec: 5.5,
+    elevateDegPerSec: 2.4,
   },
   kv2: {
     key: 'kv2',
@@ -54,6 +64,8 @@ const TANKS = {
     reloadSec: 11.8,
     health: 450,
     dispersionM: 46,
+    traverseDegPerSec: 9,
+    elevateDegPerSec: 3.8,
   },
 };
 
@@ -71,6 +83,8 @@ const TARGET_TYPES = {
     hp: 520,
     fireDamage: 24,
     fireReloadSec: 6.8,
+    muzzleVelocity: 320,
+    dispersionM: 120,
     hitRadiusM: 58,
     score: 140,
     meshColor: 0x64748b,
@@ -82,6 +96,8 @@ const TARGET_TYPES = {
     hp: 860,
     fireDamage: 44,
     fireReloadSec: 10.4,
+    muzzleVelocity: 260,
+    dispersionM: 155,
     hitRadiusM: 85,
     score: 230,
     meshColor: 0x7c2d12,
@@ -94,7 +110,9 @@ const TARGET_TYPES = {
     subHp: 180,
     subCount: 3,
     fireDamage: 8,
-    fireReloadSec: 4.6,
+    fireReloadSec: 5.8,
+    muzzleVelocity: 300,
+    dispersionM: 175,
     hitRadiusM: 70,
     score: 180,
     meshColor: 0x1d4ed8,
@@ -112,6 +130,10 @@ function toDegrees(rad) {
 function angularDifferenceDeg(a, b) {
   const raw = Math.abs(((a - b + 540) % 360) - 180);
   return Math.min(raw, 180);
+}
+
+function shortestSignedAngleDeg(fromDeg, toDeg) {
+  return ((toDeg - fromDeg + 540) % 360) - 180;
 }
 
 function metersToUnits(meters) {
@@ -222,6 +244,8 @@ export class TankAttackLabApp {
       selectedShell: 'AP',
       headingDeg: 0,
       elevationDeg: 35,
+      turretHeadingDeg: 0,
+      turretElevationDeg: 35,
       selectedTargetId: null,
       rangefinderMeters: null,
       tankHealth: TANKS.m109.health,
@@ -247,22 +271,24 @@ export class TankAttackLabApp {
     this.engine = new SceneManager(this.container, {
       background: '#080810',
       orbit: true,
-      fov: 52,
-      near: 0.1,
+      fov: 90,
+      near: 0.05,
       far: 2500,
     });
 
-    this.engine.camera.position.set(0, 28, 54);
-    this.engine.controls.target.set(0, 5, 0);
-    this.engine.controls.minDistance = 18;
-    this.engine.controls.maxDistance = 180;
-    this.engine.controls.maxPolarAngle = Math.PI * 0.49;
+    // 2D target indicator overlay
+    this.container.style.position = 'relative';
+    this.targetOverlay = document.createElement('div');
+    this.targetOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;';
+    this.container.appendChild(this.targetOverlay);
 
     this._buildScene();
+    this._initPeriscopeCamera();
     this._buildPanels();
     this._setTank(this.state.selectedTank, true);
     this._startRound(1);
     this._syncTurretToHeading();
+    this._syncPeriscopeCameraPose();
     this._updateUI();
 
     this.engine.onTick((dt) => {
@@ -296,7 +322,7 @@ export class TankAttackLabApp {
     ground.position.y = 0;
     scene.add(ground);
 
-    const ringGeo = new THREE.RingGeometry(9.5, 10, 64);
+    const ringGeo = new THREE.RingGeometry(3.2, 3.5, 64);
     const ringMat = new THREE.MeshBasicMaterial({
       color: 0x334155,
       side: THREE.DoubleSide,
@@ -311,34 +337,25 @@ export class TankAttackLabApp {
     this.tankGroup = new THREE.Group();
     scene.add(this.tankGroup);
 
-    const hull = new THREE.Mesh(
-      new THREE.BoxGeometry(6.4, 2.1, 10.2),
-      new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.68, metalness: 0.28 }),
-    );
-    hull.position.y = 1.2;
-    this.tankGroup.add(hull);
-
     this.turretGroup = new THREE.Group();
-    this.turretGroup.position.y = 2.5;
+    this.turretGroup.position.y = 0.87;
     this.tankGroup.add(this.turretGroup);
 
-    const turret = new THREE.Mesh(
-      new THREE.CylinderGeometry(2.3, 2.6, 1.3, 22),
-      new THREE.MeshStandardMaterial({ color: 0x475569, roughness: 0.6, metalness: 0.25 }),
-    );
-    turret.rotation.x = Math.PI / 2;
-    this.turretGroup.add(turret);
-
     this.barrelPivot = new THREE.Group();
-    this.barrelPivot.position.set(0, 0.15, 1.8);
+    this.barrelPivot.position.set(0, 0.05, 0.62);
     this.turretGroup.add(this.barrelPivot);
 
+    // Camera mount follows turret traverse only (no barrel elevation coupling).
+    this.turretCameraMount = new THREE.Group();
+    this.turretCameraMount.position.set(0, 0.05, 0.62);
+    this.turretGroup.add(this.turretCameraMount);
+
     this.barrel = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.24, 0.28, 7.2, 20),
+      new THREE.CylinderGeometry(0.08, 0.10, 2.4, 14),
       new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.4, metalness: 0.55 }),
     );
     this.barrel.rotation.x = Math.PI / 2;
-    this.barrel.position.z = 3.6;
+    this.barrel.position.z = 1.2;
     this.barrelPivot.add(this.barrel);
 
     this.targetGroup = new THREE.Group();
@@ -349,6 +366,120 @@ export class TankAttackLabApp {
 
     this.fxGroup = new THREE.Group();
     scene.add(this.fxGroup);
+  }
+
+  _initPeriscopeCamera() {
+    // Fully remove OrbitControls: SceneManager still calls controls.update() each frame,
+    // which otherwise overrides this miniapp's manual camera pose.
+    if (this.engine.controls) {
+      this.engine.controls.dispose();
+      this.engine.controls = null;
+    }
+
+    // Drive camera in world space from turret yaw so pitch is always fixed at 0 degrees.
+    // camera.rotation.y = PI makes the camera look along +Z because THREE cameras
+    // look along local -Z by default.
+    const cam = this.engine.camera;
+    this.engine.scene.add(cam);
+    // Fixed-0 camera mode: keep slight right offset so barrel does not block the view.
+    this._periscopeCameraOffset = new THREE.Vector3(0.13, 0.18, -0.22);
+    this._syncPeriscopeCameraPose();
+
+    // Dedicated HUD layer so crosshair/indicators are not cleared by target overlay refresh.
+    this.hudOverlay = document.createElement('div');
+    this.hudOverlay.style.cssText = 'position:absolute;inset:0;pointer-events:none;overflow:hidden;';
+    this.container.appendChild(this.hudOverlay);
+
+    // Crosshair
+    const crosshair = document.createElement('div');
+    crosshair.style.cssText = 'position:absolute;top:50%;left:50%;width:28px;height:28px;transform:translate(-50%,-50%);pointer-events:none;';
+    crosshair.innerHTML = [
+      '<div style="position:absolute;top:50%;left:0;width:100%;height:1px;background:rgba(251,191,36,0.82);transform:translateY(-50%)"></div>',
+      '<div style="position:absolute;left:50%;top:0;height:100%;width:1px;background:rgba(251,191,36,0.82);transform:translateX(-50%)"></div>',
+      '<div style="position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;border:2px solid rgba(251,191,36,0.95);transform:translate(-50%,-50%)"></div>',
+      '<div style="position:absolute;top:50%;left:50%;width:20px;height:20px;border-radius:50%;border:1px solid rgba(251,191,36,0.5);transform:translate(-50%,-50%)"></div>',
+    ].join('');
+    this.hudOverlay.appendChild(crosshair);
+
+    this.headingHud = document.createElement('div');
+    this.headingHud.style.cssText = [
+      'position:absolute',
+      'left:50%',
+      'top:10px',
+      'transform:translateX(-50%)',
+      'color:#fbbf24',
+      'font:700 15px/1.2 monospace',
+      'text-shadow:0 0 6px rgba(0,0,0,0.6)',
+      'letter-spacing:0.8px',
+    ].join(';');
+    this.hudOverlay.appendChild(this.headingHud);
+
+    this.elevationHud = document.createElement('div');
+    this.elevationHud.style.cssText = [
+      'position:absolute',
+      'right:14px',
+      'top:50%',
+      'transform:translateY(-50%)',
+      'color:#fbbf24',
+      'font:700 14px/1.5 monospace',
+      'text-shadow:0 0 6px rgba(0,0,0,0.6)',
+      'text-align:right',
+      'white-space:pre-line',
+    ].join(';');
+    this.hudOverlay.appendChild(this.elevationHud);
+
+    // Drag state
+    this._drag = { active: false, lastX: 0, lastY: 0 };
+    const SENS = 0.11;
+    const canvas = this.engine.renderer.domElement;
+    canvas.style.cursor = 'crosshair';
+
+    const startDrag = (x, y) => {
+      this._drag.active = true;
+      this._drag.lastX = x;
+      this._drag.lastY = y;
+      canvas.style.cursor = 'grabbing';
+    };
+
+    const moveDrag = (x, y) => {
+      if (!this._drag.active) return;
+      const dx = x - this._drag.lastX;
+      this._drag.lastX = x;
+      this._drag.lastY = y;
+
+      this.state.headingDeg = ((this.state.headingDeg + dx * SENS) % 360 + 360) % 360;
+      this.state.headingDeg = Number(this.state.headingDeg.toFixed(1));
+
+      if (this.headingInput) this.headingInput.value = String(this.state.headingDeg);
+    };
+
+    const endDrag = () => {
+      this._drag.active = false;
+      canvas.style.cursor = 'crosshair';
+    };
+
+    const onMouseDown = (e) => { if (e.button === 0) startDrag(e.clientX, e.clientY); };
+    const onMouseMove = (e) => moveDrag(e.clientX, e.clientY);
+    const onMouseUp   = () => endDrag();
+    const onTouchStart = (e) => { if (e.touches.length === 1) startDrag(e.touches[0].clientX, e.touches[0].clientY); };
+    const onTouchMove  = (e) => { if (e.touches.length === 1) { e.preventDefault(); moveDrag(e.touches[0].clientX, e.touches[0].clientY); } };
+    const onTouchEnd   = () => endDrag();
+
+    canvas.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    canvas.addEventListener('touchstart', onTouchStart, { passive: true });
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
+    canvas.addEventListener('touchend', onTouchEnd);
+
+    this._boundHandlers.push(
+      { element: canvas, event: 'mousedown', handler: onMouseDown },
+      { element: window, event: 'mousemove', handler: onMouseMove },
+      { element: window, event: 'mouseup', handler: onMouseUp },
+      { element: canvas, event: 'touchstart', handler: onTouchStart },
+      { element: canvas, event: 'touchmove', handler: onTouchMove },
+      { element: canvas, event: 'touchend', handler: onTouchEnd },
+    );
   }
 
   _buildPanels() {
@@ -401,6 +532,26 @@ export class TankAttackLabApp {
       bar.appendChild(button);
     });
 
+    const fsBtn = document.createElement('button');
+    fsBtn.className = 'miniapp-btn';
+    fsBtn.textContent = '\u26f6 Fullscreen';
+    const fsHandler = () => {
+      if (!document.fullscreenElement) {
+        this.container.requestFullscreen?.().catch(() => {});
+      } else {
+        document.exitFullscreen?.();
+      }
+    };
+    fsBtn.addEventListener('click', fsHandler);
+    this._boundHandlers.push({ element: fsBtn, event: 'click', handler: fsHandler });
+    const fsChangeHandler = () => {
+      fsBtn.textContent = document.fullscreenElement ? '\u2715 Exit Full' : '\u26f6 Fullscreen';
+      setTimeout(() => this.engine._onResize?.(), 50);
+    };
+    document.addEventListener('fullscreenchange', fsChangeHandler);
+    this._boundHandlers.push({ element: document, event: 'fullscreenchange', handler: fsChangeHandler });
+    bar.appendChild(fsBtn);
+
     this.presetBar = bar;
     this.container.appendChild(bar);
   }
@@ -447,15 +598,13 @@ export class TankAttackLabApp {
 
     const headingField = buildNumberInput('Heading (deg)', 0, 359, 1, this.state.headingDeg, (value) => {
       this.state.headingDeg = value;
-      this._syncTurretToHeading();
       this._updateUI();
     });
     panel.appendChild(headingField);
     this.headingInput = headingField.input;
 
-    const elevationField = buildNumberInput('Elevation (deg)', 5, 75, 0.5, this.state.elevationDeg, (value) => {
+    const elevationField = buildNumberInput('Elevation (deg)', MIN_ELEVATION_DEG, 75, 0.5, this.state.elevationDeg, (value) => {
       this.state.elevationDeg = value;
-      this._syncTurretToHeading();
       this._updateUI();
     });
     panel.appendChild(elevationField);
@@ -469,6 +618,10 @@ export class TankAttackLabApp {
     this.reloadReadout = document.createElement('div');
     this.reloadReadout.className = 'miniapp-display';
     panel.appendChild(this.reloadReadout);
+
+    this.rangeEstReadout = document.createElement('div');
+    this.rangeEstReadout.className = 'miniapp-display';
+    panel.appendChild(this.rangeEstReadout);
 
     this.fireButton = document.createElement('button');
     this.fireButton.className = 'miniapp-btn miniapp-btn--proton';
@@ -554,7 +707,6 @@ export class TankAttackLabApp {
     const centerHandler = () => {
       this.state.headingDeg = 0;
       this.headingInput.value = '0';
-      this._syncTurretToHeading();
       this._updateUI();
     };
     centerBtn.addEventListener('click', centerHandler);
@@ -611,6 +763,8 @@ export class TankAttackLabApp {
     const ratio = this.state.tankHealth / oldMax;
 
     this.state.selectedTank = tankKey;
+    this.state.turretHeadingDeg = this.state.headingDeg;
+    this.state.turretElevationDeg = this.state.elevationDeg;
     this.state.tankHealth = this.state.gameOver ? tank.health : Math.max(1, Math.round(tank.health * clamp(ratio, 0, 1)));
     this.state.reloadRemaining = Math.max(this.state.reloadRemaining, 0);
     this.state.rangefinderMeters = null;
@@ -626,7 +780,58 @@ export class TankAttackLabApp {
       });
     }
 
+    this._enforceTargetEnvelopeForCurrentTank();
+
     this._updateUI();
+  }
+
+  _getTankTargetDistanceMaxM(tank) {
+    return Math.min(this._getEffectiveCombatRangeM(tank) * 0.95, 15000);
+  }
+
+  _getShellBallisticMaxRangeM(tank, shell) {
+    return Math.max(0, ((tank.muzzleVelocity ** 2) / GRAVITY) * shell.drag);
+  }
+
+  _getBestShellBallisticMaxRangeM(tank) {
+    let best = 0;
+    for (const shell of Object.values(SHELLS)) {
+      best = Math.max(best, this._getShellBallisticMaxRangeM(tank, shell));
+    }
+    return best;
+  }
+
+  _getEffectiveCombatRangeM(tank) {
+    return Math.min(tank.maxRangeM, this._getBestShellBallisticMaxRangeM(tank));
+  }
+
+  _enforceTargetEnvelopeForCurrentTank() {
+    const tank = TANKS[this.state.selectedTank];
+    if (!tank || !this.state.targets.length) return;
+
+    const minDistanceM = 1000;
+    const maxDistanceM = this._getTankTargetDistanceMaxM(tank);
+
+    for (const target of this.state.targets) {
+      const dx = target.x;
+      const dz = target.z;
+      const headingRad = Math.atan2(dx, dz);
+      const headingDeg = ((toDegrees(headingRad) % 360) + 360) % 360;
+      const currentDistanceM = unitsToMeters(Math.hypot(dx, dz));
+      const clampedDistanceM = clamp(currentDistanceM, minDistanceM, maxDistanceM);
+      const distanceU = metersToUnits(clampedDistanceM);
+
+      target.headingDeg = headingDeg;
+      target.distanceM = clampedDistanceM;
+      target.x = Math.sin(headingRad) * distanceU;
+      target.z = Math.cos(headingRad) * distanceU;
+      if (target.mesh) {
+        target.mesh.position.set(target.x, 0, target.z);
+      }
+    }
+
+    this.state.rangefinderMeters = null;
+    this.state.measuredTargets = {};
   }
 
   _restartRun() {
@@ -643,6 +848,10 @@ export class TankAttackLabApp {
     this.state.effects = [];
     this.state.projectiles = [];
     this.state.lastImpact = null;
+    this.state.headingDeg = 0;
+    this.state.elevationDeg = 35;
+    this.state.turretHeadingDeg = 0;
+    this.state.turretElevationDeg = 35;
     this._clearTargets();
     this._setTank(currentTank, true);
     this.state.tankHealth = TANKS[currentTank].health;
@@ -662,7 +871,7 @@ export class TankAttackLabApp {
 
     for (let i = 0; i < count; i++) {
       const targetType = pickTargetType();
-      const distanceM = randRange(1000, Math.min(tank.maxRangeM * 0.95, 15000));
+      const distanceM = randRange(1000, this._getTankTargetDistanceMaxM(tank));
       const headingDeg = randRange(0, 360);
       const headingRad = toRadians(headingDeg);
       const distanceU = metersToUnits(distanceM);
@@ -682,6 +891,7 @@ export class TankAttackLabApp {
         alive: true,
         x,
         z,
+        sharedFireCooldown: 0,
         fireNodes: [],
         subDomes: [],
       };
@@ -727,20 +937,20 @@ export class TankAttackLabApp {
 
     if (target.type === 'cluster') {
       const offsets = [
-        new THREE.Vector3(-0.9, 0, 0.35),
-        new THREE.Vector3(0.9, 0, 0.35),
-        new THREE.Vector3(0, 0, -0.85),
+        new THREE.Vector3(-0.32, 0, 0.12),
+        new THREE.Vector3(0.32, 0, 0.12),
+        new THREE.Vector3(0, 0, -0.3),
       ];
       offsets.forEach((offset, index) => {
-        const dome = this._createSingleDome(def.meshColor, 0.62, 0.24, 0.44);
+        const dome = this._createSingleDome(def.meshColor, 0.22, 0.08, 0.16);
         dome.position.copy(offset);
         group.add(dome);
         this._domRefs.set(`${target.id}:${index}`, dome);
       });
     } else {
-      const size = target.type === 'large' ? 1.4 : 1.0;
-      const porthole = target.type === 'large' ? 0.35 : 0.26;
-      const barrelLength = target.type === 'large' ? 0.7 : 0.48;
+      const size = target.type === 'large' ? 0.5 : 0.35;
+      const porthole = target.type === 'large' ? 0.12 : 0.09;
+      const barrelLength = target.type === 'large' ? 0.25 : 0.17;
       const dome = this._createSingleDome(def.meshColor, size, porthole, barrelLength);
       group.add(dome);
       this._domRefs.set(`${target.id}:0`, dome);
@@ -788,6 +998,7 @@ export class TankAttackLabApp {
   _tick(dt) {
     if (!this.state.gameOver) {
       this.state.reloadRemaining = Math.max(0, this.state.reloadRemaining - dt);
+      this._tickTurretMotion(dt);
       this._tickProjectiles(dt);
       this._tickEffects(dt);
       this._tickDomeFire(dt);
@@ -796,20 +1007,47 @@ export class TankAttackLabApp {
       this._tickEffects(dt);
     }
 
+    this._syncPeriscopeCameraPose();
     this._updateUI();
+    this._updateTargetOverlays();
   }
 
   _tickProjectiles(dt) {
     const gravityUnits = GRAVITY / METERS_PER_UNIT;
 
     for (const projectile of this.state.projectiles) {
-      projectile.t += dt;
+      const step = dt * (projectile.timeScale ?? 1);
+      projectile.t += step;
       const t = projectile.t;
 
-      const x = projectile.start.x + projectile.v0.x * t;
-      const y = projectile.start.y + projectile.v0.y * t - 0.5 * gravityUnits * t * t;
-      const z = projectile.start.z + projectile.v0.z * t;
-      projectile.mesh.position.set(x, Math.max(y, 0), z);
+      let y = 0;
+      if (projectile.owner === 'enemy') {
+        const p = clamp(projectile.maxT > 0 ? t / projectile.maxT : 1, 0, 1);
+        projectile.mesh.position.lerpVectors(projectile.start, projectile.end, p);
+        const arc = projectile.arcHeightU ?? 0;
+        projectile.mesh.position.y += Math.sin(Math.PI * p) * arc;
+        y = projectile.mesh.position.y;
+      } else {
+        const x = projectile.start.x + projectile.v0.x * t;
+        y = projectile.start.y + projectile.v0.y * t - 0.5 * gravityUnits * t * t;
+        const z = projectile.start.z + projectile.v0.z * t;
+        projectile.mesh.position.set(x, Math.max(y, 0), z);
+      }
+
+      // Orient slug along current velocity direction
+      const velDir = projectile.owner === 'enemy'
+        ? projectile.end.clone().sub(projectile.start).normalize()
+        : new THREE.Vector3(
+          projectile.v0.x,
+          projectile.v0.y - gravityUnits * t,
+          projectile.v0.z,
+        ).normalize();
+      if (velDir.lengthSq() > 0.0001) {
+        projectile.mesh.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 0, 1),
+          velDir,
+        );
+      }
 
       if (projectile.trail) {
         projectile.trail.geometry.setFromPoints([
@@ -819,8 +1057,12 @@ export class TankAttackLabApp {
         projectile.prevPos.copy(projectile.mesh.position);
       }
 
-      if (projectile.t >= projectile.maxT || y <= 0) {
-        this._resolveImpact(projectile);
+      if (projectile.t >= projectile.maxT || (projectile.owner !== 'enemy' && y <= 0)) {
+        if (projectile.owner === 'enemy') {
+          this._resolveIncomingImpact(projectile);
+        } else {
+          this._resolveImpact(projectile);
+        }
         this.projectileGroup.remove(projectile.mesh);
         if (projectile.trail) this.projectileGroup.remove(projectile.trail);
         projectile.mesh.geometry.dispose();
@@ -840,9 +1082,11 @@ export class TankAttackLabApp {
     for (const fx of this.state.effects) {
       fx.time += dt;
       const t = fx.time / fx.life;
-      const scale = 1 + t * 3;
+      const scaleRate = fx.scaleRate ?? 3;
+      const baseOpacity = fx.baseOpacity ?? 0.7;
+      const scale = 1 + t * scaleRate;
       fx.mesh.scale.set(scale, scale, scale);
-      fx.mesh.material.opacity = Math.max(0, 0.7 * (1 - t));
+      fx.mesh.material.opacity = Math.max(0, baseOpacity * (1 - t));
       if (fx.time >= fx.life) {
         this.fxGroup.remove(fx.mesh);
         fx.mesh.geometry.dispose();
@@ -857,6 +1101,10 @@ export class TankAttackLabApp {
     for (const target of this.state.targets) {
       if (!target.alive) continue;
 
+      if (target.type === 'cluster') {
+        target.sharedFireCooldown = Math.max(0, (target.sharedFireCooldown || 0) - dt);
+      }
+
       for (const node of target.fireNodes) {
         if (target.type === 'cluster' && node.subIndex !== undefined) {
           const sub = target.subDomes[node.subIndex];
@@ -866,10 +1114,91 @@ export class TankAttackLabApp {
         node.cooldown -= dt;
         if (node.cooldown > 0) continue;
 
+        if (target.type === 'cluster' && (target.sharedFireCooldown || 0) > 0) {
+          continue;
+        }
+
         node.cooldown = node.reloadSec + randRange(0.0, 1.8);
-        this._applyIncomingFire(target, node.damage);
+        if (target.type === 'cluster') {
+          target.sharedFireCooldown = CLUSTER_SHARED_FIRE_COOLDOWN_SEC + randRange(0.0, 0.45);
+        }
+        this._fireDomeShell(target, node);
       }
     }
+  }
+
+  _getDomeMuzzlePosition(target, node) {
+    if (target.type === 'cluster' && node.subIndex !== undefined) {
+      const subMesh = this._domRefs.get(`${target.id}:${node.subIndex}`);
+      if (subMesh) {
+        const pos = new THREE.Vector3();
+        subMesh.updateMatrixWorld(true);
+        subMesh.getWorldPosition(pos);
+        return pos.add(new THREE.Vector3(0, 0.12, 0.16));
+      }
+    }
+
+    if (target.mesh) {
+      const pos = new THREE.Vector3();
+      target.mesh.updateMatrixWorld(true);
+      target.mesh.getWorldPosition(pos);
+      return pos.add(new THREE.Vector3(0, 0.18, 0.2));
+    }
+
+    return new THREE.Vector3(target.x, 0.22, target.z);
+  }
+
+  _fireDomeShell(target, node) {
+    if (this.state.gameOver) return;
+
+    const targetDef = TARGET_TYPES[target.type] || TARGET_TYPES.armored;
+    const muzzleVelocity = targetDef.muzzleVelocity;
+    const dispersionM = targetDef.dispersionM;
+    const impactJitterMeters = randRange(0, dispersionM);
+    const jitterAngle = randRange(0, Math.PI * 2);
+    const jitterUnits = metersToUnits(impactJitterMeters);
+
+    const tankAimPoint = new THREE.Vector3(
+      Math.cos(jitterAngle) * jitterUnits,
+      0.52,
+      Math.sin(jitterAngle) * jitterUnits,
+    );
+
+    const start = this._getDomeMuzzlePosition(target, node);
+    const travelDist = start.distanceTo(tankAimPoint);
+    const speedUnits = muzzleVelocity / METERS_PER_UNIT;
+    const maxT = Math.max(0.35, travelDist / Math.max(speedUnits, 0.01));
+
+    const shellGeo = new THREE.CylinderGeometry(0.045, 0.065, 0.48, 10);
+    shellGeo.rotateX(Math.PI / 2);
+    const shell = new THREE.Mesh(
+      shellGeo,
+      new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.25, metalness: 0.6 }),
+    );
+    shell.position.copy(start);
+    this.projectileGroup.add(shell);
+
+    const trail = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([start.clone(), start.clone()]),
+      new THREE.LineBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.42 }),
+    );
+    this.projectileGroup.add(trail);
+
+    this.state.projectiles.push({
+      owner: 'enemy',
+      sourceLabel: target.label,
+      sourceTarget: target,
+      sourceDamage: node.damage,
+      mesh: shell,
+      trail,
+      prevPos: start.clone(),
+      start,
+      end: tankAimPoint,
+      arcHeightU: Math.min(1.2, Math.max(0.2, travelDist * 0.03)),
+      t: 0,
+      maxT,
+      dead: false,
+    });
   }
 
   _tickRoundProgress(dt) {
@@ -898,18 +1227,50 @@ export class TankAttackLabApp {
     this.state.tankHealth = Math.max(0, this.state.tankHealth - adjusted);
 
     const flash = new THREE.Mesh(
-      new THREE.SphereGeometry(0.7, 14, 12),
-      new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.68 }),
+      new THREE.SphereGeometry(0.28, 12, 10),
+      new THREE.MeshBasicMaterial({ color: 0xef4444, transparent: true, opacity: 0.28 }),
     );
-    flash.position.set(randRange(-1.4, 1.4), randRange(2.2, 4.2), randRange(-1.4, 1.4));
+    flash.position.set(randRange(-0.75, 0.75), randRange(0.95, 1.55), randRange(-0.75, 0.75));
     this.fxGroup.add(flash);
-    this.state.effects.push({ mesh: flash, life: 0.4, time: 0, dead: false });
+    this.state.effects.push({
+      mesh: flash,
+      life: 0.24,
+      time: 0,
+      scaleRate: 1.15,
+      baseOpacity: 0.28,
+      dead: false,
+    });
 
-    this._addHistory(`${target.label} hit tank for ${adjusted} damage`);
+    this._addHistory(`\u2190 ${target.label} hit tank for ${adjusted} dmg`);
 
     if (this.state.tankHealth <= 0) {
       this._triggerGameOver();
     }
+  }
+
+  _resolveIncomingImpact(projectile) {
+    const hitFx = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 12, 10),
+      new THREE.MeshBasicMaterial({ color: 0xfb7185, transparent: true, opacity: 0.48 }),
+    );
+    hitFx.position.copy(projectile.end);
+    this.fxGroup.add(hitFx);
+    this.state.effects.push({
+      mesh: hitFx,
+      life: 0.22,
+      time: 0,
+      scaleRate: 1.4,
+      baseOpacity: 0.48,
+      dead: false,
+    });
+
+    const missDistM = unitsToMeters(Math.hypot(projectile.end.x, projectile.end.z));
+    if (missDistM <= ENEMY_TANK_HIT_RADIUS_M) {
+      this._applyIncomingFire(projectile.sourceTarget, projectile.sourceDamage);
+      return;
+    }
+
+    this._addHistory(`\u2190 ${projectile.sourceLabel} missed (${Math.round(missDistM)} m off)`);
   }
 
   _triggerGameOver() {
@@ -937,7 +1298,15 @@ export class TankAttackLabApp {
       return;
     }
 
-    const noise = randRange(-0.012, 0.012);
+    // Return the same reading on repeated presses for the same target
+    if (this.state.measuredTargets[target.id] !== undefined) {
+      this.state.rangefinderMeters = this.state.measuredTargets[target.id];
+      this._addHistory(`${target.label} range (cached): ${formatMeters(this.state.rangefinderMeters)}`);
+      this._updateUI();
+      return;
+    }
+
+    const noise = randRange(-0.004, 0.004);
     const measured = Math.max(1000, target.distanceM * (1 + noise));
     this.state.rangefinderMeters = measured;
     this.state.measuredTargets[target.id] = measured;
@@ -959,11 +1328,12 @@ export class TankAttackLabApp {
     const v = tank.muzzleVelocity;
     const normalized = clamp((measured * GRAVITY) / (v * v * shell.drag), -0.99, 0.99);
     const angle = 0.5 * Math.asin(normalized);
-    const elevation = clamp(toDegrees(angle), 5, 75);
+    const elevation = measured <= CLOSE_RANGE_ZERO_ELEV_M
+      ? MIN_ELEVATION_DEG
+      : clamp(toDegrees(angle), MIN_ELEVATION_DEG, 75);
     this.state.elevationDeg = Number(elevation.toFixed(1));
     this.elevationInput.value = String(this.state.elevationDeg);
-    this._syncTurretToHeading();
-    this._addHistory(`Elevation set to ${this.state.elevationDeg} deg from range`);
+    this._addHistory(`Elevation command set: ${this.state.elevationDeg} deg`);
     this._updateUI();
   }
 
@@ -977,8 +1347,8 @@ export class TankAttackLabApp {
 
     const tank = TANKS[this.state.selectedTank];
     const shell = SHELLS[this.state.selectedShell];
-    const headingDeg = this.state.headingDeg;
-    const elevationDeg = this.state.elevationDeg;
+    const headingDeg = this.state.turretHeadingDeg;
+    const elevationDeg = this.state.turretElevationDeg;
     const headingRad = toRadians(headingDeg);
     const elevationRad = toRadians(elevationDeg);
 
@@ -989,28 +1359,41 @@ export class TankAttackLabApp {
 
     const start = this._getBarrelMuzzlePosition();
     const v0Units = v / METERS_PER_UNIT;
+
+    // Evaluate impact first so we can aim the bullet at the actual scatter point
+    const impact = this._evaluateImpact(rangeM, headingDeg, tank);
+
+    // Aim horizontal velocity directly at the scatter landing point
+    const landX = impact.impactPoint ? impact.impactPoint.x : Math.sin(headingRad) * metersToUnits(rangeM);
+    const landZ = impact.impactPoint ? impact.impactPoint.z : Math.cos(headingRad) * metersToUnits(rangeM);
+    const landDist = Math.sqrt(landX * landX + landZ * landZ);
+    const horizSpeed = landDist / flightTime;
+    const horizHeadingX = landDist > 0.001 ? landX / landDist : Math.sin(headingRad);
+    const horizHeadingZ = landDist > 0.001 ? landZ / landDist : Math.cos(headingRad);
     const v0 = new THREE.Vector3(
-      Math.sin(headingRad) * Math.cos(elevationRad) * v0Units,
+      horizHeadingX * horizSpeed,
       Math.sin(elevationRad) * v0Units,
-      Math.cos(headingRad) * Math.cos(elevationRad) * v0Units,
+      horizHeadingZ * horizSpeed,
     );
 
+    // Elongated slug geometry — long axis along local Z, will be rotated to velocity direction each tick
+    const slugGeo = new THREE.CylinderGeometry(0.055, 0.08, 0.58, 10);
+    slugGeo.rotateX(Math.PI / 2);
     const projectile = new THREE.Mesh(
-      new THREE.SphereGeometry(0.16, 12, 10),
-      new THREE.MeshStandardMaterial({ color: 0xf8fafc, roughness: 0.25, metalness: 0.72 }),
+      slugGeo,
+      new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.22, metalness: 0.78 }),
     );
     projectile.position.copy(start);
     this.projectileGroup.add(projectile);
 
     const trail = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([start.clone(), start.clone()]),
-      new THREE.LineBasicMaterial({ color: 0x93c5fd, transparent: true, opacity: 0.52 }),
+      new THREE.LineBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.52 }),
     );
     this.projectileGroup.add(trail);
 
-    const impact = this._evaluateImpact(rangeM, headingDeg, tank);
-
     this.state.projectiles.push({
+      owner: 'player',
       mesh: projectile,
       trail,
       prevPos: start.clone(),
@@ -1033,19 +1416,27 @@ export class TankAttackLabApp {
   }
 
   _evaluateImpact(rangeM, headingDeg, tank) {
-    const impactX = Math.sin(toRadians(headingDeg)) * metersToUnits(rangeM);
-    const impactZ = Math.cos(toRadians(headingDeg)) * metersToUnits(rangeM);
+    // Nominal impact point from heading + range
+    const nomX = Math.sin(toRadians(headingDeg)) * metersToUnits(rangeM);
+    const nomZ = Math.cos(toRadians(headingDeg)) * metersToUnits(rangeM);
 
+    // Apply 2D circular dispersion scatter so it can land short, long, left or right
+    const dispAngle = Math.random() * Math.PI * 2;
+    const dispRadius = randRange(0, tank.dispersionM);
+    const scatterX = nomX + Math.cos(dispAngle) * metersToUnits(dispRadius);
+    const scatterZ = nomZ + Math.sin(dispAngle) * metersToUnits(dispRadius);
+
+    // Find nearest alive target to the actual scatter point
     let nearest = null;
-    let nearestGroundDistM = Number.POSITIVE_INFINITY;
+    let nearestDistM = Number.POSITIVE_INFINITY;
 
     for (const target of this.state.targets) {
       if (!target.alive) continue;
-      const dx = impactX - target.x;
-      const dz = impactZ - target.z;
+      const dx = scatterX - target.x;
+      const dz = scatterZ - target.z;
       const distM = unitsToMeters(Math.sqrt(dx * dx + dz * dz));
-      if (distM < nearestGroundDistM) {
-        nearestGroundDistM = distM;
+      if (distM < nearestDistM) {
+        nearestDistM = distM;
         nearest = target;
       }
     }
@@ -1054,21 +1445,13 @@ export class TankAttackLabApp {
       return { hit: false, targetId: null, missDistanceM: 9999 };
     }
 
-    const headingErr = angularDifferenceDeg(headingDeg, nearest.headingDeg);
-    const crossTrack = nearest.distanceM * Math.sin(toRadians(headingErr));
-    const rangeErr = rangeM - nearest.distanceM;
-    const deterministicMiss = Math.sqrt(crossTrack * crossTrack + rangeErr * rangeErr);
-
-    const dispersion = randRange(0, tank.dispersionM);
-    const missDistance = deterministicMiss + dispersion;
     const hitWindow = nearest.hitRadiusM + tank.caliberMm * 0.05;
 
     return {
-      hit: missDistance <= hitWindow,
+      hit: nearestDistM <= hitWindow,
       targetId: nearest.id,
-      missDistanceM: missDistance,
-      deterministicMissM: deterministicMiss,
-      impactPoint: { x: impactX, z: impactZ },
+      missDistanceM: nearestDistM,
+      impactPoint: { x: scatterX, z: scatterZ },
     };
   }
 
@@ -1091,7 +1474,7 @@ export class TankAttackLabApp {
     };
 
     if (!projectile.impact.hit || !projectile.impact.targetId) {
-      this._addHistory(`Missed (${projectile.impact.missDistanceM.toFixed(0)} m off)`);
+      this._addHistory(`\u2715 Missed (${projectile.impact.missDistanceM.toFixed(0)} m off)`);
       return;
     }
 
@@ -1115,7 +1498,7 @@ export class TankAttackLabApp {
     }
 
     target.hp = Math.max(0, target.hp - damage);
-    this._addHistory(`${projectile.shellType} hit ${target.label} for ${damage}`);
+    this._addHistory(`\u2192 ${projectile.shellType} hit ${target.label} for ${damage}`);
 
     if (target.hp <= 0) {
       this._destroyTarget(target);
@@ -1130,7 +1513,7 @@ export class TankAttackLabApp {
     }
 
     aliveSub.hp = Math.max(0, aliveSub.hp - damage);
-    this._addHistory(`${shellType} hit cluster dome for ${damage}`);
+    this._addHistory(`\u2192 ${shellType} hit cluster for ${damage}`);
 
     if (aliveSub.hp <= 0) {
       aliveSub.alive = false;
@@ -1202,17 +1585,73 @@ export class TankAttackLabApp {
   }
 
   _getBarrelMuzzlePosition() {
-    const local = new THREE.Vector3(0, 0, 7.2);
+    const local = new THREE.Vector3(0, 0, 2.4);
     this.barrelPivot.updateMatrixWorld();
     return this.barrelPivot.localToWorld(local.clone());
   }
 
   _syncTurretToHeading() {
-    const headingRad = toRadians(this.state.headingDeg);
+    const headingRad = toRadians(this.state.turretHeadingDeg);
     this.turretGroup.rotation.y = headingRad;
 
-    const elevation = toRadians(this.state.elevationDeg);
+    const elevation = toRadians(this.state.turretElevationDeg);
     this.barrelPivot.rotation.x = -elevation;
+  }
+
+  _syncPeriscopeCameraPose() {
+    const cam = this.engine?.camera;
+    if (!cam || !this.turretCameraMount || !this.turretGroup) return;
+
+    this.turretCameraMount.updateMatrixWorld(true);
+
+    const mountWorld = new THREE.Vector3();
+    this.turretCameraMount.getWorldPosition(mountWorld);
+
+    const turretWorldQ = new THREE.Quaternion();
+    this.turretGroup.getWorldQuaternion(turretWorldQ);
+
+    const turretForward = new THREE.Vector3(0, 0, 1).applyQuaternion(turretWorldQ);
+    turretForward.y = 0;
+    if (turretForward.lengthSq() < 1e-8) {
+      turretForward.set(0, 0, 1);
+    } else {
+      turretForward.normalize();
+    }
+
+    const yaw = Math.atan2(turretForward.x, turretForward.z);
+    const worldOffset = this._periscopeCameraOffset
+      .clone()
+      .applyAxisAngle(new THREE.Vector3(0, 1, 0), yaw);
+
+    cam.position.copy(mountWorld).add(worldOffset);
+    cam.rotation.set(0, yaw + Math.PI, 0);
+    cam.updateMatrixWorld();
+  }
+
+  _tickTurretMotion(dt) {
+    const tank = TANKS[this.state.selectedTank];
+    if (!tank) return;
+
+    const maxTraverseStep = tank.traverseDegPerSec * dt;
+    const maxElevStep = tank.elevateDegPerSec * dt;
+
+    const headingDelta = shortestSignedAngleDeg(this.state.turretHeadingDeg, this.state.headingDeg);
+    const headingStep = clamp(headingDelta, -maxTraverseStep, maxTraverseStep);
+    this.state.turretHeadingDeg = (this.state.turretHeadingDeg + headingStep + 360) % 360;
+
+    const elevDelta = this.state.elevationDeg - this.state.turretElevationDeg;
+    const elevStep = clamp(elevDelta, -maxElevStep, maxElevStep);
+    this.state.turretElevationDeg = clamp(this.state.turretElevationDeg + elevStep, MIN_ELEVATION_DEG, 75);
+
+    // Snap tiny residual error to avoid infinite asymptotic settling.
+    if (Math.abs(shortestSignedAngleDeg(this.state.turretHeadingDeg, this.state.headingDeg)) < 0.05) {
+      this.state.turretHeadingDeg = this.state.headingDeg;
+    }
+    if (Math.abs(this.state.elevationDeg - this.state.turretElevationDeg) < 0.05) {
+      this.state.turretElevationDeg = this.state.elevationDeg;
+    }
+
+    this._syncTurretToHeading();
   }
 
   _addHistory(message) {
@@ -1220,9 +1659,91 @@ export class TankAttackLabApp {
     if (this.state.history.length > 14) this.state.history.shift();
   }
 
+  _updateTargetOverlays() {
+    if (!this.targetOverlay) return;
+    this.targetOverlay.innerHTML = '';
+
+    const canvas = this.engine.renderer.domElement;
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    const camera = this.engine.camera;
+
+    for (const target of this.state.targets) {
+      if (!target.alive) continue;
+
+      const worldPos = new THREE.Vector3(target.x, 0.5, target.z);
+      const ndc = worldPos.clone().project(camera);
+      if (ndc.z > 1) continue;
+
+      const sx = (ndc.x * 0.5 + 0.5) * W;
+      const sy = (-ndc.y * 0.5 + 0.5) * H;
+
+      const domeR = target.type === 'large' ? 0.5 : target.type === 'cluster' ? 0.55 : 0.35;
+      const edgeNDC = new THREE.Vector3(target.x + domeR, 0.5, target.z).project(camera);
+      const edgeSX = (edgeNDC.x * 0.5 + 0.5) * W;
+      const half = Math.max(12, Math.min(72, Math.abs(edgeSX - sx) * 3.5));
+
+      const isSelected = target.id === this.state.selectedTargetId;
+      const borderColor = isSelected ? '#22c55e' : 'rgba(74,222,128,0.5)';
+      const textColor = isSelected ? '#22c55e' : '#86efac';
+
+      const measured = this.state.measuredTargets[target.id];
+      const hpText = target.type === 'cluster'
+        ? `${target.subDomes.filter((s) => s.alive).length}/${target.subDomes.length} sub`
+        : `${Math.max(0, Math.round(target.hp))} HP`;
+
+      const lines = [
+        `<b>${target.label}</b>`,
+        `${formatMeters(target.distanceM)} \u00b7 ${target.headingDeg.toFixed(0)}\u00b0`,
+        hpText,
+        measured ? 'Ranged \u2713' : '',
+      ].filter(Boolean).join('<br>');
+
+      const wrapper = document.createElement('div');
+      wrapper.style.cssText = [
+        'position:absolute',
+        `left:${(sx - half).toFixed(1)}px`,
+        `top:${(sy - half).toFixed(1)}px`,
+        `width:${(half * 2).toFixed(1)}px`,
+        `height:${(half * 2).toFixed(1)}px`,
+        `border:${isSelected ? 2 : 1}px solid ${borderColor}`,
+        'pointer-events:none',
+        'box-sizing:border-box',
+      ].join(';');
+
+      const lbl = document.createElement('div');
+      lbl.style.cssText = [
+        'position:absolute',
+        'bottom:calc(100% + 4px)',
+        'left:50%',
+        'transform:translateX(-50%)',
+        'background:rgba(0,0,0,0.78)',
+        `color:${textColor}`,
+        'font-size:10px',
+        'font-family:monospace',
+        'white-space:nowrap',
+        'padding:2px 5px',
+        'border-radius:3px',
+        'line-height:1.5',
+        'text-align:center',
+        `border:1px solid ${borderColor}`,
+      ].join(';');
+      lbl.innerHTML = lines;
+
+      wrapper.appendChild(lbl);
+      this.targetOverlay.appendChild(wrapper);
+    }
+  }
+
   _updateUI() {
     const tank = TANKS[this.state.selectedTank];
     const selectedTarget = this._getSelectedTarget();
+    const currentShell = SHELLS[this.state.selectedShell];
+    const elevRad = toRadians(this.state.turretElevationDeg);
+    const estCurrentElevationRange = Math.max(0, ((tank.muzzleVelocity ** 2) * Math.sin(2 * elevRad) / GRAVITY) * currentShell.drag);
+    const shellMaxAt45 = this._getShellBallisticMaxRangeM(tank, currentShell);
+    const bestShellBallisticMax = this._getBestShellBallisticMaxRangeM(tank);
+    const effectiveCombatRange = this._getEffectiveCombatRangeM(tank);
 
     const maxHealth = tank.health;
     const healthPct = clamp(this.state.tankHealth / maxHealth, 0, 1);
@@ -1232,10 +1753,14 @@ export class TankAttackLabApp {
 
     this.tankSpecBox.innerHTML = [
       `${tank.name} (${tank.role})`,
-      `Range: ${formatMeters(tank.maxRangeM)}`,
+      `Spec max range: ${formatMeters(tank.maxRangeM)}`,
+      `Ballistic max @45° (best shell): ${formatMeters(bestShellBallisticMax)}`,
+      `Effective combat range: ${formatMeters(effectiveCombatRange)}`,
       `Gun: ${tank.caliberMm} mm`,
       `Muzzle velocity: ${Math.round(tank.muzzleVelocity)} m/s`,
       `Reload: ${tank.reloadSec.toFixed(1)} s`,
+      `Traverse: ${tank.traverseDegPerSec.toFixed(1)} deg/s`,
+      `Elevation slew: ${tank.elevateDegPerSec.toFixed(1)} deg/s`,
     ].join('<br>');
 
     if (selectedTarget && selectedTarget.alive) {
@@ -1267,9 +1792,36 @@ export class TankAttackLabApp {
       ? `Last range: ${formatMeters(this.state.rangefinderMeters)}`
       : 'Last range: none';
 
-    this.reloadReadout.textContent = this.state.reloadRemaining > 0
-      ? `Reload: ${this.state.reloadRemaining.toFixed(1)} s`
-      : 'Reload: ready';
+    const headingErr = Math.abs(shortestSignedAngleDeg(this.state.turretHeadingDeg, this.state.headingDeg));
+    const elevationErr = Math.abs(this.state.elevationDeg - this.state.turretElevationDeg);
+    const alignState = headingErr < 0.15 && elevationErr < 0.15 ? 'Aligned' : 'Slewing';
+    this.reloadReadout.textContent = [
+      `Gun heading: ${this.state.turretHeadingDeg.toFixed(1)} deg (cmd ${this.state.headingDeg.toFixed(1)})`,
+      `Gun elevation: ${this.state.turretElevationDeg.toFixed(1)} deg (cmd ${this.state.elevationDeg.toFixed(1)})`,
+      `Turret: ${alignState}`,
+    ].join(' | ');
+
+    if (this.headingHud) {
+      this.headingHud.textContent = `HDG ${this.state.turretHeadingDeg.toFixed(1)}°`;
+    }
+    if (this.elevationHud) {
+      this.elevationHud.textContent = [
+        `EL ${this.state.turretElevationDeg.toFixed(1)}°`,
+        `CMD ${this.state.elevationDeg.toFixed(1)}°`,
+      ].join('\n');
+    }
+
+    if (this.rangeEstReadout) {
+      this.rangeEstReadout.textContent = [
+        `Est. range @ current EL: ${formatMeters(estCurrentElevationRange)}`,
+        `${currentShell.label} max @45°: ${formatMeters(shellMaxAt45)}`,
+        `Spec max: ${formatMeters(tank.maxRangeM)}`,
+      ].join(' | ');
+    }
+
+    this.fireButton.textContent = this.state.reloadRemaining > 0
+      ? `Reload ${this.state.reloadRemaining.toFixed(1)} s`
+      : 'Fire';
 
     this.fireButton.disabled = this.state.gameOver;
     this.rangefinderButton.disabled = this.state.gameOver;
@@ -1431,6 +1983,8 @@ export class TankAttackLabApp {
     this.state.effects = [];
 
     if (this.presetBar?.parentNode) this.presetBar.parentNode.removeChild(this.presetBar);
+    if (this.targetOverlay?.parentNode) this.targetOverlay.parentNode.removeChild(this.targetOverlay);
+    if (this.hudOverlay?.parentNode) this.hudOverlay.parentNode.removeChild(this.hudOverlay);
 
     this.engine?.dispose();
   }
