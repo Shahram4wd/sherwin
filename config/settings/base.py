@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.notifications",
     "apps.ai_tools",
+    "apps.lab_telemetry",
 ]
 
 MIDDLEWARE = [

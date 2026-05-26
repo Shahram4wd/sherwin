@@ -23,6 +23,7 @@ urlpatterns = [
     path("highlights/", include("apps.gallery.urls")),
     path("lab/", include("apps.miniapps.urls")),
     path("ai/", include("apps.ai_tools.urls")),
+    path("api/lab-telemetry/", include("apps.lab_telemetry.urls")),
     path(
         "sitemap.xml",
         sitemap,
