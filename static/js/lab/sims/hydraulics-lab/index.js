@@ -5,7 +5,7 @@ import {
   clamp,
   lerp,
   randRange,
-} from './engine.js';
+} from '@lab/core';
 import { DestructibleMesh, FractureOptions } from '@dgreenheck/three-pinata';
 
 const GRAPH_WINDOW_SEC = 45;

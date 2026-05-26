@@ -24,7 +24,7 @@ import {
   clamp,
   lerp,
   randRange,
-} from './engine.js';
+} from '@lab/core';
 
 /* ================================================================== */
 /*  Constants                                                         */
@@ -417,8 +417,9 @@ class Nucleus3D {
 /* ================================================================== */
 
 class DecayEffects {
-  constructor(scene) {
+  constructor(scene, { reducedMotion = false } = {}) {
     this.scene = scene;
+    this.reducedMotion = !!reducedMotion;
     this._particles = [];
     this._projectiles = [];
     this._flashes = [];
@@ -470,7 +471,8 @@ class DecayEffects {
       cluster_decay: 0xff8800,
     };
     const color = colorMap[type] || 0xffffff;
-    const count = type === 'alpha' ? 5 : type === 'spontaneous_fission' ? 16 : type === 'cluster_decay' ? 10 : 7;
+    let count = type === 'alpha' ? 5 : type === 'spontaneous_fission' ? 16 : type === 'cluster_decay' ? 10 : 7;
+    if (this.reducedMotion) count = Math.max(1, Math.round(count * 0.35));
     const geo = new THREE.SphereGeometry(0.12, 8, 8);
     const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 1 });
 
@@ -861,7 +863,9 @@ class DecayEffects {
       p.trailClock += dt;
       if (p.trailClock >= p.trailRate) {
         p.trailClock = 0;
-        this._spawnTrailMote(p.mesh.position, p.trailColor, p.trailSize, p.isFragment ? 0.4 : 0.24);
+        if (!this.reducedMotion) {
+          this._spawnTrailMote(p.mesh.position, p.trailColor, p.trailSize, p.isFragment ? 0.4 : 0.24);
+        }
       }
 
       p.life -= dt;
@@ -938,7 +942,8 @@ export class NuclearDecayApp {
     });
 
     this.nucleus = new Nucleus3D(this.engine.scene);
-    this.effects = new DecayEffects(this.engine.scene);
+    const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    this.effects = new DecayEffects(this.engine.scene, { reducedMotion });
 
     // Build UI
     this._buildControls();

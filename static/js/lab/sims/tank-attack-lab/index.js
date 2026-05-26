@@ -4,7 +4,7 @@ import {
   UIPanel,
   clamp,
   randRange,
-} from './engine.js';
+} from '@lab/core';
 
 const STORAGE_KEY = 'sherwin_tank_attack_lab_scores';
 const METERS_PER_UNIT = 100;
