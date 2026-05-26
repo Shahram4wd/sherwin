@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% load static %}
+
+{#
+  _base_lab.html — Shared chrome for every Lab simulation.
+
+  Sim-specific templates extend this file and only need to override two
+  blocks at minimum:
+
+    {% block sim_manifest %}js/lab/sims/<slug>/manifest.js{% endblock %}
+
+  Optional blocks:
+    sim_intro_hints — the small icon row under the simulation card.
+    extra_importmap — extra logical specifiers (e.g. third-party libs).
+#}
+
+{% block title %}{{ miniapp.name }} — Lab — Sherwin Universe{% endblock %}
+{% block meta_description %}{{ miniapp.description|truncatewords:25 }}{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="{% static 'css/miniapps.css' %}">
+{% endblock %}
+
+{% block content %}
+<section class="relative pt-6 pb-12">
+    <div class="max-w-7xl mx-auto px-4">
+        <!-- Breadcrumb -->
+        <nav class="flex items-center gap-2 text-sm text-gray-500 mb-4">
+            <a href="{% url 'miniapps:lab' %}" class="hover:text-accent-400 transition-colors">Lab</a>
+            <span>/</span>
+            <span class="text-gray-300">{{ miniapp.name }}</span>
+        </nav>
+
+        <!-- LabShell mount point. JS builds .lab-shell > .lab-toolbar + #simulation inside. -->
+        <div id="lab-mount" class="lab-mount"></div>
+
+        <!-- Description below -->
+        <div class="glass-card rounded-xl p-6 mt-6 max-w-3xl">
+            <h2 class="text-lg font-display font-semibold text-white mb-2">{{ miniapp.name }}</h2>
+            <p class="text-gray-400 text-sm leading-relaxed">{{ miniapp.description }}</p>
+            <div class="mt-4 flex flex-wrap gap-3 text-xs text-gray-500">
+                {% block sim_intro_hints %}
+                <span>🖱️ Drag to interact</span>
+                <span>⛶ Toggle fullscreen from the toolbar</span>
+                <span>❓ Open help for shortcuts</span>
+                <span>🎤 Ask the AI assistant</span>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script type="importmap">
+{
+    "imports": {
+        {% block three_importmap %}"three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/",
+        {% endblock %}"@lab/core": "{% static 'js/lab/core/index.js' %}",
+        "@lab/shell": "{% static 'js/lab/shell/lab-shell.js' %}",
+        "@lab/ai/voice-assistant": "{% static 'js/lab/ai/voice-assistant.js' %}"{% block extra_importmap %}{% endblock %}
+    }
+}
+</script>
+
+<script type="module">
+    import { LabShell } from '@lab/shell';
+
+    const manifestUrl = '{% static "js/lab/sims/" %}' + '{% block sim_slug %}{{ miniapp.slug }}{% endblock %}' + '/manifest.js';
+    const { default: manifest } = await import(manifestUrl);
+
+    const shell = new LabShell({
+        mountEl: document.getElementById('lab-mount'),
+        manifest,
+        aiEndpoint: '{% url "ai_tools:assistant_chat" %}',
+        telemetryEndpoint: '{% url "lab_telemetry:ingest" %}',
+        csrfToken: '{{ csrf_token }}',
+    });
+    shell.mount();
+
+    const app = new manifest.AppClass(shell.stageId);
+
+    // Defer the expensive sim init() until the stage scrolls into view.
+    // Falls back to immediate attach when IntersectionObserver isn't available.
+    const mountEl = document.getElementById('lab-mount');
+    if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver((entries, obs) => {
+            if (entries.some(e => e.isIntersecting)) {
+                obs.disconnect();
+                shell.attach(app);
+            }
+        }, { rootMargin: '200px' });
+        io.observe(mountEl);
+    } else {
+        await shell.attach(app);
+    }
+
+    // Auto-dispose on unload so we always send the final telemetry beacon.
+    window.addEventListener('pagehide', () => shell.dispose(), { once: true });
+</script>
+{% endblock %}

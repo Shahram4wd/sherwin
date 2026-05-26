@@ -1,62 +1,9 @@
-{% extends "base.html" %}
-{% load static %}
+{% extends "miniapps/_base_lab.html" %}
 
-{% block title %}{{ miniapp.name }} - Lab - Sherwin Universe{% endblock %}
-{% block meta_description %}{{ miniapp.description|truncatewords:25 }}{% endblock %}
-
-{% block extra_head %}
-<link rel="stylesheet" href="{% static 'css/miniapps.css' %}">
-{% endblock %}
-
-{% block content %}
-<section class="relative pt-6 pb-12">
-    <div class="max-w-7xl mx-auto px-4">
-        <nav class="flex items-center gap-2 text-sm text-gray-500 mb-4">
-            <a href="{% url 'miniapps:lab' %}" class="hover:text-accent-400 transition-colors">Lab</a>
-            <span>/</span>
-            <span class="text-gray-300">{{ miniapp.name }}</span>
-        </nav>
-
-        <div id="simulation" class="miniapp-container"></div>
-
-        <div class="glass-card rounded-xl p-6 mt-6 max-w-3xl">
-            <h2 class="text-lg font-display font-semibold text-white mb-2">{{ miniapp.name }}</h2>
-            <p class="text-gray-400 text-sm leading-relaxed">{{ miniapp.description }}</p>
-            <div class="mt-4 flex flex-wrap gap-3 text-xs text-gray-500">
-                <span>Use rangefinder or eyeball shots</span>
-                <span>Select AP, HE, or Fragmentation shells</span>
-                <span>Adjust heading and elevation</span>
-                <span>Destroy dome objectives before your tank is destroyed</span>
-                <span>Ask AI for tank and ammunition guidance</span>
-            </div>
-        </div>
-    </div>
-</section>
-{% endblock %}
-
-{% block extra_js %}
-<script type="importmap">
-{
-    "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
-        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/"
-    }
-}
-</script>
-
-<script type="module">
-    import { TankAttackLabApp } from '{% static "js/miniapps/tank-attack-lab.js" %}';
-    import { VoiceAssistant } from '{% static "js/miniapps/voice-assistant.js" %}';
-
-    const app = new TankAttackLabApp('simulation');
-    await app.init();
-
-    new VoiceAssistant({
-        container: document.getElementById('simulation'),
-        appSlug: 'tank-attack-lab',
-        apiUrl: '{% url "ai_tools:assistant_chat" %}',
-        getStateFn: () => app.getState(),
-        csrfToken: '{{ csrf_token }}',
-    });
-</script>
+{% block sim_intro_hints %}
+<span>🖱️ Drag to aim turret</span>
+<span>📐 Tune elevation and velocity</span>
+<span>👻 Watch ballistic ghosts before firing</span>
+<span>🏆 Your best scores are saved locally</span>
+<span>🎤 Ask the AI for ballistic tips</span>
 {% endblock %}

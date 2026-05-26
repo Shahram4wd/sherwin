@@ -817,3 +817,211 @@
 [data-theme="light"] .miniapp-ai-msg--assistant { background: rgba(0,0,0,0.04); color: #374151; }
 [data-theme="light"] .miniapp-ai-msg--user { background: rgba(99,102,241,0.1); color: #4338ca; }
 [data-theme="light"] .miniapp-ai-input { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.1); color: #374151; }
+
+/* ============================================================
+   Lab framework chrome � added by lab framework refactor.
+   ============================================================ */
+
+.lab-mount {
+    position: relative;
+    width: 100%;
+}
+
+.lab-shell {
+    position: relative;
+    width: 100%;
+    height: auto;
+}
+
+.lab-shell.is-pseudo-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #0b1220;
+}
+
+.lab-shell.is-pseudo-fullscreen .lab-stage {
+    height: 100vh !important;
+}
+
+/*
+ * The toolbar sits ABOVE the stage in normal flow so it never collides
+ * with sim-internal absolutely-positioned UI panels (e.g. nuclear-decay's
+ * element-info card, which lives in the top-right corner of the stage).
+ * In pseudo-fullscreen we float it over the stage so the canvas can
+ * still use the full viewport.
+ */
+.lab-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    min-height: 36px;
+}
+
+.lab-shell.is-pseudo-fullscreen .lab-toolbar {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    margin-bottom: 0;
+    z-index: 10000;
+}
+
+.lab-toolbar-btn {
+    width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(10, 16, 28, 0.7);
+    backdrop-filter: blur(8px);
+    color: #e5e7eb;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.15s;
+}
+
+.lab-toolbar-btn:hover { background: rgba(20, 30, 48, 0.85); }
+.lab-toolbar-btn:focus-visible {
+    outline: 2px solid #38bdf8;
+    outline-offset: 2px;
+}
+.lab-toolbar-btn[aria-pressed="true"] {
+    background: rgba(56, 189, 248, 0.25);
+    border-color: rgba(56, 189, 248, 0.6);
+}
+
+.lab-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    color: #94a3b8;
+    background: rgba(10, 16, 28, 0.5);
+    z-index: 5;
+}
+
+.lab-loading-spinner {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid rgba(148, 163, 184, 0.25);
+    border-top-color: #38bdf8;
+    animation: lab-spin 0.9s linear infinite;
+}
+
+@keyframes lab-spin { to { transform: rotate(360deg); } }
+
+.lab-reduced-motion .lab-loading-spinner {
+    animation: none;
+    border-top-color: rgba(148, 163, 184, 0.6);
+}
+
+.lab-error-card {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 2rem;
+    background: rgba(15, 23, 42, 0.95);
+    color: #f1f5f9;
+    z-index: 20;
+    text-align: center;
+}
+.lab-error-card h3 { color: #f87171; font-size: 1.25rem; font-weight: 600; }
+.lab-error-detail {
+    max-width: 100%;
+    max-height: 220px;
+    overflow: auto;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 0.75rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.75rem;
+    color: #fca5a5;
+    white-space: pre-wrap;
+    text-align: left;
+}
+.lab-error-card .lab-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid rgba(56, 189, 248, 0.6);
+    background: rgba(56, 189, 248, 0.15);
+    color: #e0f2fe;
+    cursor: pointer;
+}
+
+.lab-help-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(8, 12, 22, 0.7);
+    backdrop-filter: blur(4px);
+}
+.lab-help-panel {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem 1.5rem 1.25rem;
+    max-width: 480px;
+    width: calc(100% - 2rem);
+    color: #e5e7eb;
+    position: relative;
+}
+.lab-help-panel:focus { outline: none; }
+.lab-help-content h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.75rem; color: #f8fafc; }
+.lab-help-content ul { list-style: disc; padding-left: 1.25rem; display: flex; flex-direction: column; gap: 0.35rem; color: #cbd5e1; font-size: 0.875rem; }
+.lab-help-close {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.6rem;
+    width: 28px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    color: #94a3b8;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+.lab-help-close:hover { color: #f1f5f9; }
+
+.lab-debug-overlay {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0.5rem;
+    z-index: 25;
+    max-width: 360px;
+    max-height: 50%;
+    overflow: auto;
+    background: rgba(8, 12, 22, 0.85);
+    color: #a7f3d0;
+    border: 1px solid rgba(74, 222, 128, 0.3);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.7rem;
+    white-space: pre;
+    pointer-events: none;
+}
+
+/* Hide animated UI bits when user prefers reduced motion. */
+.lab-reduced-motion *,
+.lab-reduced-motion *::before,
+.lab-reduced-motion *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+}
