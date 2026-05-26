@@ -60,7 +60,11 @@ class MiniApp(models.Model):
     thumbnail = models.CharField(
         max_length=200,
         blank=True,
-        help_text="Emoji or icon class shown on the lab card.",
+        help_text=(
+            "Icon shown on the lab card. Either a single emoji "
+            "(e.g. ☢️) or an SVG filename ending in '.svg' that exists "
+            "in static/images/sim-icons/ (e.g. 'tank-attack-lab.svg')."
+        ),
     )
     is_active = models.BooleanField(default=True)
     embed_url = models.URLField(blank=True)
