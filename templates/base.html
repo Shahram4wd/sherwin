@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,7 +11,7 @@
     <meta property="og:type" content="website">
     {% endblock %}
     <title>{% block title %}Sherwin Universe{% endblock %}</title>
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+    <link rel="icon" href="{% static 'images/sherwin-universe-logo.svg' %}" type="image/svg+xml">
     <!-- Prevent flash of wrong theme -->
     <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark');</script>
     <!-- Tailwind CSS CDN -->
@@ -103,16 +104,13 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-{% load static %}
 <body class="min-h-screen overflow-x-hidden text-white font-sans flex flex-col star-field" x-data="{ mobileMenu: false }">
 
     <!-- Desktop Navigation -->
     <header class="hidden md:block glass-nav sticky top-0 z-50">
         <nav class="max-w-6xl mx-auto px-6 py-4 flex items-center gap-6">
             <a href="{% url 'core:home' %}" class="flex items-center space-x-3 group shrink-0">
-                <div class="w-8 h-8 rounded-lg bg-accent-500 flex items-center justify-center shadow-lg shadow-accent-500/25 group-hover:shadow-accent-500/40 transition-all">
-                    <span class="text-white text-sm font-display font-bold">S</span>
-                </div>
+                <img src="{% static 'images/sherwin-universe-logo.svg' %}" alt="" class="w-8 h-8 rounded-lg shadow-lg shadow-accent-500/25 group-hover:shadow-accent-500/40 transition-all" aria-hidden="true">
                 <span class="text-white font-display font-semibold text-lg tracking-wide">Sherwin</span>
                 <span class="text-accent-400 font-display font-bold text-sm -ml-2">Universe</span>
             </a>
@@ -144,9 +142,7 @@
     <header class="md:hidden glass-nav sticky top-0 z-50" x-data="{ mobileSearch: false }">
         <nav class="px-4 py-4 flex items-center justify-between gap-3">
             <a href="{% url 'core:home' %}" class="flex items-center space-x-2.5 shrink-0" x-show="!mobileSearch">
-                <div class="w-7 h-7 rounded-md bg-accent-500 flex items-center justify-center shadow-lg shadow-accent-500/25">
-                    <span class="text-white text-xs font-display font-bold">S</span>
-                </div>
+                <img src="{% static 'images/sherwin-universe-logo.svg' %}" alt="" class="w-7 h-7 rounded-md shadow-lg shadow-accent-500/25" aria-hidden="true">
                 <span class="text-white font-display font-semibold text-base">Sherwin</span>
                 <span class="text-accent-400 font-display font-bold text-xs -ml-1.5">Universe</span>
             </a>
