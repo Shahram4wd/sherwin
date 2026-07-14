@@ -2,10 +2,12 @@ from django.core.paginator import Paginator
 from django.db import models
 from django.http import HttpResponse
 from django.shortcuts import render
+from django.utils import timezone
 from taggit.models import Tag
 
 from apps.accounts.models import UserProfile
 from apps.blog.models import Post
+from apps.miniapps.models import MiniApp
 
 from .models import AboutPage
 
@@ -27,12 +29,22 @@ def home(request):
     about = AboutPage.load()
     profile = UserProfile.objects.select_related("user").first()
 
+    featured_sims = MiniApp.objects.filter(is_active=True).select_related("category")[:6]
+    first_published = (
+        Post.snaps.order_by("published_at").values_list("published_at", flat=True).first()
+    )
+    mission_day = (timezone.now() - first_published).days + 1 if first_published else 1
+
     return render(request, "pages/home.html", {
         "snaps": snaps,
         "current_tag": tag,
         "all_tags": all_tags,
         "about": about,
         "profile": profile,
+        "featured_sims": featured_sims,
+        "snap_count": Post.snaps.count(),
+        "sim_count": MiniApp.objects.filter(is_active=True).count(),
+        "mission_day": mission_day,
     })
 
 

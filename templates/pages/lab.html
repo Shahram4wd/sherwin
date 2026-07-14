@@ -2,18 +2,19 @@
 {% load static %}
 
 {% block title %}Lab — Sherwin Universe{% endblock %}
-{% block meta_description %}Interactive mini apps and experiments in Sherwin's lab.{% endblock %}
+{% block meta_description %}Playable physics sims and mini-games built in Sherwin's lab.{% endblock %}
 
 {% block content %}
 <section class="relative pt-12 pb-20">
-    <div class="absolute top-1/2 -left-32 w-72 h-72 bg-accent-500/5 rounded-full blur-[100px]"></div>
     <div class="max-w-6xl mx-auto px-6 w-full">
-        <p class="text-accent-400 text-xs font-medium tracking-[0.3em] uppercase mb-4">05 &mdash; Lab</p>
-        <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-4">Lab</h1>
-        <p class="text-gray-400 max-w-xl mb-12">
-            Interactive simulations and mini-games to explore science, creativity, and more.
-            Each app is a self-contained adventure — jump in!
-        </p>
+        <div class="mb-12 reveal">
+            <p class="hud-label mb-4">Sector 05 &middot; The Lab</p>
+            <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-4">The <span class="gradient-text-fire">Lab</span></h1>
+            <p class="text-gray-400 max-w-xl text-lg">
+                Real physics, real explosions, zero cleanup. Every experiment here is a
+                game or simulation I built — pick one and hit play.
+            </p>
+        </div>
 
         {% if request.user.is_staff %}
         <div class="mb-8 flex flex-wrap gap-3">
@@ -28,11 +29,11 @@
 
         {% if miniapps %}
         <div class="grid grid-cols-1 lg:grid-cols-[280px_minmax(0,1fr)] gap-8">
-            <aside class="glass-card rounded-xl p-5 h-fit">
+            <aside class="glass-card rounded-xl p-5 h-fit reveal">
                 <form method="get" class="space-y-5">
                     <div>
-                        <h2 class="text-sm font-semibold tracking-wide uppercase text-white/90">Filter By Tags</h2>
-                        <p class="text-xs text-gray-500 mt-1">Select one or more tags to narrow simulations.</p>
+                        <h2 class="hud-label !text-[10px]">Filter by tags</h2>
+                        <p class="text-xs text-gray-500 mt-2">Select one or more tags to narrow simulations.</p>
                     </div>
 
                     <div class="space-y-2 max-h-[26rem] overflow-y-auto pr-1">
@@ -76,23 +77,33 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                     {% for app in miniapps %}
-                    <a href="{{ app.get_absolute_url }}" class="glass-card rounded-xl p-6 group hover:scale-[1.02] transition-all duration-200 block">
-                        {% if app.thumbnail and app.thumbnail|slice:"-4:" == ".svg" %}
-                        <div class="mb-4 h-9 flex items-center">
-                            <img src="{% static 'images/sim-icons/' %}{{ app.thumbnail }}" alt="" class="h-full w-auto" loading="lazy">
-                        </div>
-                        {% else %}
-                        <div class="text-4xl mb-4">{{ app.thumbnail|default:"🧪" }}</div>
-                        {% endif %}
-                        <h3 class="text-lg font-display font-semibold text-white mb-2 group-hover:text-accent-400 transition-colors">{{ app.name }}</h3>
-                        <p class="text-gray-400 text-sm leading-relaxed">{{ app.description|truncatewords:25 }}</p>
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            {% if app.category %}
-                            <span class="inline-block text-[10px] bg-white/5 text-gray-500 px-3 py-1 rounded-full font-medium uppercase tracking-wider">Category: {{ app.category.name }}</span>
+                    <a href="{{ app.get_absolute_url }}" class="sim-card tilt-card p-6 group flex flex-col reveal" style="--reveal-delay: {% cycle '0ms' '100ms' '200ms' %};">
+                        <div class="flex items-start justify-between gap-3 mb-4">
+                            {% if app.thumbnail and app.thumbnail|slice:"-4:" == ".svg" %}
+                            <div class="h-11 flex items-center">
+                                <img src="{% static 'images/sim-icons/' %}{{ app.thumbnail }}" alt="" class="h-full w-auto" loading="lazy">
+                            </div>
+                            {% else %}
+                            <div class="text-[2.6rem] leading-none">{{ app.thumbnail|default:"🧪" }}</div>
                             {% endif %}
+                            {% if app.category %}
+                            <span class="inline-block text-[10px] bg-plasma-400/10 text-plasma-300 px-3 py-1 rounded-full font-mono font-medium uppercase tracking-wider shrink-0">{{ app.category.name }}</span>
+                            {% endif %}
+                        </div>
+                        <h3 class="text-xl font-display font-bold text-white mb-2">{{ app.name }}</h3>
+                        <p class="text-gray-400 text-sm leading-relaxed flex-1">{{ app.description|truncatewords:25 }}</p>
+                        {% if app.visible_tags %}
+                        <div class="mt-3 flex flex-wrap gap-2">
                             {% for tag in app.visible_tags %}
                             <span class="inline-block text-[10px] bg-accent-500/15 text-accent-300 px-3 py-1 rounded-full font-medium uppercase tracking-wider">{{ tag.name }}</span>
                             {% endfor %}
+                        </div>
+                        {% endif %}
+                        <div class="mt-5 pt-4 border-t border-white/10">
+                            <span class="sim-play">
+                                Play now
+                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                            </span>
                         </div>
                     </a>
                     {% endfor %}

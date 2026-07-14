@@ -9,10 +9,10 @@
         <div class="absolute top-1/4 -left-32 w-72 h-72 bg-blue-500/5 rounded-full blur-[100px]"></div>
 
         <!-- Header -->
-        <div class="mb-12">
-            <p class="text-accent-400 text-xs font-medium tracking-[0.3em] uppercase mb-4">03 &mdash; Timeline</p>
-            <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-4">Timeline</h1>
-            <p class="text-gray-500 max-w-lg">A chronological journey through milestones, firsts, and memorable moments.</p>
+        <div class="mb-12 reveal">
+            <p class="hud-label mb-4">Sector 03 &middot; Timeline</p>
+            <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-4">Mission <span class="gradient-text-fire">Timeline</span></h1>
+            <p class="text-gray-500 max-w-lg text-lg">Milestones, launches, and firsts — the story so far, in order.</p>
         </div>
 
         <!-- Year Filters -->
@@ -75,7 +75,8 @@
         </div>
         {% empty %}
         <div class="text-center py-16">
-            <p class="text-gray-500">No timeline events yet. Check back soon.</p>
+            <div class="text-4xl mb-4 animate-float">🛰️</div>
+            <p class="text-gray-500">No missions logged yet — countdown in progress. Check back soon.</p>
         </div>
         {% endfor %}
     </div>

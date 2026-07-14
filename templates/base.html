@@ -5,15 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% block meta %}
-    <meta name="description" content="{% block meta_description %}Sherwin Universe - A digital journal, interactive science lab, and family time capsule.{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Sherwin's Universe — rockets, super-tanks, physics sims, and space experiments built by a young engineer.{% endblock %}">
     <meta property="og:title" content="{% block og_title %}Sherwin Universe{% endblock %}">
-    <meta property="og:description" content="{% block og_description %}Chronicling Sherwin's growth, experiments, and creative projects.{% endblock %}">
+    <meta property="og:description" content="{% block og_description %}Rockets, experiments, and playable physics sims from Sherwin's own corner of the cosmos.{% endblock %}">
     <meta property="og:type" content="website">
     {% endblock %}
     <title>{% block title %}Sherwin Universe{% endblock %}</title>
     <link rel="icon" href="{% static 'images/sherwin-universe-logo.svg' %}" type="image/svg+xml">
     <!-- Prevent flash of wrong theme -->
-    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark');</script>
+    <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark'); document.documentElement.classList.add('js');</script>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
@@ -29,19 +29,33 @@
                             600: '#22223a',
                         },
                         accent: {
+                            300: '#ff8080',
                             400: '#ff4d4d',
                             500: '#ef2d2d',
                             600: '#dc2626',
+                        },
+                        nova: {
+                            300: '#ffd08a',
+                            400: '#ffb45c',
+                            500: '#ff8a3d',
+                        },
+                        plasma: {
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#22d3ee',
+                        },
+                        nebula: {
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
                         },
                         glass: 'rgba(255, 255, 255, 0.05)',
                     },
                     fontFamily: {
                         sans: ['Inter', 'system-ui', 'sans-serif'],
                         display: ['"Space Grotesk"', 'system-ui', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
                     },
-                    backgroundImage: {
-                        'stars': 'radial-gradient(2px 2px at 20px 30px, #eee, rgba(0,0,0,0)), radial-gradient(2px 2px at 40px 70px, #fff, rgba(0,0,0,0)), radial-gradient(1px 1px at 90px 40px, #ddd, rgba(0,0,0,0)), radial-gradient(1px 1px at 130px 80px, #fff, rgba(0,0,0,0)), radial-gradient(2px 2px at 160px 30px, #eee, rgba(0,0,0,0))',
-                    }
                 }
             }
         }
@@ -49,7 +63,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@2.0.4" integrity="sha384-HGfztofotfshcF7+8n44JQL2oJmowVChPTg48S+jvZoztPfvwD79OC/LTtG6dMp+" crossorigin="anonymous"></script>
     <!-- Alpine.js -->
@@ -80,45 +94,49 @@
             border-color: rgba(255, 255, 255, 0.15);
         }
         .glass-nav {
-            background: rgba(10, 10, 18, 0.85);
+            background: rgba(8, 8, 16, 0.8);
             backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(255, 255, 255, 0.06);
         }
         .glow-accent { text-shadow: 0 0 20px rgba(239, 45, 45, 0.4); }
         .glow-box { box-shadow: 0 0 30px rgba(239, 45, 45, 0.15); }
-        .star-field {
-            background-image:
-                radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,0.6), transparent),
-                radial-gradient(1px 1px at 30% 60%, rgba(255,255,255,0.4), transparent),
-                radial-gradient(1.5px 1.5px at 50% 10%, rgba(255,255,255,0.7), transparent),
-                radial-gradient(1px 1px at 70% 40%, rgba(255,255,255,0.3), transparent),
-                radial-gradient(1px 1px at 85% 75%, rgba(255,255,255,0.5), transparent),
-                radial-gradient(1.5px 1.5px at 15% 80%, rgba(255,255,255,0.4), transparent),
-                radial-gradient(1px 1px at 60% 90%, rgba(255,255,255,0.3), transparent),
-                radial-gradient(1px 1px at 95% 15%, rgba(255,255,255,0.6), transparent);
-        }
         @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
         .animate-float { animation: float 6s ease-in-out infinite; }
         @keyframes pulse-glow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
         .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
     </style>
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=20260714-cosmos">
     {% block extra_head %}{% endblock %}
 </head>
-<body class="min-h-screen overflow-x-hidden text-white font-sans flex flex-col star-field" x-data="{ mobileMenu: false }">
+<body class="min-h-screen overflow-x-hidden text-white font-sans flex flex-col" x-data="{ mobileMenu: false }">
+
+    <!-- Animated cosmos background (stars + nebulae, rendered by main.js) -->
+    <div id="cosmos" aria-hidden="true">
+        <div class="nebula nebula-a"></div>
+        <div class="nebula nebula-b"></div>
+        <div class="nebula nebula-c"></div>
+        <canvas id="cosmos-canvas"></canvas>
+    </div>
+
+    <!-- Scroll progress rocket -->
+    <div id="scroll-progress" aria-hidden="true">
+        <div id="scroll-progress-bar"></div>
+        <span id="scroll-rocket">🚀</span>
+    </div>
 
     <!-- Desktop Navigation -->
     <header class="hidden md:block glass-nav sticky top-0 z-50">
         <nav class="max-w-6xl mx-auto px-6 py-4 flex items-center gap-6">
             <a href="{% url 'core:home' %}" class="flex items-center space-x-3 group shrink-0">
-                <img src="{% static 'images/sherwin-universe-logo.svg' %}" alt="" class="w-8 h-8 rounded-lg shadow-lg shadow-accent-500/25 group-hover:shadow-accent-500/40 transition-all" aria-hidden="true">
+                <img src="{% static 'images/sherwin-universe-logo.svg' %}" alt="" class="w-8 h-8 rounded-lg shadow-lg shadow-accent-500/25 group-hover:shadow-accent-500/60 group-hover:-translate-y-0.5 group-hover:rotate-6 transition-all duration-300" aria-hidden="true">
                 <span class="text-white font-display font-semibold text-lg tracking-wide">Sherwin</span>
-                <span class="text-accent-400 font-display font-bold text-sm -ml-2">Universe</span>
+                <span class="font-display font-bold text-sm -ml-2 gradient-text-fire">Universe</span>
             </a>
 
             <!-- Always-visible Search -->
             <div class="relative flex-1 max-w-xs">
                 <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                <input type="search" placeholder="Search snaps..."
+                <input type="search" placeholder="Scan the universe..."
                        hx-get="{% url 'core:search' %}" hx-trigger="keyup changed delay:300ms" hx-target="#snap-feed"
                        name="q" autocomplete="off"
                        class="w-full pl-9 pr-4 py-2 rounded-lg bg-space-800 border border-white/10 text-white placeholder-gray-500 focus:border-accent-400/50 focus:ring-1 focus:ring-accent-400/20 outline-none text-sm">
@@ -144,12 +162,12 @@
             <a href="{% url 'core:home' %}" class="flex items-center space-x-2.5 shrink-0" x-show="!mobileSearch">
                 <img src="{% static 'images/sherwin-universe-logo.svg' %}" alt="" class="w-7 h-7 rounded-md shadow-lg shadow-accent-500/25" aria-hidden="true">
                 <span class="text-white font-display font-semibold text-base">Sherwin</span>
-                <span class="text-accent-400 font-display font-bold text-xs -ml-1.5">Universe</span>
+                <span class="font-display font-bold text-xs -ml-1.5 gradient-text-fire">Universe</span>
             </a>
 
             <!-- Mobile expanding search -->
             <div x-show="mobileSearch" x-transition class="flex-1 relative">
-                <input type="search" x-ref="mobileSearchInput" placeholder="Search snaps..."
+                <input type="search" x-ref="mobileSearchInput" placeholder="Scan the universe..."
                        @keydown.escape="mobileSearch = false"
                        hx-get="{% url 'core:search' %}" hx-trigger="keyup changed delay:300ms" hx-target="#snap-feed"
                        name="q" autocomplete="off"
@@ -200,23 +218,23 @@
     {% endif %}
 
     <!-- Main Content -->
-    <main class="flex-1 w-full">
+    <main class="flex-1 w-full relative">
         {% block content %}{% endblock %}
     </main>
 
     <!-- Footer -->
-    <footer class="border-t border-white/5 mt-auto">
+    <footer class="border-t border-white/5 mt-auto relative">
         <div class="max-w-6xl mx-auto px-6 py-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <p class="text-sm text-gray-500">&copy; 2026 Sherwin Universe. Built with Django.</p>
-            <div class="flex items-center space-x-4">
-                <span class="inline-block w-2 h-2 rounded-full bg-accent-500 animate-pulse-glow"></span>
-                <span class="text-xs text-gray-600 uppercase tracking-widest">Systems Online</span>
+            <p class="text-sm text-gray-500">&copy; 2026 Sherwin Universe &middot; Broadcasting from the Milky Way</p>
+            <p class="hidden md:block font-mono text-[10px] text-gray-600 tracking-widest">LAT 45.42N &middot; LON 75.69W &middot; SOL 3</p>
+            <div class="flex items-center space-x-3">
+                <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse-glow"></span>
+                <span class="font-mono text-xs text-gray-500 uppercase tracking-widest">All systems go</span>
             </div>
         </div>
     </footer>
 
-    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=20260426-navfix">
-    <script src="{% static 'js/main.js' %}?v=20260426-navfix" defer></script>
+    <script src="{% static 'js/main.js' %}?v=20260714-cosmos" defer></script>
 
     <!-- Mobile Bottom Navigation -->
     <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav z-50 border-t border-white/5">

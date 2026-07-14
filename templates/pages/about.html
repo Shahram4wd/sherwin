@@ -8,12 +8,18 @@
     <div class="relative">
         <div class="absolute bottom-1/4 -right-32 w-72 h-72 bg-accent-500/5 rounded-full blur-[100px]"></div>
 
-        <p class="text-accent-400 text-xs font-medium tracking-[0.3em] uppercase mb-4">06 &mdash; About</p>
-        <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-8">{{ about.title }}</h1>
+        <div class="reveal">
+            <p class="hud-label mb-4">Sector 06 &middot; Commander Profile</p>
+            <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-8">{{ about.title }}</h1>
+        </div>
 
         {% if profile.avatar %}
-        <div class="mb-8">
-            <img src="{{ profile.avatar.url }}" alt="{{ about.title }}" class="w-28 h-28 rounded-full object-cover ring-3 ring-accent-500/30">
+        <div class="mb-10 reveal">
+            <div class="relative inline-block">
+                <img src="{{ profile.avatar.url }}" alt="{{ about.title }}" class="w-28 h-28 rounded-full object-cover ring-2 ring-accent-500/40 shadow-lg shadow-accent-500/20">
+                <div class="absolute -inset-3 rounded-full border border-dashed border-plasma-400/30" style="animation: orbit-spin 40s linear infinite;" aria-hidden="true"></div>
+                <span class="absolute -bottom-1 -right-1 text-xl" aria-hidden="true">🚀</span>
+            </div>
         </div>
         {% endif %}
 

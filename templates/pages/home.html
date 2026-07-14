@@ -1,10 +1,108 @@
 {% extends "base.html" %}
+{% load static %}
 {% load images %}
 
 {% block title %}Home — Sherwin Universe{% endblock %}
 
 {% block content %}
-<div class="max-w-[1100px] mx-auto px-4 py-6 pb-24 md:pb-8">
+
+<!-- ===== HERO — Mission Control ===== -->
+<section class="max-w-6xl mx-auto px-4 md:px-6 pt-6 md:pt-10">
+    <div class="cosmic-panel rounded-3xl px-6 py-10 md:px-12 md:py-14 reveal">
+        <div class="flex flex-col-reverse lg:flex-row items-center gap-8 lg:gap-12">
+            <!-- Copy -->
+            <div class="flex-1 text-center lg:text-left">
+                <p class="hud-label justify-center lg:justify-start mb-5">Mission Control &middot; Online</p>
+                <h1 class="font-display font-bold text-white leading-[1.05] text-4xl sm:text-5xl md:text-6xl mb-5">
+                    Welcome to<br>
+                    <span class="gradient-text-cosmic">Sherwin's Universe</span>
+                </h1>
+                <p class="text-gray-300 text-base md:text-lg max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
+                    {% if about.subtitle %}{{ about.subtitle }}{% else %}I build rockets, super-tanks, and flying machines — then launch them here. Explore my missions, or step into the Lab and play the physics sims I made.{% endif %}
+                </p>
+                <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4">
+                    <a href="{% url 'miniapps:lab' %}" class="btn-launch">
+                        <span>Enter the Lab</span>
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                    </a>
+                    <a href="#mission-log" class="btn-ghost">Read the Mission Log</a>
+                </div>
+            </div>
+
+            <!-- Orbit animation -->
+            <div class="orbit-system" aria-hidden="true">
+                <div class="orbit-ring"></div>
+                <div class="planet"></div>
+                <div class="planet-ring"></div>
+                <div class="orbit-carrier"><span class="orbit-rocket">🚀</span></div>
+                <div class="orbit-moon"></div>
+            </div>
+        </div>
+
+        <!-- Mission stats HUD -->
+        <div class="mt-10 md:mt-12 grid grid-cols-2 md:grid-cols-4 gap-2 border-t border-white/10 pt-6">
+            <div class="mission-stat">
+                <div class="stat-value"><span data-count-to="{{ snap_count }}">0</span></div>
+                <div class="stat-label">Missions logged</div>
+            </div>
+            <div class="mission-stat">
+                <div class="stat-value"><span data-count-to="{{ sim_count }}">0</span></div>
+                <div class="stat-label">Playable sims</div>
+            </div>
+            <div class="mission-stat">
+                <div class="stat-value"><span data-count-to="{{ mission_day }}">0</span></div>
+                <div class="stat-label">Mission day</div>
+            </div>
+            <div class="mission-stat">
+                <div class="stat-value text-emerald-400" style="text-shadow: 0 0 24px rgba(52,211,153,0.5);">GO</div>
+                <div class="stat-label">All systems</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- ===== LAUNCH BAY — playable sims ===== -->
+{% if featured_sims %}
+<section class="max-w-6xl mx-auto px-4 md:px-6 pt-14 md:pt-20">
+    <div class="flex items-end justify-between gap-4 mb-8 reveal">
+        <div>
+            <p class="hud-label mb-3">Launch Bay &middot; Playable Experiments</p>
+            <h2 class="font-display font-bold text-white text-3xl md:text-4xl">Games &amp; sims I built</h2>
+        </div>
+        <a href="{% url 'miniapps:lab' %}" class="hidden sm:inline-flex items-center gap-2 text-sm text-gray-400 hover:text-nova-400 transition-colors font-medium shrink-0">
+            All experiments
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        </a>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {% for app in featured_sims %}
+        <a href="{{ app.get_absolute_url }}" class="sim-card tilt-card p-6 reveal" style="--reveal-delay: {{ forloop.counter0 }}00ms;">
+            {% if app.thumbnail and app.thumbnail|slice:"-4:" == ".svg" %}
+            <div class="mb-4 h-10 flex items-center">
+                <img src="{% static 'images/sim-icons/' %}{{ app.thumbnail }}" alt="" class="h-full w-auto" loading="lazy">
+            </div>
+            {% else %}
+            <div class="text-4xl mb-4">{{ app.thumbnail|default:"🧪" }}</div>
+            {% endif %}
+            <h3 class="text-lg font-display font-semibold text-white mb-2">{{ app.name }}</h3>
+            <p class="text-gray-400 text-sm leading-relaxed mb-4">{{ app.description|truncatewords:14 }}</p>
+            <span class="sim-play">
+                Play now
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </span>
+        </a>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+
+<!-- ===== MISSION LOG — snap feed ===== -->
+<div id="mission-log" class="max-w-[1100px] mx-auto px-4 pt-14 md:pt-20 pb-24 md:pb-8 scroll-mt-24">
+
+    <div class="mb-8 reveal">
+        <p class="hud-label mb-3">Mission Log &middot; Field Reports</p>
+        <h2 class="font-display font-bold text-white text-3xl md:text-4xl">Latest from the fleet</h2>
+    </div>
 
     <!-- ===== Mobile: Profile banner + horizontal tag chips ===== -->
     <div class="lg:hidden mb-6 max-w-xl mx-auto space-y-4">
@@ -45,7 +143,7 @@
                 <!-- Profile card -->
                 <a href="{% url 'core:about' %}" class="glass-card rounded-2xl overflow-hidden block hover:bg-white/[0.04] transition-colors">
                     <!-- Cover gradient -->
-                    <div class="h-16 bg-gradient-to-r from-accent-600/40 to-accent-400/20"></div>
+                    <div class="h-16 bg-gradient-to-r from-accent-600/40 via-nova-500/25 to-nebula-500/20"></div>
                     <div class="px-4 pb-4 -mt-8 text-center">
                         {% if profile.avatar %}
                         <img src="{{ profile.avatar.url }}" alt="{{ about.title }}" class="w-16 h-16 rounded-full object-cover ring-3 ring-space-900 mx-auto mb-2">
@@ -88,7 +186,7 @@
             {% if snaps %}
             <div id="snap-feed" class="space-y-5">
                 {% for snap in snaps %}
-                <article class="glass-card rounded-2xl overflow-hidden">
+                <article class="glass-card snap-card rounded-2xl overflow-hidden">
                     <!-- Author header -->
                     <div class="flex items-center gap-3 px-4 py-3">
                         {% if snap.created_by.profile.avatar %}
@@ -100,7 +198,7 @@
                         {% endif %}
                         <div class="flex-1 min-w-0">
                             <p class="text-white font-medium text-sm truncate">{{ snap.created_by.first_name|default:snap.created_by.username }}</p>
-                            <time class="text-xs text-gray-500" datetime="{{ snap.published_at|date:'c' }}">{{ snap.published_at|timesince }} ago</time>
+                            <time class="font-mono text-[11px] text-gray-500" datetime="{{ snap.published_at|date:'c' }}">T&minus;{{ snap.published_at|timesince }}</time>
                         </div>
                         {% if user.is_authenticated %}
                         <div x-data="{ open: false }" class="relative">
@@ -205,7 +303,7 @@
             <div class="sticky top-24 space-y-4">
                 {% if all_tags %}
                 <div class="glass-card rounded-2xl p-5">
-                    <h3 class="text-gray-400 text-xs font-medium mb-4">Filter by tag</h3>
+                    <h3 class="hud-label !text-[9px] mb-4">Filter by tag</h3>
                     <div class="flex flex-wrap gap-2">
                         {% for tag in all_tags %}
                         <a href="{% url 'core:home' %}?tag={{ tag.name|urlencode }}"
@@ -221,9 +319,9 @@
                 </div>
                 {% endif %}
 
-                <!-- Explore links for mobile/empty sidebar -->
+                <!-- Explore links -->
                 <div class="glass-card rounded-2xl py-2">
-                    <h3 class="text-gray-400 text-xs font-medium px-4 pt-3 pb-2">Explore</h3>
+                    <h3 class="hud-label !text-[9px] px-4 pt-3 pb-2">Explore</h3>
                     <a href="{% url 'timeline:timeline' %}" class="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-400 hover:text-white hover:bg-white/5 transition-all">
                         <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                         Timeline
