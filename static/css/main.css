@@ -85,8 +85,10 @@
    ================================================================ */
 
 /* --- Base / Body --- */
+/* Daylight cosmos: soft tinted sky, never flat white.
+   Pastel color washes come from the fixed #cosmos nebula layer. */
 [data-theme="light"] body {
-    background: #f5f5f5;
+    background: linear-gradient(180deg, #f6f7fb 0%, #edeff6 100%);
     color: #1f2937;
 }
 [data-theme="light"] .star-field {
@@ -240,7 +242,18 @@
     from { transform: translate(0, 0) scale(1.1); }
     to   { transform: translate(-7vw, -5vh) scale(0.95); }
 }
-[data-theme="light"] #cosmos { display: none; }
+/* Light theme: hide the star canvas but keep soft pastel nebulae drifting */
+[data-theme="light"] #cosmos-canvas { display: none; }
+[data-theme="light"] .nebula { opacity: 0.5; filter: blur(100px); }
+[data-theme="light"] .nebula-a {
+    background: radial-gradient(circle, rgba(255, 138, 61, 0.18), transparent 65%);
+}
+[data-theme="light"] .nebula-b {
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.16), transparent 65%);
+}
+[data-theme="light"] .nebula-c {
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.16), transparent 65%);
+}
 @media (prefers-reduced-motion: reduce) {
     .nebula { animation: none; }
 }
@@ -610,4 +623,80 @@ html.js .reveal.revealed {
 [data-theme="light"] main .snap-card:hover {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
 }
+
+/* ================================================================
+   LIGHT THEME — daylight variants of the cosmic components
+   (nav stays dark, so overrides are scoped to main/footer)
+   ================================================================ */
+
+/* Gradient headings: deepen the ramp so it stays legible on light */
+[data-theme="light"] main .gradient-text-fire {
+    background: linear-gradient(100deg, #dc2626 10%, #ea580c 60%, #d97706 95%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+[data-theme="light"] main .gradient-text-cosmic {
+    background: linear-gradient(100deg, #dc2626 0%, #ea580c 35%, #7c3aed 70%, #0284c7 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+}
+/* ...but inside a dark cosmic panel keep the bright ramp */
+[data-theme="light"] main .cosmic-panel .gradient-text-fire {
+    background: linear-gradient(100deg, #ff4d4d 10%, #ff8a3d 55%, #ffd08a 95%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+[data-theme="light"] main .cosmic-panel .gradient-text-cosmic {
+    background: linear-gradient(100deg, #ff4d4d 0%, #ff8a3d 30%, #c4b5fd 65%, #7dd3fc 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* HUD labels: darker orange for contrast on light backgrounds */
+[data-theme="light"] main .hud-label,
+[data-theme="light"] footer .hud-label {
+    color: #c2410c;
+}
+[data-theme="light"] main .hud-label::before,
+[data-theme="light"] footer .hud-label::before {
+    background: linear-gradient(90deg, #dc2626, #ea580c);
+    box-shadow: none;
+}
+[data-theme="light"] main .cosmic-panel .hud-label { color: #ff8a3d; }
+[data-theme="light"] main .cosmic-panel .hud-label::before {
+    background: linear-gradient(90deg, #ef2d2d, #ff8a3d);
+    box-shadow: 0 0 8px rgba(255, 138, 61, 0.8);
+}
+
+/* Mission-stat labels sit inside the dark panel; keep them readable there
+   but darken any used outside a panel */
+[data-theme="light"] main .mission-stat .stat-label { color: #6b7280; }
+
+/* Muted helper text that Tailwind sets too light for a light page */
+[data-theme="light"] main .text-gray-400 { color: #4b5563; }
+[data-theme="light"] main .text-gray-500 { color: #6b7280; }
+
+/* About-page orbit ring: faint plasma dashes need more ink on light */
+[data-theme="light"] main .border-plasma-400\/30 { border-color: rgba(2, 132, 199, 0.45); }
+
+/* Prose paragraphs forced light by prose-p:text-gray-* utilities */
+[data-theme="light"] main .prose p { color: #4b5563 !important; }
+[data-theme="light"] main .prose strong { color: #111827; }
+
+/* Badge/chip text tuned for white cards */
+[data-theme="light"] main .text-plasma-300 { color: #0369a1; }
+[data-theme="light"] main .bg-plasma-400\/10 { background-color: rgba(2, 132, 199, 0.08); }
+[data-theme="light"] main .text-accent-300 { color: #b91c1c; }
+[data-theme="light"] main .bg-accent-500\/15,
+[data-theme="light"] main .bg-accent-500\/20 { background-color: rgba(220, 38, 38, 0.08); }
+
+/* Footer status dot text */
+[data-theme="light"] footer .text-gray-500 { color: #6b7280; }
+[data-theme="light"] footer .text-gray-600 { color: #6b7280; }
 
