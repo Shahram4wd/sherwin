@@ -85,10 +85,10 @@
    ================================================================ */
 
 /* --- Base / Body --- */
-/* Daylight cosmos: soft tinted sky, never flat white.
-   Pastel color washes come from the fixed #cosmos nebula layer. */
+/* Daylight cosmos: clearly tinted sky, never flat white.
+   Extra color washes come from the fixed #cosmos nebula layer. */
 [data-theme="light"] body {
-    background: linear-gradient(180deg, #f6f7fb 0%, #edeff6 100%);
+    background: linear-gradient(165deg, #fdf3ec 0%, #f2f3fb 35%, #e9edf8 70%, #e3f0f6 100%);
     color: #1f2937;
 }
 [data-theme="light"] .star-field {
@@ -242,17 +242,17 @@
     from { transform: translate(0, 0) scale(1.1); }
     to   { transform: translate(-7vw, -5vh) scale(0.95); }
 }
-/* Light theme: hide the star canvas but keep soft pastel nebulae drifting */
+/* Light theme: hide the star canvas but keep pastel nebulae clearly visible */
 [data-theme="light"] #cosmos-canvas { display: none; }
-[data-theme="light"] .nebula { opacity: 0.5; filter: blur(100px); }
+[data-theme="light"] .nebula { opacity: 0.9; filter: blur(80px); }
 [data-theme="light"] .nebula-a {
-    background: radial-gradient(circle, rgba(255, 138, 61, 0.18), transparent 65%);
+    background: radial-gradient(circle, rgba(255, 138, 61, 0.28), transparent 68%);
 }
 [data-theme="light"] .nebula-b {
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.16), transparent 65%);
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.24), transparent 68%);
 }
 [data-theme="light"] .nebula-c {
-    background: radial-gradient(circle, rgba(34, 211, 238, 0.16), transparent 65%);
+    background: radial-gradient(circle, rgba(34, 211, 238, 0.24), transparent 68%);
 }
 @media (prefers-reduced-motion: reduce) {
     .nebula { animation: none; }
@@ -436,15 +436,15 @@ html.js .reveal.revealed {
     overflow: hidden;
 }
 
-/* Keep cosmic panels dark and readable in light theme */
-[data-theme="light"] main .cosmic-panel .text-white { color: #fff !important; }
-[data-theme="light"] main .cosmic-panel .text-gray-200 { color: #e5e7eb !important; }
-[data-theme="light"] main .cosmic-panel .text-gray-300 { color: #d1d5db !important; }
-[data-theme="light"] main .cosmic-panel .text-gray-400 { color: #9ca3af !important; }
-[data-theme="light"] main .cosmic-panel .glass-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: none;
+/* Light theme: the cosmic panel becomes a bright daylight window */
+[data-theme="light"] main .cosmic-panel {
+    background:
+        radial-gradient(120% 90% at 15% 0%, rgba(255, 138, 61, 0.20), transparent 50%),
+        radial-gradient(110% 90% at 90% 15%, rgba(139, 92, 246, 0.18), transparent 55%),
+        radial-gradient(120% 100% at 50% 110%, rgba(34, 211, 238, 0.16), transparent 55%),
+        linear-gradient(180deg, #ffffff 0%, #f0f3fa 100%);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 16px 48px rgba(30, 41, 59, 0.10);
 }
 
 /* ================================================================
@@ -644,20 +644,6 @@ html.js .reveal.revealed {
     -webkit-text-fill-color: transparent;
     color: transparent;
 }
-/* ...but inside a dark cosmic panel keep the bright ramp */
-[data-theme="light"] main .cosmic-panel .gradient-text-fire {
-    background: linear-gradient(100deg, #ff4d4d 10%, #ff8a3d 55%, #ffd08a 95%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-[data-theme="light"] main .cosmic-panel .gradient-text-cosmic {
-    background: linear-gradient(100deg, #ff4d4d 0%, #ff8a3d 30%, #c4b5fd 65%, #7dd3fc 100%);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
 /* HUD labels: darker orange for contrast on light backgrounds */
 [data-theme="light"] main .hud-label,
 [data-theme="light"] footer .hud-label {
@@ -668,15 +654,28 @@ html.js .reveal.revealed {
     background: linear-gradient(90deg, #dc2626, #ea580c);
     box-shadow: none;
 }
-[data-theme="light"] main .cosmic-panel .hud-label { color: #ff8a3d; }
-[data-theme="light"] main .cosmic-panel .hud-label::before {
-    background: linear-gradient(90deg, #ef2d2d, #ff8a3d);
-    box-shadow: 0 0 8px rgba(255, 138, 61, 0.8);
+
+/* Mission stats on the light panel: dark digits, soft warm glow */
+[data-theme="light"] main .mission-stat .stat-value {
+    color: #111827;
+    text-shadow: 0 0 20px rgba(234, 88, 12, 0.25);
+}
+[data-theme="light"] main .mission-stat .stat-label { color: #6b7280; }
+[data-theme="light"] main .cosmic-panel .text-emerald-400 { color: #059669 !important; }
+
+/* Ghost button readable on the light panel */
+[data-theme="light"] main .btn-ghost {
+    color: #1f2937;
+    border-color: rgba(30, 41, 59, 0.25);
+    background: rgba(255, 255, 255, 0.6);
+}
+[data-theme="light"] main .btn-ghost:hover {
+    border-color: rgba(2, 132, 199, 0.5);
+    background: rgba(2, 132, 199, 0.08);
 }
 
-/* Mission-stat labels sit inside the dark panel; keep them readable there
-   but darken any used outside a panel */
-[data-theme="light"] main .mission-stat .stat-label { color: #6b7280; }
+/* Orbit system: give the faint dashes and ring more ink on light */
+[data-theme="light"] main .orbit-system .orbit-ring { border-color: rgba(2, 132, 199, 0.35); }
 
 /* Muted helper text that Tailwind sets too light for a light page */
 [data-theme="light"] main .text-gray-400 { color: #4b5563; }
