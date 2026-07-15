@@ -12,6 +12,18 @@ from apps.miniapps.models import MiniApp
 from .models import AboutPage
 
 
+def _mission_stats():
+    """Shared HUD numbers for the hero and the commander profile."""
+    first_published = (
+        Post.snaps.order_by("published_at").values_list("published_at", flat=True).first()
+    )
+    return {
+        "snap_count": Post.snaps.count(),
+        "sim_count": MiniApp.objects.filter(is_active=True).count(),
+        "mission_day": (timezone.now() - first_published).days + 1 if first_published else 1,
+    }
+
+
 def home(request):
     snaps_qs = Post.snaps.select_related("category", "created_by__profile").prefetch_related("tags", "media")
 
@@ -30,10 +42,6 @@ def home(request):
     profile = UserProfile.objects.select_related("user").first()
 
     featured_sims = MiniApp.objects.filter(is_active=True).select_related("category")[:6]
-    first_published = (
-        Post.snaps.order_by("published_at").values_list("published_at", flat=True).first()
-    )
-    mission_day = (timezone.now() - first_published).days + 1 if first_published else 1
 
     return render(request, "pages/home.html", {
         "snaps": snaps,
@@ -42,16 +50,18 @@ def home(request):
         "about": about,
         "profile": profile,
         "featured_sims": featured_sims,
-        "snap_count": Post.snaps.count(),
-        "sim_count": MiniApp.objects.filter(is_active=True).count(),
-        "mission_day": mission_day,
+        **_mission_stats(),
     })
 
 
 def about(request):
     about_page = AboutPage.load()
     profile = UserProfile.objects.select_related("user").first()
-    return render(request, "pages/about.html", {"about": about_page, "profile": profile})
+    return render(request, "pages/about.html", {
+        "about": about_page,
+        "profile": profile,
+        **_mission_stats(),
+    })
 
 
 def robots_txt(request):

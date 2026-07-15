@@ -6,37 +6,26 @@
 {% block content %}
 <section class="max-w-6xl mx-auto overflow-x-hidden px-6 pt-12 pb-24" x-data="lightbox()">
     <div class="relative overflow-x-hidden">
-        <div class="absolute bottom-1/3 -right-32 w-72 h-72 bg-purple-500/5 rounded-full blur-[100px]"></div>
 
         <!-- Header -->
-        <div class="mb-12 reveal">
+        <div class="mb-10" data-scrub="inout">
             <p class="hud-label mb-4">Sector 04 &middot; Highlights</p>
             <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-4">Hall of <span class="gradient-text-fire">Highlights</span></h1>
             <p class="text-gray-500 max-w-lg text-lg">The best shots from every mission — creations, moments, and memories.</p>
         </div>
 
         <!-- Type Filters -->
-        <div class="flex flex-wrap items-center gap-3 mb-10">
-            <a href="{% url 'gallery:highlights' %}"
-               class="text-xs px-4 py-2 rounded-full border transition-all {% if not current_type %}border-accent-400/50 text-accent-400 bg-accent-400/5{% else %}border-white/10 text-gray-500 hover:border-white/20{% endif %}">
-                All
-            </a>
-            <a href="{% url 'gallery:highlights' %}?type=snap"
-               class="text-xs px-4 py-2 rounded-full border transition-all {% if current_type == 'snap' %}border-accent-400/50 text-accent-400 bg-accent-400/5{% else %}border-white/10 text-gray-500 hover:border-white/20{% endif %}">
-                Snaps
-            </a>
-            <a href="{% url 'gallery:highlights' %}?type=image"
-               class="text-xs px-4 py-2 rounded-full border transition-all {% if current_type == 'image' %}border-accent-400/50 text-accent-400 bg-accent-400/5{% else %}border-white/10 text-gray-500 hover:border-white/20{% endif %}">
-                Photos
-            </a>
-            <a href="{% url 'gallery:highlights' %}?type=video"
-               class="text-xs px-4 py-2 rounded-full border transition-all {% if current_type == 'video' %}border-accent-400/50 text-accent-400 bg-accent-400/5{% else %}border-white/10 text-gray-500 hover:border-white/20{% endif %}">
-                Videos
-            </a>
+        <div class="mb-10 reveal">
+            <div class="segmented">
+                <a href="{% url 'gallery:highlights' %}" class="{% if not current_type %}seg-active{% endif %}">All</a>
+                <a href="{% url 'gallery:highlights' %}?type=snap" class="{% if current_type == 'snap' %}seg-active{% endif %}">Snaps</a>
+                <a href="{% url 'gallery:highlights' %}?type=image" class="{% if current_type == 'image' %}seg-active{% endif %}">Photos</a>
+                <a href="{% url 'gallery:highlights' %}?type=video" class="{% if current_type == 'video' %}seg-active{% endif %}">Videos</a>
+            </div>
         </div>
 
-        <!-- Media Grid -->
-        <div id="media-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+        <!-- Media Masonry -->
+        <div id="media-grid" class="masonry">
             {% include "gallery/includes/media_grid.html" %}
         </div>
     </div>
@@ -45,7 +34,10 @@
     <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
          @keydown.escape.window="open = false" @keydown.left.window="prev()" @keydown.right.window="next()"
-         class="fixed inset-0 z-[70] bg-black/95 flex items-center justify-center p-4" @click.self="open = false">
+         class="fixed inset-0 z-[70] bg-black/90 backdrop-blur-md flex items-center justify-center p-4" @click.self="open = false">
+
+        <!-- Counter -->
+        <div class="absolute top-5 left-5 font-mono text-xs tracking-[0.25em] text-gray-400" x-text="(index + 1) + ' / ' + total"></div>
 
         <!-- Close -->
         <button @click="open = false" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors z-10">
@@ -53,18 +45,22 @@
         </button>
 
         <!-- Prev -->
-        <button @click="prev()" class="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors">
+        <button @click="prev()" class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 hover:scale-110 transition-all">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
         </button>
 
         <!-- Next -->
-        <button @click="next()" class="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors">
+        <button @click="next()" class="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 hover:scale-110 transition-all">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
         </button>
 
         <!-- Image -->
-        <div class="max-w-5xl max-h-[85vh] flex flex-col items-center">
-            <img :src="currentUrl" :alt="currentAlt" class="max-w-full max-h-[75vh] object-contain rounded-lg">
+        <div class="max-w-5xl max-h-[85vh] flex flex-col items-center"
+             x-show="open"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100">
+            <img :src="currentUrl" :alt="currentAlt" class="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl shadow-black/60">
             <p x-show="currentCaption" x-text="currentCaption" class="text-gray-300 text-sm mt-4 text-center max-w-lg"></p>
         </div>
     </div>
@@ -76,8 +72,8 @@
 function lightbox() {
     return {
         open: false,
-        items: [],
         index: 0,
+        total: 0,
         currentUrl: '',
         currentAlt: '',
         currentCaption: '',
@@ -87,6 +83,7 @@ function lightbox() {
             this.currentAlt = alt;
             this.currentCaption = caption;
             this.index = idx;
+            this.total = document.querySelectorAll('[data-lightbox-idx]').length;
             this.open = true;
         },
         prev() {

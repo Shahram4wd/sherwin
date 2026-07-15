@@ -4,47 +4,95 @@
 {% block meta_description %}About Sherwin and the universe that chronicles his journey.{% endblock %}
 
 {% block content %}
-<section class="max-w-4xl mx-auto px-6 pt-12 pb-24">
-    <div class="relative">
-        <div class="absolute bottom-1/4 -right-32 w-72 h-72 bg-accent-500/5 rounded-full blur-[100px]"></div>
+<section class="max-w-6xl mx-auto px-6 pt-12 pb-24">
 
-        <div class="reveal">
-            <p class="hud-label mb-4">Sector 06 &middot; Commander Profile</p>
-            <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-8">{{ about.title }}</h1>
-        </div>
+    <!-- Header -->
+    <div class="mb-12" data-scrub="inout">
+        <p class="hud-label mb-4">Sector 06 &middot; Commander Profile</p>
+        <h1 class="text-5xl md:text-7xl font-display font-bold text-white">{{ about.title }}</h1>
+    </div>
 
-        {% if profile.avatar %}
-        <div class="mb-10 reveal">
-            <div class="relative inline-block">
-                <img src="{{ profile.avatar.url }}" alt="{{ about.title }}" class="w-28 h-28 rounded-full object-cover ring-2 ring-accent-500/40 shadow-lg shadow-accent-500/20">
-                <div class="absolute -inset-3 rounded-full border border-dashed border-plasma-400/30" style="animation: orbit-spin 40s linear infinite;" aria-hidden="true"></div>
-                <span class="absolute -bottom-1 -right-1 text-xl" aria-hidden="true">🚀</span>
+    <div class="grid lg:grid-cols-[330px_minmax(0,1fr)] gap-10 items-start">
+
+        <!-- Commander ID card -->
+        <aside class="lg:sticky lg:top-24 reveal">
+            <div class="cosmic-panel rounded-3xl p-8 text-center">
+                <div class="avatar-orbit mb-6 mt-2">
+                    <div class="ring-b"></div>
+                    <div class="ring-a"></div>
+                    {% if profile.avatar %}
+                    <img src="{{ profile.avatar.url }}" alt="{{ about.title }}" class="w-28 h-28 rounded-full object-cover ring-2 ring-accent-500/40 shadow-lg shadow-accent-500/20">
+                    {% else %}
+                    <div class="w-28 h-28 rounded-full bg-gradient-to-br from-accent-400 to-accent-600 flex items-center justify-center text-white font-display font-bold text-5xl">S</div>
+                    {% endif %}
+                </div>
+
+                <h2 class="text-white font-display font-bold text-2xl">Sherwin</h2>
+                <p class="font-mono text-[10px] tracking-[0.3em] uppercase text-gray-500 mt-1.5 mb-6">CMDR &middot; Sherwin Universe</p>
+
+                <div class="text-left border-t border-white/10 pt-4 mb-6">
+                    <div class="profile-stat">
+                        <span class="k">Missions logged</span>
+                        <span class="v" data-count-to="{{ snap_count }}">0</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="k">Sims built</span>
+                        <span class="v" data-count-to="{{ sim_count }}">0</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="k">Mission day</span>
+                        <span class="v" data-count-to="{{ mission_day }}">0</span>
+                    </div>
+                    <div class="profile-stat">
+                        <span class="k">Status</span>
+                        <span class="v" style="color: #34d399;">ACTIVE</span>
+                    </div>
+                </div>
+
+                <a href="{% url 'miniapps:lab' %}" class="btn-launch w-full !py-3 !text-sm">
+                    <span>Visit the Lab</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+                </a>
             </div>
-        </div>
-        {% endif %}
+        </aside>
 
-        {% if profile.bio %}
-        <div class="prose prose-invert prose-lg max-w-none prose-p:text-gray-300 prose-p:leading-relaxed mb-8">
-            <p>{{ profile.bio }}</p>
-        </div>
-        {% endif %}
+        <!-- Editorial content -->
+        <div class="min-w-0">
+            {% if profile.bio %}
+            <p class="lede mb-10 reveal">{{ profile.bio }}</p>
+            {% endif %}
 
-        {% if about.body %}
-        <div class="prose prose-invert prose-lg max-w-none
-            prose-headings:font-display prose-headings:text-white
-            prose-p:text-gray-300 prose-p:leading-relaxed
-            prose-a:text-accent-400">
-            {{ about.body|safe }}
+            <!-- Equipment loadout -->
+            <div class="mb-10 reveal" style="--reveal-delay: 100ms;">
+                <p class="hud-label !text-[10px] mb-4">Equipment Loadout</p>
+                <div class="flex flex-wrap gap-2.5">
+                    <span class="loadout-chip">🚀 Kerbal Space Program</span>
+                    <span class="loadout-chip">⚙️ Stormworks</span>
+                    <span class="loadout-chip">🛩️ Simple Planes</span>
+                    <span class="loadout-chip">🚗 BeamNG</span>
+                    <span class="loadout-chip">🎹 Piano</span>
+                    <span class="loadout-chip">🏀 Basketball</span>
+                    <span class="loadout-chip">🧮 Math &amp; Science</span>
+                </div>
+            </div>
+
+            {% if about.body %}
+            <div class="prose prose-invert prose-lg max-w-none
+                prose-headings:font-display prose-headings:text-white
+                prose-p:text-gray-300 prose-p:leading-relaxed
+                prose-a:text-accent-400 reveal" style="--reveal-delay: 200ms;">
+                {{ about.body|safe }}
+            </div>
+            {% else %}
+            <div class="glass-card rounded-2xl p-8 reveal" style="--reveal-delay: 200ms;">
+                <p class="text-gray-400 leading-relaxed">
+                    Meet Sherwin and learn about this universe.
+                    A place to share who he is, what he loves, and where this journey is headed.
+                </p>
+                <p class="text-gray-600 text-sm mt-4">Content can be edited via the admin panel.</p>
+            </div>
+            {% endif %}
         </div>
-        {% else %}
-        <div class="glass-card rounded-xl p-8 max-w-2xl">
-            <p class="text-gray-400 leading-relaxed">
-                Meet Sherwin and learn about this universe.
-                A place to share who he is, what he loves, and where this journey is headed.
-            </p>
-            <p class="text-gray-600 text-sm mt-4">Content can be edited via the admin panel.</p>
-        </div>
-        {% endif %}
     </div>
 </section>
 {% endblock %}

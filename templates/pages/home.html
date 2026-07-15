@@ -8,19 +8,19 @@
 
 <!-- ===== HERO — Mission Control ===== -->
 <section class="max-w-6xl mx-auto px-4 md:px-6 pt-6 md:pt-10">
-    <div class="cosmic-panel rounded-3xl px-6 py-10 md:px-12 md:py-14 reveal">
+    <div class="cosmic-panel rounded-3xl px-6 py-10 md:px-12 md:py-14" data-scrub="out">
         <div class="flex flex-col-reverse lg:flex-row items-center gap-8 lg:gap-12">
             <!-- Copy -->
             <div class="flex-1 text-center lg:text-left">
-                <p class="hud-label justify-center lg:justify-start mb-5">Mission Control &middot; Online</p>
+                <p class="hud-label justify-center lg:justify-start mb-5 hero-line" style="--d: 0.05s;">Mission Control &middot; Online</p>
                 <h1 class="font-display font-bold text-white leading-[1.05] text-4xl sm:text-5xl md:text-6xl mb-5">
-                    Welcome to<br>
-                    <span class="gradient-text-cosmic">Sherwin's Universe</span>
+                    <span class="block hero-line" style="--d: 0.15s;">Welcome to</span>
+                    <span class="block gradient-text-cosmic hero-line" style="--d: 0.28s;">Sherwin's Universe</span>
                 </h1>
-                <p class="text-gray-300 text-base md:text-lg max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed">
+                <p class="text-gray-300 text-base md:text-lg max-w-xl mx-auto lg:mx-0 mb-8 leading-relaxed hero-line" style="--d: 0.42s;">
                     {% if about.subtitle %}{{ about.subtitle }}{% else %}I build rockets, super-tanks, and flying machines — then launch them here. Explore my missions, or step into the Lab and play the physics sims I made.{% endif %}
                 </p>
-                <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4">
+                <div class="flex flex-wrap items-center justify-center lg:justify-start gap-4 hero-line" style="--d: 0.56s;">
                     <a href="{% url 'miniapps:lab' %}" class="btn-launch">
                         <span>Enter the Lab</span>
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
@@ -29,18 +29,28 @@
                 </div>
             </div>
 
-            <!-- Orbit animation -->
-            <div class="orbit-system" aria-hidden="true">
-                <div class="orbit-ring"></div>
-                <div class="planet"></div>
-                <div class="planet-ring"></div>
-                <div class="orbit-carrier"><span class="orbit-rocket">🚀</span></div>
-                <div class="orbit-moon"></div>
+            <!-- Layered scene: distant worlds drift on mouse parallax -->
+            <div class="hero-scene" aria-hidden="true">
+                <div data-depth="0.35">
+                    <div class="scene-planet-far"></div>
+                    <span class="scene-sparkle" style="top: 10%; right: 0;"></span>
+                    <span class="scene-sparkle s2" style="bottom: 16%; left: -6%;"></span>
+                    <span class="scene-sparkle s3" style="top: 58%; right: -9%;"></span>
+                </div>
+                <div data-depth="1">
+                    <div class="orbit-system">
+                        <div class="orbit-ring"></div>
+                        <div class="planet"></div>
+                        <div class="planet-ring"></div>
+                        <div class="orbit-carrier"><span class="orbit-rocket">🚀</span></div>
+                        <div class="orbit-moon"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Mission stats HUD -->
-        <div class="mt-10 md:mt-12 grid grid-cols-2 md:grid-cols-4 gap-2 border-t border-white/10 pt-6">
+        <div class="mt-10 md:mt-12 grid grid-cols-2 md:grid-cols-4 gap-2 border-t border-white/10 pt-6 hero-line" style="--d: 0.7s;">
             <div class="mission-stat">
                 <div class="stat-value"><span data-count-to="{{ snap_count }}">0</span></div>
                 <div class="stat-label">Missions logged</div>
@@ -64,7 +74,7 @@
 <!-- ===== LAUNCH BAY — playable sims ===== -->
 {% if featured_sims %}
 <section class="max-w-6xl mx-auto px-4 md:px-6 pt-14 md:pt-20">
-    <div class="flex items-end justify-between gap-4 mb-8 reveal">
+    <div class="flex items-end justify-between gap-4 mb-8" data-scrub="inout">
         <div>
             <p class="hud-label mb-3">Launch Bay &middot; Playable Experiments</p>
             <h2 class="font-display font-bold text-white text-3xl md:text-4xl">Games &amp; sims I built</h2>
@@ -76,13 +86,13 @@
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {% for app in featured_sims %}
-        <a href="{{ app.get_absolute_url }}" class="sim-card tilt-card p-6 reveal" style="--reveal-delay: {{ forloop.counter0 }}00ms;">
+        <a href="{{ app.get_absolute_url }}" class="sim-card tilt-card spotlight p-6 reveal" style="--reveal-delay: {{ forloop.counter0 }}00ms;">
             {% if app.thumbnail and app.thumbnail|slice:"-4:" == ".svg" %}
-            <div class="mb-4 h-10 flex items-center">
+            <div class="mb-4 h-10 flex items-center sim-icon">
                 <img src="{% static 'images/sim-icons/' %}{{ app.thumbnail }}" alt="" class="h-full w-auto" loading="lazy">
             </div>
             {% else %}
-            <div class="text-4xl mb-4">{{ app.thumbnail|default:"🧪" }}</div>
+            <div class="text-4xl mb-4 sim-icon">{{ app.thumbnail|default:"🧪" }}</div>
             {% endif %}
             <h3 class="text-lg font-display font-semibold text-white mb-2">{{ app.name }}</h3>
             <p class="text-gray-400 text-sm leading-relaxed mb-4">{{ app.description|truncatewords:14 }}</p>
@@ -99,7 +109,7 @@
 <!-- ===== MISSION LOG — snap feed ===== -->
 <div id="mission-log" class="max-w-[1100px] mx-auto px-4 pt-14 md:pt-20 pb-24 md:pb-8 scroll-mt-24">
 
-    <div class="mb-8 reveal">
+    <div class="mb-8" data-scrub="inout">
         <p class="hud-label mb-3">Mission Log &middot; Field Reports</p>
         <h2 class="font-display font-bold text-white text-3xl md:text-4xl">Latest from the fleet</h2>
     </div>
@@ -186,7 +196,7 @@
             {% if snaps %}
             <div id="snap-feed" class="space-y-5">
                 {% for snap in snaps %}
-                <article class="glass-card snap-card rounded-2xl overflow-hidden">
+                <article class="glass-card snap-card spotlight rounded-2xl overflow-hidden">
                     <!-- Author header -->
                     <div class="flex items-center gap-3 px-4 py-3">
                         {% if snap.created_by.profile.avatar %}

@@ -7,7 +7,7 @@
 {% block content %}
 <section class="relative pt-12 pb-20">
     <div class="max-w-6xl mx-auto px-6 w-full">
-        <div class="mb-12 reveal">
+        <div class="mb-12" data-scrub="inout">
             <p class="hud-label mb-4">Sector 05 &middot; The Lab</p>
             <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-4">The <span class="gradient-text-fire">Lab</span></h1>
             <p class="text-gray-400 max-w-xl text-lg">
@@ -77,14 +77,14 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                     {% for app in miniapps %}
-                    <a href="{{ app.get_absolute_url }}" class="sim-card tilt-card p-6 group flex flex-col reveal" style="--reveal-delay: {% cycle '0ms' '100ms' '200ms' %};">
+                    <a href="{{ app.get_absolute_url }}" class="sim-card tilt-card spotlight p-6 group flex flex-col reveal" style="--reveal-delay: {% cycle '0ms' '100ms' '200ms' %};">
                         <div class="flex items-start justify-between gap-3 mb-4">
                             {% if app.thumbnail and app.thumbnail|slice:"-4:" == ".svg" %}
-                            <div class="h-11 flex items-center">
+                            <div class="h-11 flex items-center sim-icon">
                                 <img src="{% static 'images/sim-icons/' %}{{ app.thumbnail }}" alt="" class="h-full w-auto" loading="lazy">
                             </div>
                             {% else %}
-                            <div class="text-[2.6rem] leading-none">{{ app.thumbnail|default:"🧪" }}</div>
+                            <div class="text-[2.6rem] leading-none sim-icon">{{ app.thumbnail|default:"🧪" }}</div>
                             {% endif %}
                             {% if app.category %}
                             <span class="inline-block text-[10px] bg-plasma-400/10 text-plasma-300 px-3 py-1 rounded-full font-mono font-medium uppercase tracking-wider shrink-0">{{ app.category.name }}</span>

@@ -249,6 +249,121 @@
     }
 
     /* ============================================================
+       SCROLL SCRUB — scroll-linked enter/exit motion.
+       [data-scrub="in"]    eases in as it enters the viewport
+       [data-scrub="out"]   eases away as it leaves past the top
+       [data-scrub="inout"] both
+       Continuous (scrubbed by scroll position), not just triggered.
+       ============================================================ */
+    function initScrub() {
+        var els = Array.prototype.slice.call(document.querySelectorAll('[data-scrub]'));
+        if (!els.length || reducedMotion) return;
+        var clamp = function (v) { return v < 0 ? 0 : v > 1 ? 1 : v; };
+        var ticking = false;
+        function update() {
+            ticking = false;
+            var vh = window.innerHeight;
+            for (var i = 0; i < els.length; i++) {
+                var el = els[i];
+                var mode = el.getAttribute('data-scrub');
+                var r = el.getBoundingClientRect();
+                if (r.bottom < -80 || r.top > vh + 80) continue;
+                var opacity = 1, ty = 0;
+                if (mode !== 'out') {
+                    var p = clamp((vh * 0.94 - r.top) / (vh * 0.22));
+                    var ep = 1 - Math.pow(1 - p, 3);
+                    opacity = ep;
+                    ty = (1 - ep) * 30;
+                }
+                if (mode !== 'in') {
+                    var q = clamp((r.bottom - vh * 0.08) / (vh * 0.30));
+                    var eq = 1 - Math.pow(1 - q, 2);
+                    opacity = Math.min(opacity, 0.15 + 0.85 * eq);
+                    ty -= (1 - eq) * 22;
+                }
+                el.style.opacity = opacity.toFixed(3);
+                el.style.transform = ty ? 'translateY(' + ty.toFixed(1) + 'px)' : '';
+            }
+        }
+        window.addEventListener('scroll', function () {
+            if (!ticking) { ticking = true; requestAnimationFrame(update); }
+        }, { passive: true });
+        window.addEventListener('resize', update);
+        update();
+    }
+
+    /* ============================================================
+       HERO SCENE — mouse parallax across depth layers
+       ============================================================ */
+    function initHeroScene() {
+        var scene = document.querySelector('.hero-scene');
+        if (!scene || reducedMotion || !window.matchMedia('(hover: hover)').matches) return;
+        var panel = scene.closest('.cosmic-panel') || scene;
+        var layers = scene.querySelectorAll('[data-depth]');
+        var tx = 0, ty = 0, cx = 0, cy = 0, raf = null;
+        function tick() {
+            raf = requestAnimationFrame(function () {
+                cx += (tx - cx) * 0.07;
+                cy += (ty - cy) * 0.07;
+                for (var i = 0; i < layers.length; i++) {
+                    var d = parseFloat(layers[i].getAttribute('data-depth')) || 0;
+                    layers[i].style.transform =
+                        'translate(' + (cx * d * 34).toFixed(1) + 'px, ' + (cy * d * 26).toFixed(1) + 'px)';
+                }
+                if (Math.abs(cx - tx) > 0.002 || Math.abs(cy - ty) > 0.002) tick();
+                else raf = null;
+            });
+        }
+        panel.addEventListener('pointermove', function (e) {
+            var r = panel.getBoundingClientRect();
+            tx = (e.clientX - r.left) / r.width - 0.5;
+            ty = (e.clientY - r.top) / r.height - 0.5;
+            if (!raf) tick();
+        });
+        panel.addEventListener('pointerleave', function () {
+            tx = 0; ty = 0;
+            if (!raf) tick();
+        });
+    }
+
+    /* ============================================================
+       SPOTLIGHT — pointer-tracked glow on .spotlight cards
+       ============================================================ */
+    function initSpotlight() {
+        if (!window.matchMedia('(hover: hover)').matches) return;
+        document.addEventListener('pointermove', function (e) {
+            if (!e.target || !e.target.closest) return;
+            var card = e.target.closest('.spotlight');
+            if (!card) return;
+            var r = card.getBoundingClientRect();
+            card.style.setProperty('--mx', (((e.clientX - r.left) / r.width) * 100).toFixed(2) + '%');
+            card.style.setProperty('--my', (((e.clientY - r.top) / r.height) * 100).toFixed(2) + '%');
+        }, { passive: true });
+    }
+
+    /* ============================================================
+       MAGNETIC BUTTONS — CTAs lean toward the cursor
+       ============================================================ */
+    function initMagnetic(root) {
+        if (reducedMotion || !window.matchMedia('(hover: hover)').matches) return;
+        (root || document).querySelectorAll('.btn-launch:not([data-mag]), .btn-ghost:not([data-mag])').forEach(function (btn) {
+            btn.setAttribute('data-mag', '1');
+            btn.addEventListener('pointermove', function (e) {
+                var r = btn.getBoundingClientRect();
+                var x = (e.clientX - r.left - r.width / 2) * 0.14;
+                var y = (e.clientY - r.top - r.height / 2) * 0.22;
+                var max = 6;
+                x = Math.max(-max, Math.min(max, x));
+                y = Math.max(-max, Math.min(max, y));
+                btn.style.transform = 'translate(' + x.toFixed(1) + 'px, ' + (y - 2).toFixed(1) + 'px) scale(1.02)';
+            });
+            btn.addEventListener('pointerleave', function () {
+                btn.style.transform = '';
+            });
+        });
+    }
+
+    /* ============================================================
        BOOT
        ============================================================ */
     document.addEventListener('DOMContentLoaded', function () {
@@ -257,10 +372,15 @@
         observeReveals();
         initCounters();
         initTilt();
+        initScrub();
+        initHeroScene();
+        initSpotlight();
+        initMagnetic();
         // Re-scan content swapped in by HTMX (infinite scroll, search)
         document.body.addEventListener('htmx:afterSwap', function (e) {
             observeReveals(document);
             initTilt(document);
+            initMagnetic(document);
         });
     });
 })();
