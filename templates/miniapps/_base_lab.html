@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% load static %}
+{% load static lab_modules %}
 
 {#
   _base_lab.html — Shared chrome for every Lab simulation.
@@ -14,7 +14,7 @@
     extra_importmap — extra logical specifiers (e.g. third-party libs).
 #}
 
-{% block title %}{{ miniapp.name }} — Lab — Sherwin Universe{% endblock %}
+{% block title %}{{ miniapp.name }} · Sherwin Universe{% endblock %}
 {% block meta_description %}{{ miniapp.description|truncatewords:25 }}{% endblock %}
 
 {% block extra_head %}
@@ -57,9 +57,11 @@
     "imports": {
         {% block three_importmap %}"three": "https://cdn.jsdelivr.net/npm/three@0.168.0/build/three.module.js",
         "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.168.0/examples/jsm/",
-        {% endblock %}"@lab/core": "{% static 'js/lab/core/index.js' %}",
-        "@lab/shell": "{% static 'js/lab/shell/lab-shell.js' %}",
-        "@lab/ai/voice-assistant": "{% static 'js/lab/ai/voice-assistant.js' %}"{% block extra_importmap %}{% endblock %}
+        {% endblock %}"@lab/core": "{% lab_static 'js/lab/core/index.js' %}",
+        "@lab/shell": "{% lab_static 'js/lab/shell/lab-shell.js' %}",
+        "@lab/ai/voice-assistant": "{% lab_static 'js/lab/ai/voice-assistant.js' %}",
+        {# Every Lab module URL, remapped to a content-versioned URL so browsers never serve a stale sim. #}
+        {% lab_module_imports %}{% block extra_importmap %}{% endblock %}
     }
 }
 </script>

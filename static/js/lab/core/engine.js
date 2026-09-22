@@ -4,7 +4,10 @@
  *
  * Provides:
  *   - SceneManager: Three.js scene bootstrap (renderer, camera, lights, orbit, resize, loop)
+ *       opt-in: ACES tone mapping, soft shadows, room environment reflections, bloom
  *   - ParticlePool: reusable instanced-mesh particle system for high perf
+ *   - BurstSystem: GPU point sprites for sparks, embers, debris and dust
+ *   - makeGlowTexture: soft radial sprite texture for flashes and fireballs
  *   - UIPanel: lightweight overlay panel builder
  *   - formatHalfLife / lerp / clamp / etc. pure helpers
  *
@@ -30,23 +33,33 @@ export class SceneManager {
    * @param {number} opts.fov         camera FOV, default 50
    * @param {number} opts.near        camera near plane, default 0.1
    * @param {number} opts.far         camera far plane, default 2000
+   * @param {boolean} opts.shadows    enable soft shadow maps, default false
+   * @param {'none'|'aces'} opts.toneMapping  default 'none' (legacy look)
+   * @param {number} opts.exposure    tone mapping exposure, default 1
+   * @param {boolean} opts.defaultLights  add the stock ambient/key/point lights, default true
    */
   constructor(container, opts = {}) {
     this.container = container;
     this.opts = Object.assign(
-      { background: '#0a0a12', orbit: true, fov: 50, near: 0.1, far: 2000 },
+      {
+        background: '#0a0a12', orbit: true, fov: 50, near: 0.1, far: 2000,
+        shadows: false, toneMapping: 'none', exposure: 1, defaultLights: true,
+      },
       opts,
     );
 
     this._clock = new THREE.Clock();
     this._callbacks = [];
     this._running = false;
+    this.composer = null;
+    this._pmrem = null;
+    this._envTexture = null;
 
     this._initRenderer();
     this._initCamera();
     this._initScene();
     if (this.opts.orbit) this._initOrbit();
-    this._initLights();
+    if (this.opts.defaultLights) this._initLights();
     this._handleResize();
   }
 
@@ -57,6 +70,14 @@ export class SceneManager {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
     this.renderer.setClearColor(this.opts.background);
+    if (this.opts.shadows) {
+      this.renderer.shadowMap.enabled = true;
+      this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    }
+    if (this.opts.toneMapping === 'aces') {
+      this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      this.renderer.toneMappingExposure = this.opts.exposure;
+    }
     this.container.appendChild(this.renderer.domElement);
   }
 
@@ -93,15 +114,54 @@ export class SceneManager {
     const onResize = () => {
       const w = this.container.clientWidth;
       const h = this.container.clientHeight;
+      if (!w || !h) return;
       this.camera.aspect = w / h;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(w, h);
+      if (this.composer) this.composer.setSize(w, h);
     };
     window.addEventListener('resize', onResize);
     this._onResize = onResize;
   }
 
   /* --- public API ------------------------------------------------- */
+
+  /**
+   * Give PBR materials something to reflect: a neutral studio room baked to a PMREM.
+   * Metal and glass look like metal and glass afterwards.
+   */
+  async setEnvironment(intensity = 1) {
+    const { RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js');
+    this._pmrem = new THREE.PMREMGenerator(this.renderer);
+    const room = new RoomEnvironment();
+    this._envTexture = this._pmrem.fromScene(room, 0.04).texture;
+    this.scene.environment = this._envTexture;
+    if ('environmentIntensity' in this.scene) this.scene.environmentIntensity = intensity;
+    return this._envTexture;
+  }
+
+  /**
+   * Post-processing bloom for emissive glows (tracers, flashes, fluid).
+   * Renders through an EffectComposer; the loop picks it up automatically.
+   */
+  async enableBloom({ strength = 0.45, radius = 0.5, threshold = 0.85 } = {}) {
+    const [{ EffectComposer }, { RenderPass }, { UnrealBloomPass }, { OutputPass }] = await Promise.all([
+      import('three/addons/postprocessing/EffectComposer.js'),
+      import('three/addons/postprocessing/RenderPass.js'),
+      import('three/addons/postprocessing/UnrealBloomPass.js'),
+      import('three/addons/postprocessing/OutputPass.js'),
+    ]);
+    const w = this.container.clientWidth || 1;
+    const h = this.container.clientHeight || 1;
+    const composer = new EffectComposer(this.renderer);
+    composer.addPass(new RenderPass(this.scene, this.camera));
+    this.bloomPass = new UnrealBloomPass(new THREE.Vector2(w, h), strength, radius, threshold);
+    composer.addPass(this.bloomPass);
+    composer.addPass(new OutputPass());
+    composer.setSize(w, h);
+    this.composer = composer;
+    return composer;
+  }
 
   /** Register a per-frame callback: fn(deltaTime, elapsedTime) */
   onTick(fn) {
@@ -120,7 +180,8 @@ export class SceneManager {
       const t = this._clock.getElapsedTime();
       for (const cb of this._callbacks) cb(dt, t);
       if (this.controls) this.controls.update();
-      this.renderer.render(this.scene, this.camera);
+      if (this.composer) this.composer.render(dt);
+      else this.renderer.render(this.scene, this.camera);
     };
     tick();
   }
@@ -134,6 +195,9 @@ export class SceneManager {
   dispose() {
     this.stop();
     window.removeEventListener('resize', this._onResize);
+    if (this.composer && this.composer.dispose) this.composer.dispose();
+    if (this._envTexture) this._envTexture.dispose();
+    if (this._pmrem) this._pmrem.dispose();
     this.renderer.dispose();
     if (this.controls) this.controls.dispose();
     this.scene.traverse((obj) => {
@@ -231,6 +295,197 @@ export class ParticlePool {
     this._dummy.position.copy(this._positions[idx]);
     this._dummy.updateMatrix();
     this.mesh.setMatrixAt(idx, this._dummy.matrix);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  Glow sprite texture + BurstSystem (GPU point sprites)              */
+/* ------------------------------------------------------------------ */
+
+/** Soft radial sprite: white core fading to transparent. Tint with material.color. */
+export function makeGlowTexture(size = 128) {
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.25, 'rgba(255,255,255,0.75)');
+  g.addColorStop(0.6, 'rgba(255,255,255,0.18)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+/**
+ * Sparks, embers, debris, dust. One draw call, per-particle size/colour/alpha,
+ * simple gravity + drag integration on the CPU.
+ */
+export class BurstSystem {
+  /**
+   * @param {THREE.Scene} scene
+   * @param {Object} opts
+   * @param {number} opts.max        pool size (default 800)
+   * @param {number} opts.gravity    world units/s^2 applied on Y (default -9.8)
+   * @param {boolean} opts.additive  additive blending (glowing) vs normal (dust/debris)
+   * @param {number} opts.sizeScale  pixels per world unit at distance 1 (default 320)
+   */
+  constructor(scene, { max = 800, gravity = -9.8, additive = true, sizeScale = 320 } = {}) {
+    this.max = max;
+    this.count = 0;
+    this.gravity = gravity;
+    this.pos = new Float32Array(max * 3);
+    this.vel = new Float32Array(max * 3);
+    this.col = new Float32Array(max * 3);
+    this.size = new Float32Array(max);
+    this.alpha = new Float32Array(max);
+    this.life = new Float32Array(max);
+    this.maxLife = new Float32Array(max);
+    this.drag = new Float32Array(max);
+    this.baseSize = new Float32Array(max);
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(this.pos, 3));
+    geo.setAttribute('aColor', new THREE.BufferAttribute(this.col, 3));
+    geo.setAttribute('aSize', new THREE.BufferAttribute(this.size, 1));
+    geo.setAttribute('aAlpha', new THREE.BufferAttribute(this.alpha, 1));
+    geo.setDrawRange(0, 0);
+
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { uScale: { value: sizeScale }, uMap: { value: makeGlowTexture(64) } },
+      vertexShader: `
+        attribute vec3 aColor; attribute float aSize; attribute float aAlpha;
+        varying vec3 vColor; varying float vAlpha;
+        uniform float uScale;
+        void main() {
+          vColor = aColor; vAlpha = aAlpha;
+          vec4 mv = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = clamp(aSize * uScale / max(-mv.z, 0.001), 1.0, 96.0);
+          gl_Position = projectionMatrix * mv;
+        }`,
+      fragmentShader: `
+        uniform sampler2D uMap; varying vec3 vColor; varying float vAlpha;
+        void main() {
+          vec4 t = texture2D(uMap, gl_PointCoord);
+          gl_FragColor = vec4(vColor, t.a * vAlpha);
+          if (gl_FragColor.a < 0.01) discard;
+        }`,
+      transparent: true,
+      depthWrite: false,
+      blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    });
+    this.points = new THREE.Points(geo, mat);
+    this.points.frustumCulled = false;
+    scene.add(this.points);
+    this._tmp = new THREE.Color();
+  }
+
+  /**
+   * @param {THREE.Vector3|{x,y,z}} origin
+   * @param {Object} o
+   * @param {number} o.count
+   * @param {[number,number]} o.speed   min/max initial speed
+   * @param {THREE.Vector3} [o.dir]     bias direction (default up)
+   * @param {number} [o.spread]         0 = tight cone along dir, 1 = full sphere
+   * @param {[number,number]} o.life    seconds
+   * @param {[number,number]} o.size    world units
+   * @param {number|number[]} o.color   hex or list of hex to pick from
+   * @param {number} [o.drag]           per-second velocity retention (0.9 = loses 10%/s)
+   * @param {number} [o.jitter]         random position offset radius
+   */
+  emit(origin, o) {
+    const dir = o.dir ? o.dir.clone().normalize() : new THREE.Vector3(0, 1, 0);
+    const spread = o.spread ?? 0.6;
+    const colors = Array.isArray(o.color) ? o.color : [o.color ?? 0xffffff];
+    for (let n = 0; n < o.count; n++) {
+      if (this.count >= this.max) break;
+      const i = this.count++;
+      const jitter = o.jitter ?? 0;
+      this.pos[i * 3] = origin.x + (Math.random() - 0.5) * 2 * jitter;
+      this.pos[i * 3 + 1] = origin.y + (Math.random() - 0.5) * 2 * jitter;
+      this.pos[i * 3 + 2] = origin.z + (Math.random() - 0.5) * 2 * jitter;
+      // random direction blended toward dir by (1 - spread)
+      const rx = Math.random() * 2 - 1, ry = Math.random() * 2 - 1, rz = Math.random() * 2 - 1;
+      const rl = Math.hypot(rx, ry, rz) || 1;
+      const vx = dir.x * (1 - spread) + (rx / rl) * spread;
+      const vy = dir.y * (1 - spread) + (ry / rl) * spread;
+      const vz = dir.z * (1 - spread) + (rz / rl) * spread;
+      const vl = Math.hypot(vx, vy, vz) || 1;
+      const speed = o.speed[0] + Math.random() * (o.speed[1] - o.speed[0]);
+      this.vel[i * 3] = (vx / vl) * speed;
+      this.vel[i * 3 + 1] = (vy / vl) * speed;
+      this.vel[i * 3 + 2] = (vz / vl) * speed;
+      this._tmp.setHex(colors[Math.floor(Math.random() * colors.length)]);
+      this.col[i * 3] = this._tmp.r; this.col[i * 3 + 1] = this._tmp.g; this.col[i * 3 + 2] = this._tmp.b;
+      this.maxLife[i] = o.life[0] + Math.random() * (o.life[1] - o.life[0]);
+      this.life[i] = this.maxLife[i];
+      this.baseSize[i] = o.size[0] + Math.random() * (o.size[1] - o.size[0]);
+      this.size[i] = this.baseSize[i];
+      this.alpha[i] = 1;
+      this.drag[i] = o.drag ?? 1;
+    }
+    this._dirty();
+  }
+
+  tick(dt) {
+    if (!this.count) return;
+    const g = this.gravity * dt;
+    for (let i = 0; i < this.count; i++) {
+      this.life[i] -= dt;
+      if (this.life[i] <= 0) {
+        this._swapRemove(i);
+        i--;
+        continue;
+      }
+      const keep = Math.pow(this.drag[i], dt);
+      this.vel[i * 3] *= keep;
+      this.vel[i * 3 + 1] = this.vel[i * 3 + 1] * keep + g;
+      this.vel[i * 3 + 2] *= keep;
+      this.pos[i * 3] += this.vel[i * 3] * dt;
+      this.pos[i * 3 + 1] += this.vel[i * 3 + 1] * dt;
+      this.pos[i * 3 + 2] += this.vel[i * 3 + 2] * dt;
+      const t = this.life[i] / this.maxLife[i];
+      this.alpha[i] = Math.min(1, t * 1.6);
+      this.size[i] = this.baseSize[i] * (0.6 + 0.4 * t);
+    }
+    this._dirty();
+  }
+
+  clear() {
+    this.count = 0;
+    this._dirty();
+  }
+
+  _swapRemove(i) {
+    const last = --this.count;
+    if (i === last) return;
+    for (let k = 0; k < 3; k++) {
+      this.pos[i * 3 + k] = this.pos[last * 3 + k];
+      this.vel[i * 3 + k] = this.vel[last * 3 + k];
+      this.col[i * 3 + k] = this.col[last * 3 + k];
+    }
+    this.size[i] = this.size[last]; this.alpha[i] = this.alpha[last];
+    this.life[i] = this.life[last]; this.maxLife[i] = this.maxLife[last];
+    this.drag[i] = this.drag[last]; this.baseSize[i] = this.baseSize[last];
+  }
+
+  _dirty() {
+    const geo = this.points.geometry;
+    geo.setDrawRange(0, this.count);
+    geo.attributes.position.needsUpdate = true;
+    geo.attributes.aColor.needsUpdate = true;
+    geo.attributes.aSize.needsUpdate = true;
+    geo.attributes.aAlpha.needsUpdate = true;
+  }
+
+  dispose() {
+    this.points.parent?.remove(this.points);
+    this.points.geometry.dispose();
+    this.points.material.uniforms.uMap.value.dispose();
+    this.points.material.dispose();
   }
 }
 
@@ -416,6 +671,10 @@ export class UIPanel {
 export function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 export function lerp(a, b, t) { return a + (b - a) * t; }
 export function randRange(lo, hi) { return lo + Math.random() * (hi - lo); }
+export function smoothstep(edge0, edge1, x) {
+  const t = clamp((x - edge0) / (edge1 - edge0), 0, 1);
+  return t * t * (3 - 2 * t);
+}
 
 /** Convert seconds to a human-readable half-life string */
 export function formatHalfLife(seconds) {

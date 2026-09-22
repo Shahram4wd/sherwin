@@ -5,6 +5,7 @@ import {
   clamp,
   lerp,
   randRange,
+  BurstSystem,
 } from '@lab/core';
 import { DestructibleMesh, FractureOptions } from '@dgreenheck/three-pinata';
 
@@ -64,13 +65,38 @@ function createCautionTapeTexture() {
   return texture;
 }
 
+function createFloorGridTexture() {
+  const size = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = 'rgba(125, 211, 252, 0.6)';
+  ctx.lineWidth = 2;
+  for (let i = 0; i <= 16; i++) {
+    const p = Math.round((i / 16) * size) + 0.5;
+    ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, size); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(size, p); ctx.stroke();
+  }
+  // The grid dies out toward the edge of the pad.
+  const fade = ctx.createRadialGradient(size / 2, size / 2, size * 0.12, size / 2, size / 2, size * 0.5);
+  fade.addColorStop(0, 'rgba(0,0,0,0)');
+  fade.addColorStop(1, 'rgba(0,0,0,1)');
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, 0, size, size);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
 function createElementEngraveTexture(material) {
   const canvas = document.createElement('canvas');
   canvas.width = 512;
   canvas.height = 512;
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#c9ced6';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   const symbol = material.symbol || material.code;
@@ -121,7 +147,7 @@ function createMaterialNameEngraveTexture(material) {
   canvas.height = 512;
   const ctx = canvas.getContext('2d');
 
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#c9ced6';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   ctx.strokeStyle = 'rgba(0, 0, 0, 0.12)';
@@ -342,6 +368,13 @@ export class HydraulicsLabApp {
     this._ambientGlow = null;
     this._themeKeyLight = null;
     this._themeFillLight = null;
+    this._rimLight = null;
+    this._gridMesh = null;
+    this._fluidMesh = null;
+    this._lampMaterial = null;
+    this._gaugeTexture = null;
+    this._gaugeLast = -1;
+    this._sparks = null;
 
     this.materialFragments = [];
     this.materialFractured = false;
@@ -350,10 +383,23 @@ export class HydraulicsLabApp {
   async init() {
     await this._loadMaterials();
 
+    const highFx = window.matchMedia('(min-width: 900px)').matches
+      && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     this.engine = new SceneManager(this.container, {
       background: this._getCanvasBackground(),
       orbit: true,
+      shadows: true,
+      toneMapping: 'aces',
+      exposure: 1.05,
+      defaultLights: false,
     });
+    // Reflections make the chrome ram and steel frame read as metal.
+    await this.engine.setEnvironment(0.9);
+    if (highFx) {
+      this.engine.enableBloom({ strength: 0.32, radius: 0.55, threshold: 0.86 })
+        .then(() => this._applyThemeVisuals())
+        .catch(() => {});
+    }
     this._watchThemeChanges();
     this._buildScene();
     this._updateMaterialAppearance();
@@ -387,22 +433,39 @@ export class HydraulicsLabApp {
     const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
     if (!this.engine || !this.engine.renderer) return;
 
-    this.engine.renderer.toneMappingExposure = isLightTheme ? 1.14 : 1;
-
-    if (this._ambientGlow) {
-      this._ambientGlow.intensity = isLightTheme ? 0.28 : 0.45;
+    this.engine.renderer.toneMappingExposure = isLightTheme ? 0.92 : 1.05;
+    if (this.engine.bloomPass) {
+      // Bloom on a white page glows the background itself; keep only a trace of it.
+      this.engine.bloomPass.strength = isLightTheme ? 0.05 : 0.32;
+    }
+    if (this.engine.scene && 'environmentIntensity' in this.engine.scene) {
+      // The studio environment is bright; on a white page it flattens everything.
+      this.engine.scene.environmentIntensity = isLightTheme ? 0.4 : 0.9;
+    }
+    if (this.engine.scene && this.engine.scene.fog) {
+      this.engine.scene.fog.color.set(this._getCanvasBackground());
+      this.engine.scene.fog.near = isLightTheme ? 30 : 20;
+      this.engine.scene.fog.far = isLightTheme ? 62 : 44;
     }
     if (this._themeKeyLight) {
-      this._themeKeyLight.intensity = isLightTheme ? 1.15 : 0.32;
+      this._themeKeyLight.intensity = isLightTheme ? 2.8 : 2.6;
     }
     if (this._themeFillLight) {
-      this._themeFillLight.intensity = isLightTheme ? 0.85 : 0.22;
+      this._themeFillLight.intensity = isLightTheme ? 0.9 : 0.7;
+      this._themeFillLight.groundColor.setHex(isLightTheme ? 0x6b7280 : 0x1a1208);
+    }
+    if (this._rimLight) {
+      this._rimLight.intensity = isLightTheme ? 12 : 26;
     }
     if (this._floorMesh) {
-      this._floorMesh.material.color.setHex(isLightTheme ? 0xd1d5db : 0x111827);
+      this._floorMesh.material.color.setHex(isLightTheme ? 0xb4bfcc : 0x1a2030);
+      this._floorMesh.material.roughness = isLightTheme ? 0.75 : 0.45;
+    }
+    if (this._gridMesh) {
+      this._gridMesh.material.opacity = isLightTheme ? 0.16 : 0.28;
     }
     if (this._frameMaterial) {
-      this._frameMaterial.color.setHex(isLightTheme ? 0x6b7280 : 0x374151);
+      this._frameMaterial.color.setHex(isLightTheme ? 0x475569 : 0x3d4a5c);
     }
   }
 
@@ -427,48 +490,145 @@ export class HydraulicsLabApp {
 
   _buildScene() {
     const scene = this.engine.scene;
+    scene.fog = new THREE.Fog(this._getCanvasBackground(), 20, 44);
 
+    // Floor: a round steel pad with a faint blueprint grid and a caution stripe ring.
     this._floorMesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(10, 10, 0.8, 48),
-      new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.9 })
+      new THREE.CylinderGeometry(11, 11.6, 0.6, 96),
+      new THREE.MeshStandardMaterial({ color: 0x1a2030, roughness: 0.45, metalness: 0.35 })
     );
-    this._floorMesh.position.y = -4.6;
+    this._floorMesh.position.y = -4.5;
+    this._floorMesh.receiveShadow = true;
     scene.add(this._floorMesh);
 
-    this._frameMaterial = new THREE.MeshStandardMaterial({ color: 0x374151, metalness: 0.45, roughness: 0.5 });
-    const pillarGeo = new THREE.BoxGeometry(0.7, 7.5, 0.7);
-    this.leftPillar = new THREE.Mesh(pillarGeo, this._frameMaterial);
-    this.rightPillar = new THREE.Mesh(pillarGeo, this._frameMaterial);
-    this.leftPillar.position.set(-3.2, -0.2, 0);
-    this.rightPillar.position.set(3.2, -0.2, 0);
+    this._gridMesh = new THREE.Mesh(
+      new THREE.CircleGeometry(10.6, 96),
+      new THREE.MeshBasicMaterial({ map: createFloorGridTexture(), transparent: true, opacity: 0.28, depthWrite: false })
+    );
+    this._gridMesh.rotation.x = -Math.PI / 2;
+    this._gridMesh.position.y = -4.19;
+    scene.add(this._gridMesh);
+
+    const tape = createCautionTapeTexture();
+    tape.wrapT = THREE.RepeatWrapping;
+    tape.repeat.set(3, 3);
+    const stripe = new THREE.Mesh(
+      new THREE.RingGeometry(6.6, 7.3, 96),
+      new THREE.MeshStandardMaterial({ map: tape, roughness: 0.7, metalness: 0.05 })
+    );
+    stripe.rotation.x = -Math.PI / 2;
+    stripe.position.y = -4.185;
+    stripe.receiveShadow = true;
+    scene.add(stripe);
+
+    // Frame: two I-beam pillars on bolted feet, and a top beam.
+    this._frameMaterial = new THREE.MeshStandardMaterial({ color: 0x3d4a5c, metalness: 0.75, roughness: 0.42 });
+    const boltMaterial = new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.9, roughness: 0.3 });
+    const shadowed = (obj) => {
+      obj.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+      return obj;
+    };
+    const makePillar = (x) => {
+      const g = new THREE.Group();
+      const web = new THREE.Mesh(new THREE.BoxGeometry(0.28, 7.6, 0.7), this._frameMaterial);
+      const flangeFront = new THREE.Mesh(new THREE.BoxGeometry(0.8, 7.6, 0.16), this._frameMaterial);
+      const flangeBack = flangeFront.clone();
+      flangeFront.position.z = 0.35;
+      flangeBack.position.z = -0.35;
+      const foot = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.35, 1.3), this._frameMaterial);
+      foot.position.y = -3.8 + 0.175;
+      g.add(web, flangeFront, flangeBack, foot);
+      [[-0.45, -0.45], [0.45, -0.45], [-0.45, 0.45], [0.45, 0.45]].forEach(([bx, bz]) => {
+        const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.1, 10), boltMaterial);
+        bolt.position.set(bx, -3.8 + 0.4, bz);
+        g.add(bolt);
+      });
+      g.position.set(x, -0.4, 0);
+      return shadowed(g);
+    };
+    this.leftPillar = makePillar(-3.4);
+    this.rightPillar = makePillar(3.4);
     scene.add(this.leftPillar, this.rightPillar);
 
-    const topBeam = new THREE.Mesh(new THREE.BoxGeometry(7.2, 0.8, 1), this._frameMaterial);
-    topBeam.position.set(0, 3.25, 0);
+    const topBeam = shadowed(new THREE.Mesh(new THREE.BoxGeometry(7.9, 0.9, 1.05), this._frameMaterial));
+    topBeam.position.set(0, 3.5, 0);
     scene.add(topBeam);
+    for (const bx of [-3.4, -1.6, 1.6, 3.4]) {
+      const bolt = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.12, 12), boltMaterial);
+      bolt.rotation.x = Math.PI / 2;
+      bolt.position.set(bx, 3.5, 0.585);
+      scene.add(bolt);
+    }
 
-    this.cylinder = new THREE.Mesh(
-      new THREE.CylinderGeometry(1.1, 1.1, 3.6, 32),
-      new THREE.MeshStandardMaterial({ color: 0x60a5fa, metalness: 0.5, roughness: 0.35 })
-    );
+    // Hydraulic cylinder: blue body, steel end caps, a sight glass with glowing fluid.
+    this.cylinder = shadowed(new THREE.Mesh(
+      new THREE.CylinderGeometry(1.1, 1.1, 3.6, 48),
+      new THREE.MeshStandardMaterial({ color: 0x1d4ed8, metalness: 0.62, roughness: 0.3 })
+    ));
     this.cylinder.position.set(0, 2.4, 0);
     scene.add(this.cylinder);
-
-    this.ram = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.62, 0.62, 4.2, 32),
-      new THREE.MeshStandardMaterial({ color: 0xe5e7eb, metalness: 0.8, roughness: 0.2 })
+    const capMaterial = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.25 });
+    for (const [y, h] of [[4.05, 0.32], [0.72, 0.28]]) {
+      const cap = shadowed(new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, h, 48), capMaterial));
+      cap.position.set(0, y, 0);
+      scene.add(cap);
+    }
+    const glass = new THREE.Mesh(
+      new THREE.BoxGeometry(0.26, 2.6, 0.16),
+      new THREE.MeshStandardMaterial({ color: 0x0b1220, transparent: true, opacity: 0.55, roughness: 0.1, metalness: 0.2 })
     );
+    glass.position.set(0.6, 2.4, 0.98);
+    scene.add(glass);
+    this._fluidMesh = new THREE.Mesh(
+      new THREE.BoxGeometry(0.16, 1, 0.1),
+      new THREE.MeshStandardMaterial({ color: 0x22d3ee, emissive: 0x22d3ee, emissiveIntensity: 1.2, roughness: 0.3 })
+    );
+    this._fluidMesh.position.set(0.6, 1.2, 0.98);
+    scene.add(this._fluidMesh);
+
+    // Hose from the pump unit up and over into the cylinder.
+    const hosePath = new THREE.CatmullRomCurve3([
+      new THREE.Vector3(-5.1, -2.2, -0.9),
+      new THREE.Vector3(-5.4, 0.6, -0.9),
+      new THREE.Vector3(-3.8, 3.2, -0.6),
+      new THREE.Vector3(-1.4, 3.05, -0.4),
+      new THREE.Vector3(-1.05, 2.6, -0.2),
+    ]);
+    const hose = shadowed(new THREE.Mesh(
+      new THREE.TubeGeometry(hosePath, 48, 0.11, 10, false),
+      new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.85, metalness: 0.1 })
+    ));
+    scene.add(hose);
+    const pump = shadowed(new THREE.Mesh(new THREE.BoxGeometry(1.5, 2.0, 1.5), this._frameMaterial));
+    pump.position.set(-5.1, -3.2, -0.9);
+    scene.add(pump);
+    this._lampMaterial = new THREE.MeshStandardMaterial({ color: 0x34d399, emissive: 0x34d399, emissiveIntensity: 1.6, roughness: 0.4 });
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.13, 16, 12), this._lampMaterial);
+    lamp.position.set(-5.1, -2.05, -0.12);
+    scene.add(lamp);
+
+    // Ram (chrome) and press plate (brushed steel with a dark rim).
+    this.ram = shadowed(new THREE.Mesh(
+      new THREE.CylinderGeometry(0.62, 0.62, 4.2, 48),
+      new THREE.MeshStandardMaterial({ color: 0xf1f5f9, metalness: 1.0, roughness: 0.12 })
+    ));
     this.ram.position.set(0, 0.6, 0);
     scene.add(this.ram);
 
-    this.pressPlate = new THREE.Mesh(
+    this.pressPlate = shadowed(new THREE.Mesh(
       new THREE.BoxGeometry(2.9, 0.45, 2.9),
-      new THREE.MeshStandardMaterial({ color: 0x9ca3af, metalness: 0.55, roughness: 0.28 })
-    );
+      new THREE.MeshStandardMaterial({ color: 0x9ca3af, metalness: 0.85, roughness: 0.32 })
+    ));
     this.pressPlate.position.set(0, -1.75, 0);
+    const plateRim = new THREE.Mesh(
+      new THREE.BoxGeometry(3.0, 0.12, 3.0),
+      new THREE.MeshStandardMaterial({ color: 0x1f2937, metalness: 0.6, roughness: 0.5 })
+    );
+    plateRim.position.y = -0.19;
+    this.pressPlate.add(plateRim);
     scene.add(this.pressPlate);
 
-    const outerMaterial = new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: 0.8 });
+    const outerMaterial = new THREE.MeshStandardMaterial({ color: 0x93c5fd, roughness: 0.62, metalness: 0.12 });
     const innerMaterial = new THREE.MeshStandardMaterial({ color: 0x1f2937, roughness: 0.9, metalness: 0.05 });
     this.materialMesh = new DestructibleMesh(
       new THREE.BoxGeometry(2.4, 2.2, 2.4),
@@ -476,27 +636,121 @@ export class HydraulicsLabApp {
       innerMaterial
     );
     this.materialMesh.position.set(0, -3.1, 0);
+    this.materialMesh.castShadow = true;
+    this.materialMesh.receiveShadow = true;
     scene.add(this.materialMesh);
 
-    this._ambientGlow = new THREE.PointLight(0xf59e0b, 0.45, 30);
-    this._ambientGlow.position.set(0, -1.2, 4);
-    scene.add(this._ambientGlow);
+    // Pressure gauge on the right pillar; its face is a live canvas.
+    this._gaugeCanvas = document.createElement('canvas');
+    this._gaugeCanvas.width = 256;
+    this._gaugeCanvas.height = 256;
+    this._gaugeTexture = new THREE.CanvasTexture(this._gaugeCanvas);
+    this._gaugeTexture.colorSpace = THREE.SRGBColorSpace;
+    const gauge = new THREE.Group();
+    const gaugeBody = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.18, 40), capMaterial);
+    gaugeBody.rotation.x = Math.PI / 2;
+    const gaugeFace = new THREE.Mesh(new THREE.CircleGeometry(0.55, 40), new THREE.MeshBasicMaterial({ map: this._gaugeTexture }));
+    gaugeFace.position.z = 0.095;
+    gauge.add(gaugeBody, gaugeFace);
+    gauge.position.set(3.4, 1.6, 0.55);
+    scene.add(gauge);
+    this._drawGauge(0);
 
-    // Extra fill in light theme to keep details visible on bright backgrounds.
-    this._themeKeyLight = new THREE.DirectionalLight(0xffffff, 0.32);
-    this._themeKeyLight.position.set(5, 7, 6);
+    // Lights: warm key with shadows, cool rim, soft fill, and the amber work glow by the block.
+    this._themeKeyLight = new THREE.DirectionalLight(0xfff1e0, 2.6);
+    this._themeKeyLight.position.set(6, 9, 7);
+    this._themeKeyLight.castShadow = true;
+    this._themeKeyLight.shadow.mapSize.set(2048, 2048);
+    this._themeKeyLight.shadow.camera.near = 2;
+    this._themeKeyLight.shadow.camera.far = 40;
+    this._themeKeyLight.shadow.camera.left = -9;
+    this._themeKeyLight.shadow.camera.right = 9;
+    this._themeKeyLight.shadow.camera.top = 9;
+    this._themeKeyLight.shadow.camera.bottom = -9;
+    this._themeKeyLight.shadow.bias = -0.0006;
+    this._themeKeyLight.shadow.normalBias = 0.02;
     scene.add(this._themeKeyLight);
 
-    this._themeFillLight = new THREE.HemisphereLight(0xffffff, 0xdbeafe, 0.22);
+    this._themeFillLight = new THREE.HemisphereLight(0xbfd4ff, 0x1a1208, 0.7);
     scene.add(this._themeFillLight);
+
+    this._rimLight = new THREE.PointLight(0x22d3ee, 26, 40, 1.6);
+    this._rimLight.position.set(-6, 4, -7);
+    scene.add(this._rimLight);
+
+    this._ambientGlow = new THREE.PointLight(0xffa23d, 18, 24, 1.8);
+    this._ambientGlow.position.set(0.6, -1.4, 3.6);
+    scene.add(this._ambientGlow);
+
+    // Sparks for yield and crush moments.
+    this._sparks = new BurstSystem(scene, { max: 600, gravity: -9.8, additive: true, sizeScale: 260 });
 
     // Smoke particle system
     this._initSmoke(scene);
 
-    this.engine.camera.position.set(0, 1.5, 17);
-    this.engine.controls.target.set(0, -1.2, 0);
+    this.engine.camera.position.set(1.6, 1.2, 14.8);
+    this.engine.controls.target.set(0, -1.0, 0);
+    this.engine.controls.minDistance = 7;
+    this.engine.controls.maxDistance = 30;
+    this.engine.controls.maxPolarAngle = Math.PI * 0.53;
+    this.engine.controls.enablePan = false;
     this._cameraBasePos = this.engine.camera.position.clone();
     this._applyThemeVisuals();
+  }
+
+  _drawGauge(ratio) {
+    if (!this._gaugeCanvas) return;
+    const ctx = this._gaugeCanvas.getContext('2d');
+    const size = 256;
+    const c = size / 2;
+    const r = 104;
+    ctx.clearRect(0, 0, size, size);
+    ctx.fillStyle = '#0b1220';
+    ctx.beginPath();
+    ctx.arc(c, c, 124, 0, Math.PI * 2);
+    ctx.fill();
+    const a0 = Math.PI * 0.75;
+    const sweep = Math.PI * 1.5;
+    ctx.lineWidth = 12;
+    ctx.lineCap = 'butt';
+    [[0, 0.6, 'rgba(52,211,153,0.85)'], [0.6, 0.8, 'rgba(255,208,138,0.9)'], [0.8, 1, 'rgba(239,45,45,0.95)']].forEach(([f0, f1, col]) => {
+      ctx.strokeStyle = col;
+      ctx.beginPath();
+      ctx.arc(c, c, r, a0 + sweep * f0, a0 + sweep * f1);
+      ctx.stroke();
+    });
+    ctx.strokeStyle = 'rgba(226,232,240,0.85)';
+    ctx.lineWidth = 2;
+    for (let k = 0; k <= 12; k++) {
+      const ta = a0 + sweep * k / 12;
+      const inner = k % 3 === 0 ? 74 : 82;
+      ctx.beginPath();
+      ctx.moveTo(c + Math.cos(ta) * inner, c + Math.sin(ta) * inner);
+      ctx.lineTo(c + Math.cos(ta) * 92, c + Math.sin(ta) * 92);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(226,232,240,0.7)';
+    ctx.font = '700 22px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('MPa', c, c + 64);
+    const na = a0 + sweep * clamp(ratio, 0, 1);
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(c - Math.cos(na) * 16, c - Math.sin(na) * 16);
+    ctx.lineTo(c + Math.cos(na) * 88, c + Math.sin(na) * 88);
+    ctx.stroke();
+    ctx.strokeStyle = '#ef2d2d';
+    ctx.beginPath();
+    ctx.moveTo(c + Math.cos(na) * 62, c + Math.sin(na) * 62);
+    ctx.lineTo(c + Math.cos(na) * 88, c + Math.sin(na) * 88);
+    ctx.stroke();
+    ctx.fillStyle = '#cbd5e1';
+    ctx.beginPath();
+    ctx.arc(c, c, 9, 0, Math.PI * 2);
+    ctx.fill();
+    this._gaugeTexture.needsUpdate = true;
   }
 
   _initSmoke(scene) {
@@ -912,6 +1166,43 @@ export class HydraulicsLabApp {
       meshMaterial.emissiveIntensity = emissive;
     }
 
+    // Gauge, sight glass, pump lamp and work light follow the load relative to the crush point.
+    const crushPa = Math.max(material.crushMpa, 0.001) * 1_000_000;
+    const loadRatio = clamp(this.currentPressurePa / crushPa, 0, 1);
+    if (this._gaugeTexture && Math.abs(loadRatio - this._gaugeLast) > 0.004) {
+      this._gaugeLast = loadRatio;
+      this._drawGauge(loadRatio);
+    }
+    if (this._fluidMesh) {
+      const level = 0.1 + loadRatio * 2.35;
+      this._fluidMesh.scale.y = level;
+      this._fluidMesh.position.y = 1.15 + level / 2;
+      this._fluidMesh.material.emissiveIntensity = 0.9 + loadRatio * 1.6;
+    }
+    if (this._lampMaterial) {
+      const danger = this.riskScore >= 50;
+      const lampColor = this.riskScore >= 75 ? 0xef2d2d : danger ? 0xffb45c : 0x34d399;
+      this._lampMaterial.color.setHex(lampColor);
+      this._lampMaterial.emissive.setHex(lampColor);
+      this._lampMaterial.emissiveIntensity = danger ? 1.6 + Math.sin(this.timeSec * 12) * 0.9 : 1.6;
+    }
+    if (this._ambientGlow) {
+      const isLightTheme = document.documentElement.getAttribute('data-theme') === 'light';
+      this._ambientGlow.intensity = (isLightTheme ? 8 : 14) + loadRatio * 30;
+      this._ambientGlow.color.setHex(this.stage === 'Crush' ? 0xff5f2d : 0xffa23d);
+    }
+    if (this._sparks) {
+      if (this.stage !== 'Elastic' && this.currentPressurePa > 0 && Math.random() < (this.stage === 'Crush' ? 0.7 : 0.22)) {
+        const topY = this.materialMesh.position.y + this.materialMesh.scale.y * MATERIAL_HALF_HEIGHT;
+        const half = 1.2 * this.materialMesh.scale.x;
+        this._sparks.emit(
+          { x: randRange(-half, half), y: topY, z: randRange(-half, half) },
+          { count: this.stage === 'Crush' ? 14 : 5, speed: [1.5, 5], spread: 0.75, life: [0.25, 0.7], size: [0.05, 0.12], color: [0xffd08a, 0xff8a3d, 0xffffff], drag: 0.6 }
+        );
+      }
+      this._sparks.tick(dt);
+    }
+
     // Smoke intensity ramps from riskScore 50 (High) to 100 (Critical)
     const smokeIntensity = clamp((this.riskScore - 50) / 50, 0, 1);
     this._tickSmoke(dt, smokeIntensity);
@@ -921,8 +1212,8 @@ export class HydraulicsLabApp {
   _updateMaterialAppearance() {
     const material = this.materials[this.materialKey];
     if (!material || !this.materialMesh) return;
-    const outerColor = new THREE.Color(material.color);
-    const innerColor = outerColor.clone().multiplyScalar(0.28);
+    const outerColor = new THREE.Color(material.color).multiplyScalar(0.78);
+    const innerColor = outerColor.clone().multiplyScalar(0.32);
 
     const meshMaterial = this.materialMesh.material;
     const outerMaterial = Array.isArray(meshMaterial) ? meshMaterial[0] : meshMaterial;
@@ -989,6 +1280,13 @@ export class HydraulicsLabApp {
 
     this.materialMesh.visible = false;
     this.materialFractured = true;
+
+    if (this._sparks) {
+      this._sparks.emit(sourcePosition, {
+        count: 140, speed: [2, 9], spread: 0.9, life: [0.4, 1.3], size: [0.06, 0.16],
+        color: [0xffd08a, 0xff8a3d, 0xef2d2d, 0xffffff], drag: 0.5, jitter: 0.8,
+      });
+    }
   }
 
   _clearFractureFragments() {
@@ -1117,6 +1415,8 @@ export class HydraulicsLabApp {
     }
 
     this._clearFractureFragments();
+    if (this._sparks) this._sparks.dispose();
+    if (this._gaugeTexture) this._gaugeTexture.dispose();
     this.engine.dispose();
   }
 }

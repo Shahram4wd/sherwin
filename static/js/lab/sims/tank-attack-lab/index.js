@@ -4,6 +4,9 @@ import {
   UIPanel,
   clamp,
   randRange,
+  smoothstep,
+  BurstSystem,
+  makeGlowTexture,
 } from '@lab/core';
 
 const STORAGE_KEY = 'sherwin_tank_attack_lab_scores';
@@ -16,6 +19,137 @@ const CLUSTER_SHARED_FIRE_COOLDOWN_SEC = 1.25;
 const DEFAULT_VISOR_FOV = 32;
 const MIN_VISOR_FOV = 14;
 const MAX_VISOR_FOV = 58;
+
+// Rendering budget: shadows and bloom only on larger screens without reduced motion.
+const HIGH_FX = window.matchMedia('(min-width: 900px)').matches
+  && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SKY_HORIZON = 0x35506a;
+const SUN_DIR = new THREE.Vector3(-0.55, 0.16, -0.82).normalize();
+const MAX_SCORCH_MARKS = 24;
+
+/**
+ * Rolling terrain height in world units. Flat within ~7 units of the gun so the
+ * platform and close-range shots stay on level ground; gentle ridges beyond.
+ */
+function terrainHeight(x, z) {
+  const d = Math.hypot(x, z);
+  const rise = smoothstep(7, 26, d);
+  const n = Math.sin(x * 0.031 + 1.3) * Math.cos(z * 0.027 - 0.7) * 0.9
+    + Math.sin((x + z) * 0.012 + 0.4) * 1.3
+    + Math.sin(x * 0.085 - z * 0.05) * Math.sin(z * 0.07 + 2.0) * 0.35;
+  return Math.max(-0.35, n) * rise;
+}
+
+/** Dusk sky: deep cosmos at the zenith, teal mid-sky, a warm band at the horizon. */
+function createSoftRingTexture(size = 256) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const half = size / 2;
+  const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
+  grad.addColorStop(0.0, 'rgba(255,200,120,0)');
+  grad.addColorStop(0.58, 'rgba(255,200,120,0)');
+  grad.addColorStop(0.72, 'rgba(255,214,150,0.95)');
+  grad.addColorStop(0.86, 'rgba(255,150,70,0.35)');
+  grad.addColorStop(1.0, 'rgba(255,120,50,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function createScorchTexture(size = 256) {
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const half = size / 2;
+  const grad = ctx.createRadialGradient(half, half, 0, half, half, half);
+  grad.addColorStop(0.0, 'rgba(12,10,8,0.85)');
+  grad.addColorStop(0.35, 'rgba(24,18,12,0.7)');
+  grad.addColorStop(0.7, 'rgba(40,30,18,0.3)');
+  grad.addColorStop(1.0, 'rgba(40,30,18,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+  // Ragged edge: a few darker splatters so the mark does not read as a perfect disc.
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * Math.PI * 2 + Math.random() * 0.4;
+    const r = half * (0.45 + Math.random() * 0.3);
+    const blob = ctx.createRadialGradient(half + Math.cos(a) * r, half + Math.sin(a) * r, 0, half + Math.cos(a) * r, half + Math.sin(a) * r, half * (0.1 + Math.random() * 0.14));
+    blob.addColorStop(0, 'rgba(14,10,6,0.6)');
+    blob.addColorStop(1, 'rgba(14,10,6,0)');
+    ctx.fillStyle = blob;
+    ctx.fillRect(0, 0, size, size);
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
+
+function createSkyTexture() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 4;
+  canvas.height = 512;
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 0, 512);
+  g.addColorStop(0.0, '#070a1a');
+  g.addColorStop(0.3, '#0e1a33');
+  g.addColorStop(0.44, '#1f3d5c');
+  g.addColorStop(0.49, '#5a7a94');
+  g.addColorStop(0.505, '#c98a5c');
+  g.addColorStop(0.52, '#4a5866');
+  g.addColorStop(0.6, '#1b2430');
+  g.addColorStop(1.0, '#0b0f16');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 4, 512);
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  return texture;
+}
+
+function createStarField(count, radius) {
+  const positions = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const y = 0.06 + Math.random() * 0.94;
+    const r = Math.sqrt(1 - y * y);
+    positions[i * 3] = Math.cos(theta) * r * radius;
+    positions[i * 3 + 1] = y * radius;
+    positions[i * 3 + 2] = Math.sin(theta) * r * radius;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({
+    color: 0xdbe7ff, size: 2.2, sizeAttenuation: false, transparent: true, opacity: 0.85, fog: false, depthWrite: false,
+  });
+  return new THREE.Points(geo, mat);
+}
+
+/** Rolling ground with height- and slope-tinted vertex colours. */
+function createTerrainMesh(size, segments) {
+  const geo = new THREE.PlaneGeometry(size, size, segments, segments);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const grassLow = new THREE.Color(0x263f2a);
+  const grassHigh = new THREE.Color(0x5a6a33);
+  const rock = new THREE.Color(0x4a4f52);
+  const tmp = new THREE.Color();
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i);
+    const z = pos.getZ(i);
+    const h = terrainHeight(x, z);
+    pos.setY(i, h);
+    const slope = Math.abs(terrainHeight(x + 1.5, z) - h) + Math.abs(terrainHeight(x, z + 1.5) - h);
+    tmp.copy(grassLow).lerp(grassHigh, clamp(h / 2.2, 0, 1)).lerp(rock, clamp(slope * 1.4, 0, 0.7));
+    colors[i * 3] = tmp.r;
+    colors[i * 3 + 1] = tmp.g;
+    colors[i * 3 + 2] = tmp.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 }));
+}
 
 const TANKS = {
   m109: {
@@ -307,7 +441,13 @@ export class TankAttackLabApp {
       fov: DEFAULT_VISOR_FOV,
       near: 0.05,
       far: 2500,
+      shadows: HIGH_FX,
+      toneMapping: 'aces',
+      exposure: 1.0,
+      defaultLights: false,
     });
+    await this.engine.setEnvironment(0.35);
+    if (HIGH_FX) this.engine.enableBloom({ strength: 0.5, radius: 0.6, threshold: 0.82 }).catch(() => {});
 
     // 2D target indicator overlay
     this.container.style.position = 'relative';
@@ -332,39 +472,67 @@ export class TankAttackLabApp {
 
   _buildScene() {
     const scene = this.engine.scene;
+    scene.fog = new THREE.Fog(SKY_HORIZON, 26, 250);
 
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x1f2937, 0.75);
+    // Sky dome, stars and a low sun
+    this._skyTexture = createSkyTexture();
+    this._sky = new THREE.Mesh(
+      new THREE.SphereGeometry(900, 40, 20),
+      new THREE.MeshBasicMaterial({ map: this._skyTexture, side: THREE.BackSide, fog: false, depthWrite: false }),
+    );
+    scene.add(this._sky);
+    scene.add(createStarField(1600, 860));
+    this._glowTexture = makeGlowTexture(128);
+    this._ringTexture = createSoftRingTexture();
+    this._scorchTexture = createScorchTexture();
+    const sun = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this._glowTexture, color: 0xffb27a, blending: THREE.AdditiveBlending, depthWrite: false, fog: false, transparent: true,
+    }));
+    sun.position.copy(SUN_DIR).multiplyScalar(820);
+    sun.scale.set(110, 110, 1);
+    scene.add(sun);
+
+    // Lights: warm low sun with shadows around the gun, cool sky fill, faint rim
+    const hemi = new THREE.HemisphereLight(0x5b7fa6, 0x2a2c1e, 0.85);
     scene.add(hemi);
 
-    const key = new THREE.DirectionalLight(0xfff7dc, 0.95);
-    key.position.set(26, 34, 16);
+    const key = new THREE.DirectionalLight(0xffc48a, 2.4);
+    key.position.copy(SUN_DIR).multiplyScalar(60);
+    key.castShadow = HIGH_FX;
+    key.shadow.mapSize.set(2048, 2048);
+    key.shadow.camera.near = 10;
+    key.shadow.camera.far = 140;
+    key.shadow.camera.left = -18;
+    key.shadow.camera.right = 18;
+    key.shadow.camera.top = 18;
+    key.shadow.camera.bottom = -18;
+    key.shadow.bias = -0.0008;
+    key.shadow.normalBias = 0.03;
     scene.add(key);
 
-    const rim = new THREE.DirectionalLight(0x93c5fd, 0.35);
-    rim.position.set(-18, 12, -32);
+    const rim = new THREE.DirectionalLight(0x7dd3fc, 0.5);
+    rim.position.set(30, 18, 40);
     scene.add(rim);
 
-    const groundGeo = new THREE.CircleGeometry(260, 128);
-    const groundMat = new THREE.MeshStandardMaterial({
-      color: 0x1f2937,
-      roughness: 0.95,
-      metalness: 0.05,
-    });
-    const ground = new THREE.Mesh(groundGeo, groundMat);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = 0;
-    scene.add(ground);
+    // Terrain and the gun platform
+    this.ground = createTerrainMesh(620, 200);
+    this.ground.receiveShadow = true;
+    scene.add(this.ground);
 
-    const ringGeo = new THREE.RingGeometry(3.2, 3.5, 64);
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0x334155,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.45,
-    });
-    const ring = new THREE.Mesh(ringGeo, ringMat);
+    const pad = new THREE.Mesh(
+      new THREE.CylinderGeometry(3.4, 3.7, 0.18, 48),
+      new THREE.MeshStandardMaterial({ color: 0x2b2f36, roughness: 0.9, metalness: 0.05 }),
+    );
+    pad.position.y = 0.04;
+    pad.receiveShadow = true;
+    scene.add(pad);
+
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(3.05, 3.3, 64),
+      new THREE.MeshBasicMaterial({ color: 0xffb45c, side: THREE.DoubleSide, transparent: true, opacity: 0.35 }),
+    );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.03;
+    ring.position.y = 0.14;
     scene.add(ring);
 
     this.tankGroup = new THREE.Group();
@@ -374,11 +542,20 @@ export class TankAttackLabApp {
     scene.add(this.sceneryGroup);
 
     this.treeMaterials = {
-      trunk: new THREE.MeshStandardMaterial({ color: 0xc97842, roughness: 0.82, metalness: 0.02 }),
-      trunkDark: new THREE.MeshStandardMaterial({ color: 0x9f5f32, roughness: 0.9, metalness: 0.02 }),
-      leaf: new THREE.MeshStandardMaterial({ color: 0x22e864, roughness: 0.72, metalness: 0.03 }),
-      leafDark: new THREE.MeshStandardMaterial({ color: 0x16c957, roughness: 0.78, metalness: 0.03 }),
+      trunk: new THREE.MeshStandardMaterial({ color: 0x5b4030, roughness: 0.9, metalness: 0.02 }),
+      trunkDark: new THREE.MeshStandardMaterial({ color: 0x3f2c20, roughness: 0.95, metalness: 0.02 }),
+      leaf: new THREE.MeshStandardMaterial({ color: 0x33633a, roughness: 0.88, metalness: 0.03 }),
+      leafDark: new THREE.MeshStandardMaterial({ color: 0x24482c, roughness: 0.92, metalness: 0.03 }),
+      leafAutumn: new THREE.MeshStandardMaterial({ color: 0xa9752f, roughness: 0.85, metalness: 0.03 }),
+      rock: new THREE.MeshStandardMaterial({ color: 0x5b6470, roughness: 0.95, metalness: 0.05, flatShading: true }),
     };
+
+    // Impact and muzzle particles
+    this._embers = new BurstSystem(scene, { max: 700, gravity: -3.5, additive: true, sizeScale: 240 });
+    this._debris = new BurstSystem(scene, { max: 700, gravity: -6, additive: false, sizeScale: 200 });
+    this._scorches = [];
+    this._beacons = [];
+    this._spinners = [];
 
     this.turretGroup = new THREE.Group();
     this.turretGroup.position.y = 0.87;
@@ -393,14 +570,38 @@ export class TankAttackLabApp {
     this.turretCameraMount.position.set(0, 0.05, 0.62);
     this.barrelPivot.add(this.turretCameraMount);
 
+    // Barrel assembly recoils as one piece: barrel, muzzle brake, muzzle light.
+    this.barrelAssembly = new THREE.Group();
+    this.barrelPivot.add(this.barrelAssembly);
+    this._barrelRecoil = 0;
+
     this._barrelVisualLength = BARREL_VISUALS.m109.length;
     this.barrel = new THREE.Mesh(
       this._createBarrelGeometry(BARREL_VISUALS.m109),
-      new THREE.MeshStandardMaterial({ color: 0x9ca3af, roughness: 0.4, metalness: 0.55 }),
+      new THREE.MeshStandardMaterial({ color: 0x4b5320, roughness: 0.55, metalness: 0.45 }),
     );
     this.barrel.rotation.x = Math.PI / 2;
     this.barrel.position.z = this._barrelVisualLength * 0.5;
-    this.barrelPivot.add(this.barrel);
+    this.barrel.castShadow = true;
+    this.barrelAssembly.add(this.barrel);
+
+    this.muzzleBrake = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.034, 0.03, 0.2, 16),
+      new THREE.MeshStandardMaterial({ color: 0x4b5320, roughness: 0.5, metalness: 0.5 }),
+    );
+    this.muzzleBrake.rotation.x = Math.PI / 2;
+    const bore = new THREE.Mesh(
+      new THREE.CircleGeometry(0.018, 14),
+      new THREE.MeshBasicMaterial({ color: 0x050505 }),
+    );
+    bore.position.y = 0.101;
+    bore.rotation.x = -Math.PI / 2;
+    this.muzzleBrake.add(bore);
+    this.barrelAssembly.add(this.muzzleBrake);
+
+    this._muzzleLight = new THREE.PointLight(0xffb27a, 0, 16, 2);
+    this.barrelAssembly.add(this._muzzleLight);
+    this._applyTankBarrelProfile('m109');
 
     this.targetGroup = new THREE.Group();
     scene.add(this.targetGroup);
@@ -429,6 +630,12 @@ export class TankAttackLabApp {
     this.barrel.geometry.dispose();
     this.barrel.geometry = this._createBarrelGeometry(profile);
     this.barrel.position.z = profile.length * 0.5;
+    if (this.muzzleBrake) {
+      const scale = profile.muzzleRadius / 0.024;
+      this.muzzleBrake.scale.set(scale, 1, scale);
+      this.muzzleBrake.position.z = profile.length - 0.09;
+    }
+    if (this._muzzleLight) this._muzzleLight.position.z = profile.length + 0.1;
   }
 
   _setVisorFov(fov) {
@@ -980,7 +1187,7 @@ export class TankAttackLabApp {
       target.x = Math.sin(headingRad) * distanceU;
       target.z = Math.cos(headingRad) * distanceU;
       if (target.mesh) {
-        target.mesh.position.set(target.x, 0, target.z);
+        target.mesh.position.set(target.x, terrainHeight(target.x, target.z), target.z);
       }
     }
 
@@ -1088,7 +1295,7 @@ export class TankAttackLabApp {
 
   _createTargetMesh(target, def) {
     const group = new THREE.Group();
-    group.position.set(target.x, 0, target.z);
+    group.position.set(target.x, terrainHeight(target.x, target.z), target.z);
 
     if (target.type === 'cluster') {
       const offsets = [
@@ -1119,10 +1326,36 @@ export class TankAttackLabApp {
 
     const shell = new THREE.Mesh(
       new THREE.SphereGeometry(scale, 24, 18, 0, Math.PI * 2, 0, Math.PI / 2),
-      new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.22 }),
+      new THREE.MeshStandardMaterial({ color, roughness: 0.82, metalness: 0.12 }),
     );
     shell.position.y = scale * 0.44;
+    shell.castShadow = true;
+    shell.receiveShadow = true;
     group.add(shell);
+
+    // Blinking warning beacon on the crown
+    const beaconMat = new THREE.MeshStandardMaterial({ color: 0xff3b3b, emissive: 0xff3b3b, emissiveIntensity: 2.4, roughness: 0.4 });
+    const beacon = new THREE.Mesh(new THREE.SphereGeometry(scale * 0.09, 10, 8), beaconMat);
+    beacon.position.y = scale * 1.46;
+    group.add(beacon);
+    const mast = new THREE.Mesh(
+      new THREE.CylinderGeometry(scale * 0.02, scale * 0.02, scale * 0.28, 6),
+      new THREE.MeshStandardMaterial({ color: 0xcbd5e1, metalness: 0.8, roughness: 0.35 }),
+    );
+    mast.position.y = scale * 1.34;
+    group.add(mast);
+    this._beacons.push({ material: beaconMat, phase: Math.random() * Math.PI * 2 });
+
+    if (scale >= 0.45) {
+      const dish = new THREE.Mesh(
+        new THREE.ConeGeometry(scale * 0.34, scale * 0.16, 16, 1, true),
+        new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.7, roughness: 0.35, side: THREE.DoubleSide }),
+      );
+      dish.rotation.x = -Math.PI * 0.35;
+      dish.position.set(scale * 0.55, scale * 1.15, -scale * 0.2);
+      group.add(dish);
+      this._spinners.push(dish);
+    }
 
     const base = new THREE.Mesh(
       new THREE.CylinderGeometry(scale * 0.92, scale * 0.92, scale * 0.32, 24),
@@ -1133,7 +1366,7 @@ export class TankAttackLabApp {
 
     const porthole = new THREE.Mesh(
       new THREE.CylinderGeometry(portholeRadius, portholeRadius, 0.16, 16),
-      new THREE.MeshStandardMaterial({ color: 0x111827, roughness: 0.35, metalness: 0.75 }),
+      new THREE.MeshStandardMaterial({ color: 0x1a0b0b, emissive: 0xff5a2d, emissiveIntensity: 0.9, roughness: 0.35, metalness: 0.4 }),
     );
     porthole.rotation.x = Math.PI / 2;
     porthole.position.set(0, scale * 0.38, scale * 0.9);
@@ -1186,10 +1419,11 @@ export class TankAttackLabApp {
       }
     } else {
       const crownCount = Math.random() > 0.35 ? 3 : 2;
+      const autumn = Math.random() < 0.18;
       for (let i = 0; i < crownCount; i++) {
         const crown = new THREE.Mesh(
           new THREE.IcosahedronGeometry(randRange(0.42, 0.72), 1),
-          i % 2 ? this.treeMaterials.leafDark : this.treeMaterials.leaf,
+          autumn ? this.treeMaterials.leafAutumn : (i % 2 ? this.treeMaterials.leafDark : this.treeMaterials.leaf),
         );
         crown.position.set(
           randRange(-0.28, 0.28),
@@ -1203,7 +1437,17 @@ export class TankAttackLabApp {
 
     group.rotation.y = randRange(0, Math.PI * 2);
     group.scale.setScalar(randRange(0.85, 1.35));
+    group.traverse((node) => { if (node.isMesh) { node.castShadow = true; node.receiveShadow = true; } });
     return group;
+  }
+
+  _createRock() {
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(randRange(0.25, 0.8), 0), this.treeMaterials.rock);
+    rock.rotation.set(randRange(0, Math.PI), randRange(0, Math.PI), randRange(0, Math.PI));
+    rock.scale.set(randRange(0.8, 1.4), randRange(0.45, 0.8), randRange(0.8, 1.4));
+    rock.castShadow = true;
+    rock.receiveShadow = true;
+    return rock;
   }
 
   _populateTreesForTargets() {
@@ -1216,10 +1460,20 @@ export class TankAttackLabApp {
       if (!this._isTreePositionClear(position)) return false;
 
       const tree = this._createLowPolyTree(style);
-      tree.position.set(position.x, 0, position.z);
+      tree.position.set(position.x, terrainHeight(position.x, position.z) - 0.04, position.z);
       this.sceneryGroup.add(tree);
       return true;
     };
+
+    for (let i = 0; i < 44; i++) {
+      const angle = randRange(0, Math.PI * 2);
+      const distance = randRange(9, 70);
+      const position = new THREE.Vector3(Math.sin(angle) * distance, 0, Math.cos(angle) * distance);
+      if (!this._isTreePositionClear(position)) continue;
+      const rock = this._createRock();
+      rock.position.set(position.x, terrainHeight(position.x, position.z) + 0.05, position.z);
+      this.sceneryGroup.add(rock);
+    }
 
     const rings = [16, 28, 44, 68, 96];
     rings.forEach((radius, ringIndex) => {
@@ -1294,9 +1548,80 @@ export class TankAttackLabApp {
     }
 
     this._tickCameraShake(dt);
+    this._tickWorldFx(dt);
     this._syncPeriscopeCameraPose();
     this._updateUI();
     this._updateTargetOverlays();
+  }
+
+  _tickWorldFx(dt) {
+    const now = performance.now() / 1000;
+    if (this.barrelAssembly) {
+      this._barrelRecoil = Math.max(0, this._barrelRecoil - dt * 3.2);
+      const kick = Math.sin(this._barrelRecoil * Math.PI) * 0.22;
+      this.barrelAssembly.position.z = -kick;
+    }
+    if (this._muzzleLight && this._muzzleLight.intensity > 0) {
+      this._muzzleLight.intensity = Math.max(0, this._muzzleLight.intensity - dt * 420);
+    }
+    for (const beacon of this._beacons) {
+      beacon.material.emissiveIntensity = 0.6 + Math.max(0, Math.sin(now * 3.2 + beacon.phase)) * 2.6;
+    }
+    for (const dish of this._spinners) {
+      dish.rotation.y += dt * 0.9;
+    }
+    if (this._embers) this._embers.tick(dt);
+    if (this._debris) this._debris.tick(dt);
+    for (let i = this._scorches.length - 1; i >= 0; i--) {
+      const mark = this._scorches[i];
+      mark.life -= dt;
+      mark.mesh.material.opacity = Math.min(0.8, mark.life / 8);
+      if (mark.life <= 0) {
+        this.fxGroup.remove(mark.mesh);
+        mark.mesh.geometry.dispose();
+        mark.mesh.material.dispose();
+        this._scorches.splice(i, 1);
+      }
+    }
+  }
+
+  /** Billboard flash / fireball / smoke sprite tracked by the effects loop. */
+  _spawnSprite(position, { color = 0xffffff, size = 1, life = 0.5, scaleRate = 2, opacity = 0.9, additive = true, vel = null, light = 0, lightColor = 0xff8a3d } = {}) {
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: this._glowTexture, color, transparent: true, opacity, depthWrite: false,
+      blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending,
+    }));
+    sprite.position.copy(position);
+    sprite.scale.set(size, size, 1);
+    this.fxGroup.add(sprite);
+    const fx = { mesh: sprite, life, time: 0, scaleRate, baseOpacity: opacity, baseScale: size, dead: false, vel };
+    if (light > 0) {
+      const point = new THREE.PointLight(lightColor, light, 12, 2);
+      point.position.copy(position);
+      this.fxGroup.add(point);
+      fx.light = point;
+      fx.lightIntensity = light;
+    }
+    this.state.effects.push(fx);
+    return fx;
+  }
+
+  _spawnScorch(x, z, radius) {
+    const mark = new THREE.Mesh(
+      new THREE.PlaneGeometry(radius * 2.4, radius * 2.4),
+      new THREE.MeshBasicMaterial({ map: this._scorchTexture, transparent: true, opacity: 0.8, depthWrite: false }),
+    );
+    mark.rotation.x = -Math.PI / 2;
+    mark.rotation.z = Math.random() * Math.PI * 2;
+    mark.position.set(x, terrainHeight(x, z) + 0.03, z);
+    this.fxGroup.add(mark);
+    this._scorches.push({ mesh: mark, life: 28 });
+    if (this._scorches.length > MAX_SCORCH_MARKS) {
+      const old = this._scorches.shift();
+      this.fxGroup.remove(old.mesh);
+      old.mesh.geometry.dispose();
+      old.mesh.material.dispose();
+    }
   }
 
   _triggerCameraShake(strength = 0.035, duration = 0.28) {
@@ -1329,7 +1654,8 @@ export class TankAttackLabApp {
         const x = projectile.start.x + projectile.v0.x * t;
         y = projectile.start.y + projectile.v0.y * t - 0.5 * gravityUnits * t * t;
         const z = projectile.start.z + projectile.v0.z * t;
-        projectile.mesh.position.set(x, Math.max(y, 0), z);
+        projectile.groundY = terrainHeight(x, z);
+        projectile.mesh.position.set(x, Math.max(y, projectile.groundY), z);
       }
 
       // Orient slug along current velocity direction
@@ -1348,14 +1674,12 @@ export class TankAttackLabApp {
       }
 
       if (projectile.trail) {
-        projectile.trail.geometry.setFromPoints([
-          projectile.prevPos.clone(),
-          projectile.mesh.position.clone(),
-        ]);
-        projectile.prevPos.copy(projectile.mesh.position);
+        projectile.trailPoints.push(projectile.mesh.position.clone());
+        if (projectile.trailPoints.length > 40) projectile.trailPoints.shift();
+        projectile.trail.geometry.setFromPoints(projectile.trailPoints);
       }
 
-      if (projectile.t >= projectile.maxT || (projectile.owner !== 'enemy' && y <= 0)) {
+      if (projectile.t >= projectile.maxT || (projectile.owner !== 'enemy' && y <= (projectile.groundY ?? 0))) {
         if (projectile.owner === 'enemy') {
           this._resolveIncomingImpact(projectile);
         } else {
@@ -1382,12 +1706,15 @@ export class TankAttackLabApp {
       const t = fx.time / fx.life;
       const scaleRate = fx.scaleRate ?? 3;
       const baseOpacity = fx.baseOpacity ?? 0.7;
-      const scale = 1 + t * scaleRate;
-      fx.mesh.scale.set(scale, scale, scale);
+      const scale = (fx.baseScale ?? 1) * (1 + t * scaleRate);
+      fx.mesh.scale.set(scale, scale, fx.mesh.isSprite ? 1 : scale);
       fx.mesh.material.opacity = Math.max(0, baseOpacity * (1 - t));
+      if (fx.vel) fx.mesh.position.addScaledVector(fx.vel, dt);
+      if (fx.light) fx.light.intensity = fx.lightIntensity * Math.max(0, 1 - t);
       if (fx.time >= fx.life) {
         this.fxGroup.remove(fx.mesh);
-        fx.mesh.geometry.dispose();
+        if (fx.light) this.fxGroup.remove(fx.light);
+        if (!fx.mesh.isSprite) fx.mesh.geometry.dispose();
         fx.mesh.material.dispose();
         fx.dead = true;
       }
@@ -1471,16 +1798,17 @@ export class TankAttackLabApp {
     shellGeo.rotateX(Math.PI / 2);
     const shell = new THREE.Mesh(
       shellGeo,
-      new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.25, metalness: 0.6 }),
+      new THREE.MeshStandardMaterial({ color: 0xffb0a0, emissive: 0xff5a2d, emissiveIntensity: 2.2, roughness: 0.3, metalness: 0.4 }),
     );
     shell.position.copy(start);
     this.projectileGroup.add(shell);
 
     const trail = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([start.clone(), start.clone()]),
-      new THREE.LineBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.42 }),
+      new THREE.LineBasicMaterial({ color: 0xff7a5a, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false }),
     );
     this.projectileGroup.add(trail);
+    this._spawnSprite(start, { color: 0xff8a5a, size: 0.5, life: 0.18, scaleRate: 1.4, opacity: 0.9 });
 
     this.state.projectiles.push({
       owner: 'enemy',
@@ -1489,7 +1817,7 @@ export class TankAttackLabApp {
       sourceDamage: node.damage,
       mesh: shell,
       trail,
-      prevPos: start.clone(),
+      trailPoints: [start.clone()],
       start,
       end: tankAimPoint,
       arcHeightU: Math.min(1.2, Math.max(0.2, travelDist * 0.03)),
@@ -1548,20 +1876,7 @@ export class TankAttackLabApp {
   }
 
   _resolveIncomingImpact(projectile) {
-    const hitFx = new THREE.Mesh(
-      new THREE.SphereGeometry(0.22, 12, 10),
-      new THREE.MeshBasicMaterial({ color: 0xfb7185, transparent: true, opacity: 0.48 }),
-    );
-    hitFx.position.copy(projectile.end);
-    this.fxGroup.add(hitFx);
-    this.state.effects.push({
-      mesh: hitFx,
-      life: 0.22,
-      time: 0,
-      scaleRate: 1.4,
-      baseOpacity: 0.48,
-      dead: false,
-    });
+    this._spawnImpactBurst(projectile.end.clone(), 0.55);
 
     const missDistM = unitsToMeters(Math.hypot(projectile.end.x, projectile.end.z));
     if (missDistM <= ENEMY_TANK_HIT_RADIUS_M) {
@@ -1578,16 +1893,44 @@ export class TankAttackLabApp {
     this.state.gameOver = true;
     this.state.availableActions = ['restart'];
 
-    const boom = new THREE.Mesh(
-      new THREE.SphereGeometry(1.2, 24, 18),
-      new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.82 }),
-    );
-    boom.position.set(0, 2.2, 0);
-    this.fxGroup.add(boom);
-    this.state.effects.push({ mesh: boom, life: 0.9, time: 0, dead: false });
+    this._spawnImpactBurst(new THREE.Vector3(0, 1.6, 0.4), 3);
+    this._triggerCameraShake(0.09, 0.6);
 
     this._addHistory('Tank destroyed. Run ended.');
     this._saveHighScore();
+  }
+
+  /** Fireball + dust + debris + scorch mark; `power` scales everything. Far hits are drawn larger so they stay readable through the optic. */
+  _spawnImpactBurst(at, power) {
+    const distance = this.engine?.camera ? at.distanceTo(this.engine.camera.position) : 10;
+    const view = power * clamp(distance / 28, 1, 5);
+    this._spawnSprite(at, { color: 0xffe2b0, size: 0.9 * view, life: 0.2, scaleRate: 1.6, opacity: 1, light: 90 * power, lightColor: 0xff9a3d });
+    this._spawnSprite(at, { color: 0xff8a3d, size: 1.1 * view, life: 0.8, scaleRate: 2.2, opacity: 0.85, vel: new THREE.Vector3(0, 0.25 * view, 0) });
+    this._spawnSprite(at.clone().setY(at.y + 0.2 * view), { color: 0xef2d2d, size: 0.8 * view, life: 0.9, scaleRate: 2.6, opacity: 0.55, vel: new THREE.Vector3(0, 0.6 * view, 0) });
+    for (let i = 0; i < 5; i++) {
+      this._spawnSprite(at.clone().add(new THREE.Vector3(randRange(-0.4, 0.4) * view, randRange(0, 0.2), randRange(-0.4, 0.4) * view)), {
+        color: 0x8a7f6a, size: randRange(0.8, 1.3) * view, life: randRange(1.6, 2.6), scaleRate: 2.8, opacity: 0.45, additive: false,
+        vel: new THREE.Vector3(randRange(-0.3, 0.3), randRange(0.3, 0.7), randRange(-0.3, 0.3)).multiplyScalar(view * 0.5),
+      });
+    }
+    const ring = new THREE.Mesh(
+      new THREE.PlaneGeometry(2, 2),
+      new THREE.MeshBasicMaterial({
+        map: this._ringTexture, color: 0xffc97a, transparent: true, opacity: 0.75, side: THREE.DoubleSide,
+        depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+      }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(at.x, terrainHeight(at.x, at.z) + 0.06, at.z);
+    this.fxGroup.add(ring);
+    this.state.effects.push({ mesh: ring, life: 0.65, time: 0, baseScale: 0.7 * view, scaleRate: 3.2, baseOpacity: 0.75, dead: false });
+    if (this._debris) {
+      this._debris.emit(at, { count: Math.round(40 * power), speed: [2, 7 * power], spread: 0.7, life: [0.5, 1.4], size: [0.08, 0.2], color: [0x3d3a33, 0x5a4a3a, 0x2a2a2a], drag: 0.7, jitter: 0.2 });
+    }
+    if (this._embers) {
+      this._embers.emit(at, { count: Math.round(50 * power), speed: [2, 8 * power], spread: 0.85, life: [0.3, 0.9], size: [0.06, 0.16], color: [0xffd08a, 0xff8a3d, 0xffffff], drag: 0.5 });
+    }
+    this._spawnScorch(at.x, at.z, 0.55 * view);
   }
 
   _runRangefinder() {
@@ -1680,22 +2023,39 @@ export class TankAttackLabApp {
     slugGeo.rotateX(Math.PI / 2);
     const projectile = new THREE.Mesh(
       slugGeo,
-      new THREE.MeshStandardMaterial({ color: 0xfacc15, roughness: 0.22, metalness: 0.78 }),
+      new THREE.MeshStandardMaterial({ color: 0xffd08a, emissive: 0xff9a3d, emissiveIntensity: 2.4, roughness: 0.3, metalness: 0.4 }),
     );
     projectile.position.copy(start);
     this.projectileGroup.add(projectile);
 
     const trail = new THREE.Line(
       new THREE.BufferGeometry().setFromPoints([start.clone(), start.clone()]),
-      new THREE.LineBasicMaterial({ color: 0xfacc15, transparent: true, opacity: 0.52 }),
+      new THREE.LineBasicMaterial({ color: 0xffb45c, transparent: true, opacity: 0.75, blending: THREE.AdditiveBlending, depthWrite: false }),
     );
     this.projectileGroup.add(trail);
+
+    // Muzzle: flash, light, smoke and embers; the barrel kicks back and the optic shakes.
+    const forward = v0.clone().normalize();
+    this._spawnSprite(start, { color: 0xffe0b0, size: 1.4, life: 0.14, scaleRate: 1.3, opacity: 0.95 });
+    this._spawnSprite(start.clone().addScaledVector(forward, 0.25), { color: 0xff9a3d, size: 0.9, life: 0.2, scaleRate: 2.2, opacity: 0.8 });
+    for (let i = 0; i < 6; i++) {
+      this._spawnSprite(start.clone().addScaledVector(forward, randRange(0.1, 0.6)), {
+        color: 0x9a9aa6, size: randRange(0.35, 0.6), life: randRange(1.2, 2.2), scaleRate: 2.4, opacity: 0.32, additive: false,
+        vel: new THREE.Vector3(randRange(-0.25, 0.25), randRange(0.25, 0.6), randRange(-0.25, 0.25)).addScaledVector(forward, 0.5),
+      });
+    }
+    if (this._embers) {
+      this._embers.emit(start, { count: 30, speed: [3, 9], dir: forward, spread: 0.35, life: [0.15, 0.45], size: [0.05, 0.12], color: [0xffd08a, 0xff8a3d, 0xffffff], drag: 0.4 });
+    }
+    if (this._muzzleLight) this._muzzleLight.intensity = 70;
+    this._barrelRecoil = 1;
+    this._triggerCameraShake(0.03, 0.22);
 
     this.state.projectiles.push({
       owner: 'player',
       mesh: projectile,
       trail,
-      prevPos: start.clone(),
+      trailPoints: [start.clone()],
       start,
       v0,
       t: 0,
@@ -1755,14 +2115,9 @@ export class TankAttackLabApp {
   }
 
   _resolveImpact(projectile) {
-    const fx = new THREE.Mesh(
-      new THREE.SphereGeometry(0.45, 16, 12),
-      new THREE.MeshBasicMaterial({ color: 0xf59e0b, transparent: true, opacity: 0.72 }),
-    );
     const point = projectile.impact.impactPoint || { x: projectile.mesh.position.x, z: projectile.mesh.position.z };
-    fx.position.set(point.x, 0.5, point.z);
-    this.fxGroup.add(fx);
-    this.state.effects.push({ mesh: fx, life: 0.46, time: 0, dead: false });
+    const groundY = terrainHeight(point.x, point.z);
+    this._spawnImpactBurst(new THREE.Vector3(point.x, groundY + 0.25, point.z), 1);
 
     this.state.lastImpact = {
       shellType: projectile.shellType,
@@ -1837,13 +2192,15 @@ export class TankAttackLabApp {
       target.mesh.visible = false;
     }
 
-    const pop = new THREE.Mesh(
-      new THREE.SphereGeometry(0.7, 14, 12),
-      new THREE.MeshBasicMaterial({ color: 0xfb7185, transparent: true, opacity: 0.76 }),
-    );
-    pop.position.set(target.x, 0.8, target.z);
-    this.fxGroup.add(pop);
-    this.state.effects.push({ mesh: pop, life: 0.55, time: 0, dead: false });
+    const groundY = terrainHeight(target.x, target.z);
+    const at = new THREE.Vector3(target.x, groundY + 0.4, target.z);
+    this._spawnImpactBurst(at, 2.2);
+    for (let i = 0; i < 6; i++) {
+      this._spawnSprite(at.clone().add(new THREE.Vector3(randRange(-0.3, 0.3), randRange(0, 0.4), randRange(-0.3, 0.3))), {
+        color: 0x3a3a42, size: randRange(0.9, 1.6), life: randRange(2.5, 4), scaleRate: 1.6, opacity: 0.55, additive: false,
+        vel: new THREE.Vector3(randRange(-0.15, 0.15), randRange(0.6, 1.2), randRange(-0.15, 0.15)),
+      });
+    }
 
     this._addHistory(`${target.label} destroyed (+${target.scoreValue})`);
 
@@ -2006,7 +2363,8 @@ export class TankAttackLabApp {
     for (const target of this.state.targets) {
       if (!target.alive) continue;
 
-      const worldPos = new THREE.Vector3(target.x, 0.5, target.z);
+      const groundY = terrainHeight(target.x, target.z);
+      const worldPos = new THREE.Vector3(target.x, groundY + 0.5, target.z);
       const ndc = worldPos.clone().project(camera);
       if (ndc.z > 1) continue;
 
@@ -2014,7 +2372,7 @@ export class TankAttackLabApp {
       const sy = (-ndc.y * 0.5 + 0.5) * H;
 
       const domeR = target.type === 'large' ? 0.5 : target.type === 'cluster' ? 0.55 : 0.35;
-      const edgeNDC = new THREE.Vector3(target.x + domeR, 0.5, target.z).project(camera);
+      const edgeNDC = new THREE.Vector3(target.x + domeR, groundY + 0.5, target.z).project(camera);
       const edgeSX = (edgeNDC.x * 0.5 + 0.5) * W;
       const half = Math.max(24, Math.min(78, Math.abs(edgeSX - sx) * 3.5));
 
@@ -2261,6 +2619,8 @@ export class TankAttackLabApp {
       });
     }
     this._domRefs.clear();
+    if (this._beacons) this._beacons.length = 0;
+    if (this._spinners) this._spinners.length = 0;
   }
 
   _clearTrees() {
@@ -2359,10 +2719,17 @@ export class TankAttackLabApp {
 
     for (const fx of this.state.effects) {
       this.fxGroup.remove(fx.mesh);
-      fx.mesh.geometry.dispose();
+      if (fx.light) this.fxGroup.remove(fx.light);
+      if (!fx.mesh.isSprite) fx.mesh.geometry.dispose();
       fx.mesh.material.dispose();
     }
     this.state.effects = [];
+    if (this._embers) this._embers.dispose();
+    if (this._debris) this._debris.dispose();
+    if (this._skyTexture) this._skyTexture.dispose();
+    if (this._glowTexture) this._glowTexture.dispose();
+    if (this._ringTexture) this._ringTexture.dispose();
+    if (this._scorchTexture) this._scorchTexture.dispose();
 
     if (this.presetBar?.parentNode) this.presetBar.parentNode.removeChild(this.presetBar);
     if (this.targetOverlay?.parentNode) this.targetOverlay.parentNode.removeChild(this.targetOverlay);
