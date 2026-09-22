@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Lab — Sherwin Universe{% endblock %}
+{% block title %}Lab · Sherwin Universe{% endblock %}
 {% block meta_description %}Playable physics sims and mini-games built in Sherwin's lab.{% endblock %}
 
 {% block content %}
@@ -9,10 +9,10 @@
     <div class="max-w-6xl mx-auto px-6 w-full">
         <div class="mb-12" data-scrub="inout">
             <p class="hud-label mb-4">Sector 05 &middot; The Lab</p>
-            <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-4">The <span class="gradient-text-fire">Lab</span></h1>
+            <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-4 tracking-tight">The <span class="gradient-text-fire">Lab</span></h1>
             <p class="text-gray-400 max-w-xl text-lg">
                 Real physics, real explosions, zero cleanup. Every experiment here is a
-                game or simulation I built — pick one and hit play.
+                game or simulation I built. Pick one and hit play.
             </p>
         </div>
 
@@ -69,40 +69,31 @@
                 <div class="mb-5 flex flex-wrap gap-2">
                     {% for tag in all_tags %}
                         {% if tag.slug in selected_tag_slugs %}
-                        <span class="inline-flex items-center rounded-full bg-accent-500/20 px-3 py-1 text-xs font-semibold text-accent-300">{{ tag.name }}</span>
+                        <span class="snap-tag">{{ tag.name }}</span>
                         {% endif %}
                     {% endfor %}
                 </div>
                 {% endif %}
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+                <!-- Game tiles: each carries a live procedural preview of the sim -->
+                <div class="sim-grid grid grid-cols-1 sm:grid-cols-2 gap-5">
                     {% for app in miniapps %}
-                    <a href="{{ app.get_absolute_url }}" class="sim-card tilt-card spotlight p-6 group flex flex-col reveal" style="--reveal-delay: {% cycle '0ms' '100ms' '200ms' %};">
-                        <div class="flex items-start justify-between gap-3 mb-4">
-                            {% if app.thumbnail and app.thumbnail|slice:"-4:" == ".svg" %}
-                            <div class="h-11 flex items-center sim-icon">
-                                <img src="{% static 'images/sim-icons/' %}{{ app.thumbnail }}" alt="" class="h-full w-auto" loading="lazy">
-                            </div>
-                            {% else %}
-                            <div class="text-[2.6rem] leading-none sim-icon">{{ app.thumbnail|default:"🧪" }}</div>
-                            {% endif %}
-                            {% if app.category %}
-                            <span class="inline-block text-[10px] bg-plasma-400/10 text-plasma-300 px-3 py-1 rounded-full font-mono font-medium uppercase tracking-wider shrink-0">{{ app.category.name }}</span>
-                            {% endif %}
-                        </div>
-                        <h3 class="text-xl font-display font-bold text-white mb-2">{{ app.name }}</h3>
-                        <p class="text-gray-400 text-sm leading-relaxed flex-1">{{ app.description|truncatewords:25 }}</p>
-                        {% if app.visible_tags %}
-                        <div class="mt-3 flex flex-wrap gap-2">
-                            {% for tag in app.visible_tags %}
-                            <span class="inline-block text-[10px] bg-accent-500/15 text-accent-300 px-3 py-1 rounded-full font-medium uppercase tracking-wider">{{ tag.name }}</span>
-                            {% endfor %}
-                        </div>
+                    <a href="{{ app.get_absolute_url }}" class="sim-tile is-open spotlight reveal" data-sim="{{ app.slug }}" style="--reveal-delay: {% cycle '0ms' '100ms' %};">
+                        <canvas class="sim-preview" aria-hidden="true"></canvas>
+                        <span class="sim-shade" aria-hidden="true"></span>
+                        {% if app.thumbnail and app.thumbnail|slice:"-4:" == ".svg" %}
+                        <img class="sim-mark" src="{% static 'images/sim-icons/' %}{{ app.thumbnail }}" alt="" loading="lazy">
                         {% endif %}
-                        <div class="mt-5 pt-4 border-t border-white/10">
+                        {% if app.category %}<span class="sim-badge">{{ app.category.name }}</span>{% endif %}
+                        <div class="sim-tile-body">
+                            <h3 class="sim-title">{{ app.name }}</h3>
+                            {% if app.visible_tags %}
+                            <span class="sim-tags">{% for tag in app.visible_tags %}#{{ tag.name }}{% if not forloop.last %} {% endif %}{% endfor %}</span>
+                            {% endif %}
+                            <p class="sim-desc">{{ app.description|truncatewords:24 }}</p>
                             <span class="sim-play">
                                 Play now
-                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
                             </span>
                         </div>
                     </a>
@@ -112,10 +103,10 @@
         </div>
         {% else %}
         <div class="glass-card rounded-xl p-8 max-w-2xl">
-            <span class="inline-block text-[10px] bg-blue-400/10 text-blue-400 px-3 py-1 rounded-full font-medium uppercase tracking-wider mb-4">Coming Soon</span>
-            <p class="text-gray-400 leading-relaxed">
+            <span class="snap-tag mb-4">Coming Soon</span>
+            <p class="text-gray-400 leading-relaxed mt-4">
                 Interactive mini apps and experiments are being built.
-                Check back soon!
+                Check back soon.
             </p>
         </div>
         {% endif %}

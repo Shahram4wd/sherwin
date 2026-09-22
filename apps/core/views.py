@@ -21,6 +21,8 @@ def _mission_stats():
         "snap_count": Post.snaps.count(),
         "sim_count": MiniApp.objects.filter(is_active=True).count(),
         "mission_day": (timezone.now() - first_published).days + 1 if first_published else 1,
+        # ISO timestamp the hero's T+ mission clock counts from (empty = no missions yet)
+        "mission_start": first_published.isoformat() if first_published else "",
     }
 
 

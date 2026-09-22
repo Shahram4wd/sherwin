@@ -277,10 +277,13 @@
 }
 #scroll-rocket {
     position: absolute;
-    top: -8px;
+    top: -9px;
     left: -14px;
-    font-size: 15px;
-    line-height: 1;
+    width: 18px;
+    height: 18px;
+    color: #fff;
+    --rocket-window: #7dd3fc;
+    --rocket-nozzle: #c4b5fd;
     transform: rotate(45deg);
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -447,89 +450,10 @@ html.js .reveal.revealed {
     box-shadow: 0 16px 48px rgba(30, 41, 59, 0.10);
 }
 
-/* ================================================================
-   HERO ORBIT SYSTEM — planet + ring + orbiting rocket
-   ================================================================ */
-.orbit-system {
-    position: relative;
-    width: 300px;
-    height: 300px;
-    flex-shrink: 0;
-}
-.orbit-system .planet {
-    position: absolute;
-    inset: 25%;
-    border-radius: 9999px;
-    background:
-        radial-gradient(circle at 32% 28%, #ff9d6b 0%, #ef2d2d 38%, #7c1d3f 72%, #2a1030 100%);
-    box-shadow:
-        0 0 60px rgba(239, 45, 45, 0.45),
-        inset -12px -14px 40px rgba(0, 0, 0, 0.55),
-        inset 6px 8px 24px rgba(255, 210, 160, 0.35);
-    animation: planet-bob 7s ease-in-out infinite;
-}
-.orbit-system .planet-ring {
-    position: absolute;
-    inset: 50% 2%;
-    height: 26%;
-    transform: translateY(-50%) rotate(-16deg);
-    border-radius: 50%;
-    border: 3px solid rgba(255, 180, 92, 0.35);
-    border-top-color: transparent;
-    filter: drop-shadow(0 0 8px rgba(255, 138, 61, 0.4));
-    animation: planet-bob 7s ease-in-out infinite;
-}
-.orbit-system .orbit-ring {
-    position: absolute;
-    inset: 0;
-    border-radius: 9999px;
-    border: 1px dashed rgba(125, 211, 252, 0.3);
-    animation: orbit-spin 60s linear infinite;
-}
-.orbit-system .orbit-carrier {
-    position: absolute;
-    inset: 0;
-    animation: orbit-spin 14s linear infinite;
-}
-.orbit-system .orbit-rocket {
-    position: absolute;
-    top: -14px;
-    left: 50%;
-    margin-left: -13px;
-    font-size: 26px;
-    line-height: 1;
-    transform: rotate(90deg);
-    filter: drop-shadow(0 0 8px rgba(255, 138, 61, 0.9));
-}
-.orbit-system .orbit-moon {
-    position: absolute;
-    bottom: 6%;
-    right: 4%;
-    width: 22px;
-    height: 22px;
-    border-radius: 9999px;
-    background: radial-gradient(circle at 35% 30%, #e2e8f0, #64748b 70%);
-    box-shadow: 0 0 14px rgba(226, 232, 240, 0.35);
-    animation: planet-bob 9s ease-in-out infinite reverse;
-}
+/* Shared keyframes: About-page avatar orbit rings */
 @keyframes orbit-spin {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
-}
-@keyframes planet-bob {
-    0%, 100% { translate: 0 0; }
-    50%      { translate: 0 -8px; }
-}
-@media (prefers-reduced-motion: reduce) {
-    .orbit-system .orbit-carrier,
-    .orbit-system .orbit-ring,
-    .orbit-system .planet,
-    .orbit-system .planet-ring,
-    .orbit-system .orbit-moon { animation: none; }
-}
-@media (max-width: 1023px) {
-    .orbit-system { width: 210px; height: 210px; }
-    .orbit-system .orbit-rocket { font-size: 20px; top: -11px; margin-left: -10px; }
 }
 
 /* ================================================================
@@ -554,61 +478,6 @@ html.js .reveal.revealed {
     color: #6b7280;
     margin-top: 0.35rem;
 }
-
-/* ================================================================
-   SIM CARDS (Lab + Launch Bay) — glow ring + play affordance
-   ================================================================ */
-.sim-card {
-    position: relative;
-    display: block;
-    border-radius: 1.25rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(12px);
-    transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
-    transform-style: preserve-3d;
-}
-.sim-card::before {
-    content: "";
-    position: absolute;
-    inset: -1px;
-    border-radius: 1.25rem;
-    padding: 1px;
-    background: linear-gradient(135deg, rgba(255, 77, 77, 0.6), rgba(255, 138, 61, 0.5), rgba(125, 211, 252, 0.5));
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0;
-    transition: opacity 0.25s ease;
-    pointer-events: none;
-}
-.sim-card:hover {
-    box-shadow: 0 10px 40px rgba(239, 45, 45, 0.18), 0 4px 16px rgba(0, 0, 0, 0.4);
-    border-color: transparent;
-}
-.sim-card:hover::before { opacity: 1; }
-.sim-card .sim-play {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-family: "JetBrains Mono", ui-monospace, monospace;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    color: #ffb45c;
-    transition: color 0.2s ease, gap 0.2s ease;
-}
-.sim-card:hover .sim-play { color: #ffd08a; gap: 0.7rem; }
-[data-theme="light"] main .sim-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-}
-[data-theme="light"] main .sim-card:hover {
-    box-shadow: 0 10px 32px rgba(239, 45, 45, 0.18);
-}
-[data-theme="light"] main .sim-card .sim-play { color: #ea580c; }
 
 /* ================================================================
    SNAP CARD polish (mission log feed)
@@ -674,9 +543,6 @@ html.js .reveal.revealed {
     background: rgba(2, 132, 199, 0.08);
 }
 
-/* Orbit system: give the faint dashes and ring more ink on light */
-[data-theme="light"] main .orbit-system .orbit-ring { border-color: rgba(2, 132, 199, 0.35); }
-
 /* Muted helper text that Tailwind sets too light for a light page */
 [data-theme="light"] main .text-gray-400 { color: #4b5563; }
 [data-theme="light"] main .text-gray-500 { color: #6b7280; }
@@ -734,7 +600,6 @@ html.js .reveal.revealed {
     .hero-scene { width: 210px; height: 210px; }
 }
 .hero-scene [data-depth] { position: absolute; inset: 0; will-change: transform; }
-.hero-scene .orbit-system { width: 100%; height: 100%; }
 .scene-planet-far {
     position: absolute;
     top: 6%;
@@ -754,10 +619,12 @@ html.js .reveal.revealed {
     animation: sparkle-pulse 3.2s ease-in-out infinite;
 }
 .scene-sparkle::before {
-    content: "✦";
-    font-size: 14px;
-    line-height: 1;
+    content: "";
     display: block;
+    width: 100%;
+    height: 100%;
+    background: currentColor;
+    clip-path: polygon(50% 0, 60% 40%, 100% 50%, 60% 60%, 50% 100%, 40% 60%, 0 50%, 40% 40%);
     filter: drop-shadow(0 0 6px rgba(125, 211, 252, 0.8));
 }
 .scene-sparkle.s2 { animation-delay: 1.1s; scale: 0.7; }
@@ -792,17 +659,6 @@ html.js .reveal.revealed {
     [data-theme="light"] main .spotlight::after {
         background: radial-gradient(340px circle at var(--mx, 50%) var(--my, 50%),
             rgba(234, 88, 12, 0.07), transparent 65%);
-    }
-}
-
-/* Sim icon does a little launch hop on card hover */
-.sim-icon { display: inline-block; }
-@media (prefers-reduced-motion: no-preference) {
-    .sim-card:hover .sim-icon { animation: icon-launch 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); }
-    @keyframes icon-launch {
-        30%  { transform: translateY(-7px) rotate(-8deg); }
-        60%  { transform: translateY(-2px) rotate(5deg); }
-        100% { transform: none; }
     }
 }
 
@@ -1029,3 +885,911 @@ html.js .reveal.revealed {
 [data-theme="light"] main .cosmic-panel .profile-stat { border-color: rgba(30, 41, 59, 0.12); }
 [data-theme="light"] main .cosmic-panel .profile-stat .v { color: #c2410c; }
 
+
+
+/* ================================================================
+   BROWSER SURFACES — selection, caret, scrollbar, focus, skip link.
+   The parts we did not draw still carry the design.
+   ================================================================ */
+html {
+    accent-color: #ff8a3d;
+    caret-color: #ff8a3d;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 138, 61, 0.55) transparent;
+}
+::selection { background: rgba(255, 138, 61, 0.4); color: #fff; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ef2d2d, #ff8a3d);
+    border-radius: 999px;
+    border: 3px solid #050508;
+}
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #ff4d4d, #ffb45c); }
+:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; border-radius: 6px; }
+html[data-theme="light"] { scrollbar-color: rgba(234, 88, 12, 0.6) transparent; }
+[data-theme="light"] ::selection { background: rgba(234, 88, 12, 0.28); color: #111827; }
+[data-theme="light"] ::-webkit-scrollbar-thumb { border-color: #eef0f8; }
+
+.skip-link {
+    position: fixed;
+    top: -100%;
+    left: 1rem;
+    z-index: 100;
+    padding: 0.65rem 1.1rem;
+    border-radius: 0.7rem;
+    background: #ff8a3d;
+    color: #0a0a12;
+    font-weight: 700;
+    font-size: 0.9rem;
+    transition: top 0.2s ease;
+}
+.skip-link:focus { top: 1rem; outline-color: #fff; }
+
+/* Cross-document page transitions (Chromium, Safari). Others load normally. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: 0.2s ease-in both su-page-out; }
+::view-transition-new(root) { animation: 0.34s cubic-bezier(0.16, 1, 0.3, 1) both su-page-in; }
+@keyframes su-page-out { to { opacity: 0; } }
+@keyframes su-page-in { from { opacity: 0; transform: translateY(12px); } }
+@media (prefers-reduced-motion: reduce) {
+    ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+}
+
+/* ================================================================
+   LAUNCH HERO — full-bleed launch scene: planet horizon, ascending
+   rocket, T-minus readout, HUD stat strip riding the horizon
+   ================================================================ */
+.launch-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: min(76vh, 700px);
+    padding-top: clamp(2rem, 5vh, 3.5rem);
+}
+@supports (height: 1svh) {
+    .launch-hero { min-height: min(76svh, 700px); }
+}
+.launch-hero .hero-copy {
+    position: relative;
+    z-index: 4;
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1.5rem clamp(1.25rem, 3vh, 2rem);
+}
+.launch-hero .hero-title {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    line-height: 0.98;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+    color: #fff;
+}
+.launch-hero .hero-lede {
+    max-width: 34rem;
+    font-size: clamp(1rem, 1.2vw, 1.15rem);
+    line-height: 1.6;
+    color: #cbd5e1;
+}
+
+/* Planet horizon (click it) */
+.hero-horizon {
+    position: absolute;
+    z-index: 1;
+    left: 50%;
+    top: 68%;
+    width: 175vw;
+    height: 175vw;
+    max-width: 2600px;
+    max-height: 2600px;
+    transform: translate3d(-50%, 0, 0);
+    will-change: transform;
+    cursor: pointer;
+}
+.hero-horizon .horizon-disc {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background:
+        radial-gradient(ellipse 55% 18% at 50% 1%, rgba(255, 175, 115, 0.55), transparent 70%),
+        radial-gradient(circle at 50% 10%, #3b1552 0%, #1c0b33 22%, #0b0619 46%, #050508 70%);
+    box-shadow:
+        0 -1px 0 rgba(255, 205, 160, 0.75),
+        0 -14px 40px rgba(255, 138, 61, 0.45),
+        0 -50px 140px rgba(139, 92, 246, 0.32),
+        0 -130px 320px rgba(34, 211, 238, 0.10);
+}
+.hero-horizon .horizon-disc.is-poked { animation: horizon-poke 0.9s cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes horizon-poke {
+    0%   { transform: scale(1); }
+    30%  { transform: scale(1.012) translateY(-10px); }
+    60%  { transform: scale(0.996) translateY(4px); }
+    100% { transform: scale(1); }
+}
+
+/* Distant bodies on mouse parallax */
+.launch-hero .hero-scene {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    width: auto;
+    height: auto;
+    pointer-events: none;
+}
+.launch-hero .scene-planet-far {
+    top: 10%;
+    left: 84%;
+    width: 56px;
+    height: 56px;
+}
+.launch-hero .scene-moon {
+    position: absolute;
+    top: 34%;
+    left: 90%;
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    background: radial-gradient(circle at 35% 30%, #e2e8f0, #64748b 70%);
+    box-shadow: 0 0 14px rgba(226, 232, 240, 0.35);
+}
+@media (max-width: 767px) {
+    .launch-hero .scene-planet-far { top: 4%; left: 6%; width: 40px; height: 40px; }
+    .launch-hero .scene-moon { display: none; }
+    .launch-hero .hero-title { font-size: clamp(2.1rem, 10.5vw, 2.5rem); }
+}
+
+/* Rocket: lifts off the horizon on load, climbs with the scroll */
+.hero-rocket-track {
+    position: absolute;
+    z-index: 3;
+    left: 72%;
+    top: 62%;
+    width: 0;
+    height: 0;
+    will-change: transform;
+    pointer-events: none;
+}
+@media (max-width: 767px) { .hero-rocket-track { left: 78%; top: 66%; } }
+.hero-rocket {
+    position: absolute;
+    left: -36px;
+    top: -96px;
+    width: 72px;
+    height: 96px;
+    opacity: 1;
+    transform: translateY(46px);
+    --rocket-window: #7dd3fc;
+    --rocket-nozzle: #c4b5fd;
+}
+.hero-rocket .rocket-body {
+    display: block;
+    width: 72px;
+    height: 72px;
+    color: #f8fafc;
+    filter: drop-shadow(0 0 10px rgba(255, 138, 61, 0.55));
+}
+.hero-rocket .rocket-flame {
+    position: absolute;
+    left: 50%;
+    top: 66px;
+    width: 18px;
+    height: 44px;
+    transform-origin: 50% 0;
+    transform: translateX(-50%);
+    border-radius: 50% 50% 50% 50% / 15% 15% 85% 85%;
+    background: linear-gradient(180deg, #ffffff 0%, #ffd08a 22%, #ff8a3d 50%, rgba(239, 45, 45, 0) 100%);
+    filter: blur(0.5px);
+    opacity: 0;
+}
+.launch-smoke {
+    position: absolute;
+    left: -30px;
+    top: -18px;
+    width: 60px;
+    height: 24px;
+    border-radius: 9999px;
+    background: radial-gradient(ellipse at center, rgba(255, 210, 170, 0.55), rgba(255, 255, 255, 0) 70%);
+    opacity: 0;
+    transform: scale(0.4);
+}
+.launch-hero.is-launched .hero-rocket {
+    animation: rocket-liftoff 2.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.launch-hero.is-launched .rocket-flame {
+    animation: flame-ignite 2.6s ease-out forwards, flame-flicker 0.12s ease-in-out 0.3s infinite alternate;
+}
+.launch-hero.is-launched .launch-smoke {
+    animation: launch-smoke 1.8s ease-out forwards;
+}
+.launch-hero.is-instant .hero-rocket,
+.launch-hero.is-instant .launch-smoke { animation-duration: 0.01s; }
+.launch-hero.is-instant .rocket-flame { animation-duration: 0.01s, 0.12s; }
+@keyframes rocket-liftoff {
+    0%   { opacity: 1; transform: translateY(46px) rotate(0deg); }
+    10%  { opacity: 1; transform: translateY(38px) rotate(0deg); }
+    100% { opacity: 1; transform: translate(34px, calc(-1 * var(--climb, 40vh))) rotate(9deg); }
+}
+@keyframes flame-ignite {
+    0%   { opacity: 0; }
+    12%  { opacity: 1; }
+    100% { opacity: 0.95; }
+}
+@keyframes flame-flicker {
+    from { transform: translateX(-50%) scale(0.9, 0.85); }
+    to   { transform: translateX(-50%) scale(1.06, 1.12); }
+}
+@keyframes launch-smoke {
+    0%   { opacity: 0; transform: scale(0.4); }
+    15%  { opacity: 0.9; transform: scale(1); }
+    100% { opacity: 0; transform: scale(2.6) translateY(6px); }
+}
+
+/* HUD stat strip */
+.hud-strip {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: clamp(1.5rem, 3.5vh, 2.5rem);
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: linear-gradient(180deg, rgba(10, 10, 22, 0.55), rgba(10, 10, 22, 0.25));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+}
+.hud-strip .mission-stat {
+    padding: 0.9rem 0.75rem 0.85rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.hud-strip .mission-stat:nth-child(2n) { border-right: 0; }
+.hud-strip .mission-stat:nth-child(n+3) { border-bottom: 0; }
+.hud-strip .stat-value { font-variant-numeric: tabular-nums; }
+.hud-strip .stat-label { font-size: 11px; color: rgba(255, 208, 138, 0.72); }
+@media (min-width: 768px) {
+    .hud-strip { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .hud-strip .mission-stat,
+    .hud-strip .mission-stat:nth-child(2n) { border-bottom: 0; border-right: 1px solid rgba(255, 255, 255, 0.08); }
+    .hud-strip .mission-stat:last-child { border-right: 0; }
+}
+
+/* Light theme: the launch scene becomes a daylight launch */
+[data-theme="light"] main .launch-hero .hero-title { color: #111827; }
+[data-theme="light"] main .launch-hero .hero-lede { color: #374151; }
+[data-theme="light"] main .hero-horizon .horizon-disc {
+    background:
+        radial-gradient(ellipse 55% 18% at 50% 1%, rgba(255, 255, 255, 0.95), transparent 70%),
+        radial-gradient(circle at 50% 10%, #ffd9c0 0%, #d3c6ff 24%, #b3dcf6 50%, #eaeef8 72%);
+    box-shadow:
+        0 -1px 0 rgba(255, 255, 255, 0.95),
+        0 -14px 40px rgba(255, 138, 61, 0.35),
+        0 -50px 140px rgba(139, 92, 246, 0.22);
+}
+[data-theme="light"] main .hud-strip {
+    border-color: rgba(30, 41, 59, 0.14);
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 10px 30px rgba(30, 41, 59, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+[data-theme="light"] main .hud-strip .mission-stat { border-color: rgba(30, 41, 59, 0.12); }
+[data-theme="light"] main .hud-strip .stat-label { color: #4b5563; }
+[data-theme="light"] main .hud-strip .text-emerald-400 { color: #059669 !important; }
+[data-theme="light"] main .hero-rocket .rocket-body { color: #1f2937; filter: drop-shadow(0 0 10px rgba(234, 88, 12, 0.35)); }
+[data-theme="light"] main .launch-hero .scene-moon { box-shadow: 0 0 14px rgba(100, 116, 139, 0.35); }
+
+/* ================================================================
+   SIM TILES — the Lab as a game launcher. Each tile carries a live
+   procedural preview (canvas, main.js) with the title lockup low-left.
+   ================================================================ */
+.sim-tile {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    isolation: isolate;
+    height: 100%;
+    min-height: 0;
+    border-radius: 1.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    background:
+        radial-gradient(120% 90% at 15% 0%, rgba(239, 45, 45, 0.16), transparent 55%),
+        radial-gradient(100% 80% at 90% 100%, rgba(34, 211, 238, 0.10), transparent 55%),
+        #0a0a16;
+    color: #fff;
+    text-decoration: none;
+    transform: translateY(0);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+}
+.sim-tile:hover,
+.sim-tile:focus-visible {
+    transform: translateY(-4px);
+    border-color: rgba(255, 138, 61, 0.5);
+    box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 138, 61, 0.18), 0 0 40px rgba(255, 138, 61, 0.12);
+}
+.sim-tile .sim-preview {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.sim-tile:hover .sim-preview { transform: scale(1.04); }
+.sim-tile .sim-shade {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: linear-gradient(180deg, rgba(5, 5, 8, 0) 30%, rgba(5, 5, 8, 0.45) 62%, rgba(5, 5, 8, 0.92) 100%);
+    pointer-events: none;
+}
+/* Scanline sweep on hover: the screen "powers up" */
+.sim-tile::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    background: linear-gradient(180deg, transparent 0%, rgba(125, 211, 252, 0.14) 48%, rgba(255, 255, 255, 0.08) 52%, transparent 100%);
+    transform: translateY(-100%);
+    pointer-events: none;
+}
+.sim-tile:hover::before { animation: sim-scan 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes sim-scan { to { transform: translateY(100%); } }
+.sim-tile .sim-mark {
+    position: absolute;
+    top: 0.9rem;
+    left: 1rem;
+    z-index: 3;
+    height: 2rem;
+    width: auto;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.6));
+}
+.sim-tile .sim-badge {
+    position: absolute;
+    top: 0.9rem;
+    right: 0.9rem;
+    z-index: 3;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    padding: 0.32rem 0.7rem;
+    border-radius: 9999px;
+    color: #7dd3fc;
+    background: rgba(5, 5, 8, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.sim-tile .sim-tile-body {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 3;
+    padding: 1.2rem 1.3rem 1.3rem;
+}
+.sim-tile .sim-title {
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.25rem;
+    line-height: 1.12;
+    letter-spacing: -0.015em;
+    color: #fff;
+    margin: 0 0 0.45rem;
+    text-wrap: balance;
+}
+.sim-tile.is-featured .sim-title { font-size: clamp(1.5rem, 2.3vw, 2.1rem); }
+.sim-tile .sim-desc {
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: #cbd5e1;
+    margin: 0;
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+    transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, margin-bottom 0.3s ease;
+}
+.sim-tile:hover .sim-desc,
+.sim-tile:focus-visible .sim-desc,
+.sim-tile.is-featured .sim-desc,
+.sim-tile.is-open .sim-desc {
+    max-height: 6.5rem;
+    opacity: 1;
+    margin-bottom: 0.95rem;
+}
+@media (hover: none) {
+    .sim-tile .sim-desc { max-height: 6.5rem; opacity: 1; margin-bottom: 0.95rem; }
+}
+.sim-tile .sim-tags {
+    display: block;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #ffb45c;
+    margin-bottom: 0.6rem;
+}
+.sim-tile .sim-play {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 40px;
+    padding: 0.5rem 1.15rem;
+    border-radius: 9999px;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: #fff;
+    background: linear-gradient(120deg, #ef2d2d 0%, #ff5f2d 55%, #ff8a3d 100%);
+    box-shadow: 0 6px 20px rgba(239, 45, 45, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.sim-tile:hover .sim-play {
+    transform: translateX(3px);
+    box-shadow: 0 8px 28px rgba(255, 95, 45, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.sim-tile .sim-play svg { width: 0.8rem; height: 0.8rem; }
+/* A scripted live scene is the tile's picture; hide the static thumbnail so a sim is not drawn twice */
+.sim-tile[data-has-scene] .sim-mark { display: none; }
+
+/* Per-sim cover tints behind the live scene */
+.sim-tile[data-sim*="gravit"],
+.sim-tile[data-sim*="gunner"] {
+    background:
+        radial-gradient(110% 80% at 30% 10%, rgba(239, 45, 45, 0.22), transparent 55%),
+        radial-gradient(90% 70% at 90% 20%, rgba(139, 92, 246, 0.25), transparent 55%),
+        #0a0714;
+}
+.sim-tile[data-sim*="hydraul"],
+.sim-tile[data-sim*="press"] {
+    background:
+        radial-gradient(110% 80% at 20% 100%, rgba(34, 211, 238, 0.18), transparent 55%),
+        radial-gradient(80% 60% at 90% 0%, rgba(125, 211, 252, 0.10), transparent 55%),
+        #060b16;
+}
+.sim-tile[data-sim*="nuclear"],
+.sim-tile[data-sim*="decay"],
+.sim-tile[data-sim*="atom"] {
+    background:
+        radial-gradient(100% 80% at 50% 50%, rgba(139, 92, 246, 0.22), transparent 60%),
+        radial-gradient(80% 60% at 10% 100%, rgba(255, 138, 61, 0.14), transparent 55%),
+        #0a0616;
+}
+.sim-tile[data-sim*="tank"],
+.sim-tile[data-sim*="artiller"],
+.sim-tile[data-sim*="siege"] {
+    background: linear-gradient(180deg, #0b1020 0%, #0f1a14 70%, #142016 100%);
+}
+[data-theme="light"] main .sim-tile { box-shadow: 0 12px 34px rgba(30, 41, 59, 0.18); border-color: rgba(30, 41, 59, 0.15); }
+[data-theme="light"] main .sim-tile:hover { box-shadow: 0 22px 50px rgba(30, 41, 59, 0.28), 0 0 0 1px rgba(234, 88, 12, 0.25); }
+
+/* ================================================================
+   FLIGHT PATH — timeline as a trajectory; the rocket marker follows
+   the scroll (main.js) and lights each waypoint it passes
+   ================================================================ */
+.flight-path {
+    --fp-x: 0.9rem;
+    --fp-pad: 3rem;
+    position: relative;
+    padding-left: var(--fp-pad);
+}
+.flight-path .flight-line {
+    position: absolute;
+    top: 0.5rem;
+    bottom: 0;
+    left: var(--fp-x);
+    width: 0;
+    border-left: 2px dashed rgba(125, 211, 252, 0.3);
+}
+.flight-marker {
+    position: absolute;
+    top: 0;
+    left: var(--fp-x);
+    z-index: 3;
+    width: 34px;
+    height: 34px;
+    margin-top: -17px;
+    transform: translate3d(-50%, 0, 0);
+    will-change: transform;
+    color: #fff;
+    filter: drop-shadow(0 0 10px rgba(255, 138, 61, 0.75));
+    pointer-events: none;
+    --rocket-window: #7dd3fc;
+    --rocket-nozzle: #c4b5fd;
+}
+.flight-marker svg { display: block; width: 100%; height: 100%; transform: rotate(180deg); }
+.flight-marker::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: -16px;
+    width: 8px;
+    height: 20px;
+    transform-origin: 50% 100%;
+    transform: translateX(-50%);
+    border-radius: 50% 50% 50% 50% / 85% 85% 15% 15%;
+    background: linear-gradient(0deg, #fff 0%, #ffd08a 25%, #ff8a3d 55%, rgba(239, 45, 45, 0) 100%);
+    animation: flame-flicker 0.12s ease-in-out infinite alternate;
+}
+.flight-year {
+    position: relative;
+    display: flex;
+    align-items: center;
+    margin: 0 0 1.5rem;
+    font-family: "Space Grotesk", system-ui, sans-serif;
+    font-weight: 700;
+    font-size: 1.6rem;
+    color: #fff;
+}
+.flight-year::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--fp-x) - var(--fp-pad) - 7px);
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    margin-top: -7px;
+    border-radius: 9999px;
+    background: #0a0a16;
+    border: 2px solid rgba(239, 45, 45, 0.6);
+    transition: background 0.35s ease, box-shadow 0.35s ease;
+}
+.flight-year.is-passed::before {
+    background: #ef2d2d;
+    box-shadow: 0 0 0 4px rgba(239, 45, 45, 0.22), 0 0 18px rgba(239, 45, 45, 0.7);
+}
+.flight-node { position: relative; }
+.flight-node::before {
+    content: "";
+    position: absolute;
+    left: calc(var(--fp-x) - var(--fp-pad) - 6px);
+    top: 1.35rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 9999px;
+    background: #0a0a16;
+    border: 2px solid rgba(125, 211, 252, 0.5);
+    transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+}
+.flight-node.is-passed::before {
+    background: #ff8a3d;
+    border-color: #ffd08a;
+    box-shadow: 0 0 14px rgba(255, 138, 61, 0.85);
+}
+.flight-node .glass-card { transition: border-color 0.35s ease, box-shadow 0.35s ease, background 0.25s ease; }
+.flight-node.is-passed .glass-card { border-color: rgba(255, 138, 61, 0.28); }
+.flight-type {
+    display: inline-flex;
+    align-items: center;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.6rem;
+    border-radius: 9999px;
+    color: #7dd3fc;
+    background: rgba(125, 211, 252, 0.08);
+    border: 1px solid rgba(125, 211, 252, 0.22);
+}
+.flight-date {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    white-space: nowrap;
+}
+[data-theme="light"] main .flight-path .flight-line { border-color: rgba(2, 132, 199, 0.4); }
+[data-theme="light"] main .flight-marker { color: #1f2937; filter: drop-shadow(0 0 10px rgba(234, 88, 12, 0.45)); }
+[data-theme="light"] main .flight-year { color: #111827; }
+[data-theme="light"] main .flight-year::before,
+[data-theme="light"] main .flight-node::before { background: #fff; }
+[data-theme="light"] main .flight-type { color: #0369a1; background: rgba(2, 132, 199, 0.08); border-color: rgba(2, 132, 199, 0.3); }
+[data-theme="light"] main .flight-date { color: #6b7280; }
+
+/* ================================================================
+   MISSION LOG — field-report cards: HUD corner brackets + tag chips
+   ================================================================ */
+.snap-media { position: relative; }
+.snap-media::before,
+.snap-media::after {
+    content: "";
+    position: absolute;
+    z-index: 5;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #ffb45c;
+    opacity: 0;
+    pointer-events: none;
+    filter: drop-shadow(0 0 6px rgba(255, 138, 61, 0.7));
+    transition: opacity 0.3s ease, transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.snap-media::before { top: 10px; left: 10px; border-right: 0; border-bottom: 0; transform: translate(-8px, -8px); }
+.snap-media::after { bottom: 10px; right: 10px; border-left: 0; border-top: 0; transform: translate(8px, 8px); }
+.snap-card:hover .snap-media::before,
+.snap-card:hover .snap-media::after { opacity: 1; transform: none; }
+.snap-tag {
+    display: inline-flex;
+    align-items: center;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.28rem 0.65rem;
+    border-radius: 9999px;
+    color: #ffb45c;
+    background: rgba(255, 138, 61, 0.09);
+    border: 1px solid rgba(255, 138, 61, 0.24);
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.snap-tag:hover { background: rgba(255, 138, 61, 0.2); border-color: rgba(255, 138, 61, 0.5); color: #ffd08a; }
+[data-theme="light"] main .snap-tag { color: #c2410c; background: rgba(234, 88, 12, 0.07); border-color: rgba(234, 88, 12, 0.3); }
+[data-theme="light"] main .snap-tag:hover { background: rgba(234, 88, 12, 0.14); color: #9a3412; }
+
+/* Empty-state glyphs (authored SVG instead of emoji) */
+.empty-glyph {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 1.25rem;
+    color: #ffb45c;
+    background: rgba(255, 138, 61, 0.08);
+    border: 1px solid rgba(255, 138, 61, 0.22);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+.empty-glyph svg { width: 2.2rem; height: 2.2rem; }
+[data-theme="light"] main .empty-glyph { color: #c2410c; background: #fff; border-color: #fed7aa; box-shadow: 0 6px 18px rgba(30, 41, 59, 0.1); }
+
+/* Reduced motion: keep the states, drop the movement */
+@media (prefers-reduced-motion: reduce) {
+    .rocket-flame, .flight-marker::before { animation: none !important; }
+    .launch-hero.is-launched .rocket-flame { opacity: 0.95; }
+    .hero-horizon .horizon-disc.is-poked { animation: none; }
+    .sim-tile, .sim-tile .sim-preview, .sim-tile .sim-play, .sim-tile .sim-desc { transition: none; }
+    .sim-tile:hover { transform: none; }
+    .sim-tile:hover .sim-preview { transform: none; }
+    .sim-tile:hover::before { animation: none; }
+    .snap-media::before, .snap-media::after { transition: none; }
+}
+
+/* Tiles that always show a description get a deeper shade behind the text */
+.sim-tile.is-open .sim-shade,
+.sim-tile.is-featured .sim-shade {
+    background: linear-gradient(180deg, rgba(5, 5, 8, 0) 18%, rgba(5, 5, 8, 0.5) 48%, rgba(5, 5, 8, 0.94) 100%);
+}
+
+/* Let clicks on empty hero space reach the planet; text and controls stay interactive */
+.launch-hero .hero-copy { pointer-events: none; }
+.launch-hero .hero-copy .hud-label,
+.launch-hero .hero-copy .hero-title,
+.launch-hero .hero-copy .hero-lede,
+.launch-hero .hero-copy a { pointer-events: auto; }
+
+/* Mobile rocket sizing (after the base .hero-rocket rules so it wins the cascade) */
+@media (max-width: 767px) {
+    .hero-rocket { left: -26px; top: -70px; width: 52px; height: 70px; }
+    .hero-rocket .rocket-body { width: 52px; height: 52px; }
+    .hero-rocket .rocket-flame { top: 48px; width: 14px; height: 34px; }
+}
+
+/* ================================================================
+   SIM GRID + MINI TILES — explicit rows (no aspect-ratio transfer),
+   compact rail tiles for the home sidebar and the mobile swipe rail
+   ================================================================ */
+.sim-grid { grid-auto-rows: clamp(230px, 24vw, 330px); }
+.rail-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+.sim-rail { display: grid; gap: 0.7rem; }
+.sim-tile.is-mini { height: 128px; border-radius: 1rem; }
+.sim-tile.is-mini .sim-tile-body {
+    padding: 0.75rem 0.9rem 0.85rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+.sim-tile.is-mini .sim-title { font-size: 1rem; margin: 0; }
+.sim-tile.is-mini .sim-desc { display: none; }
+.sim-tile.is-mini .sim-play { min-height: 32px; padding: 0.3rem 0.8rem; font-size: 0.8rem; flex-shrink: 0; }
+.sim-tile.is-mini .sim-badge { font-size: 9px; padding: 0.2rem 0.5rem; top: 0.6rem; right: 0.6rem; }
+.sim-tile.is-mini .sim-shade { background: linear-gradient(180deg, rgba(5, 5, 8, 0) 25%, rgba(5, 5, 8, 0.55) 62%, rgba(5, 5, 8, 0.9) 100%); }
+.sim-tile.is-mini:hover { transform: translateY(-2px); }
+.sim-rail-scroll {
+    display: flex;
+    gap: 0.75rem;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 0 1rem 0.5rem;
+    margin: 0 -1rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.sim-rail-scroll::-webkit-scrollbar { display: none; }
+.sim-rail-scroll .sim-tile.is-mini { flex: 0 0 76%; max-width: 300px; height: 150px; scroll-snap-align: start; }
+
+/* ================================================================
+   FEED — filter chips above the posts, commander card in the left rail
+   ================================================================ */
+.feed-filter {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.35rem;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+.feed-filter::-webkit-scrollbar { display: none; }
+.feed-chip {
+    flex: 0 0 auto;
+    padding: 0.45rem 0.95rem;
+    border-radius: 9999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.feed-chip:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+.feed-chip.is-active {
+    color: #fff;
+    background: linear-gradient(120deg, #ef2d2d, #ff8a3d);
+    border-color: transparent;
+    box-shadow: 0 4px 16px rgba(239, 45, 45, 0.3);
+}
+[data-theme="light"] main .feed-chip { color: #374151; background: #fff; border-color: #e5e7eb; }
+[data-theme="light"] main .feed-chip:hover { color: #111827; }
+[data-theme="light"] main .feed-chip.is-active { color: #fff; border-color: transparent; background: linear-gradient(120deg, #dc2626, #ea580c); }
+
+.commander-card { position: relative; overflow: hidden; border-radius: 1.25rem; }
+.commander-card .cc-cover {
+    height: 4.25rem;
+    background:
+        radial-gradient(80% 120% at 20% 0%, rgba(239, 45, 45, 0.55), transparent 60%),
+        radial-gradient(70% 120% at 85% 20%, rgba(139, 92, 246, 0.45), transparent 60%),
+        linear-gradient(120deg, rgba(255, 138, 61, 0.25), rgba(34, 211, 238, 0.15));
+}
+.commander-card .cc-avatar { margin-top: -2.25rem; }
+.avatar-orbit.is-small .ring-a { inset: -7px; }
+.avatar-orbit.is-small .ring-b { inset: -14px; }
+.avatar-orbit.is-small .ring-a::before { width: 5px; height: 5px; top: -3px; }
+.commander-card .cc-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+.commander-card .cc-stat { padding: 0.7rem 0.25rem; text-align: center; }
+.commander-card .cc-stat .v {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-weight: 700;
+    font-size: 1.05rem;
+    color: #ffb45c;
+    font-variant-numeric: tabular-nums;
+}
+.commander-card .cc-stat .k {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #9ca3af;
+    margin-top: 0.15rem;
+}
+.commander-card .cc-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #cbd5e1;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+.commander-card .cc-link:hover { color: #ffb45c; background: rgba(255, 255, 255, 0.04); }
+[data-theme="light"] main .commander-card .cc-stats,
+[data-theme="light"] main .commander-card .cc-link { border-color: #e5e7eb; }
+[data-theme="light"] main .commander-card .cc-stat .v { color: #c2410c; }
+[data-theme="light"] main .commander-card .cc-stat .k { color: #6b7280; }
+[data-theme="light"] main .commander-card .cc-link { color: #374151; }
+[data-theme="light"] main .commander-card .cc-link:hover { color: #c2410c; background: #f9fafb; }
+
+/* ================================================================
+   LIGHTBOX — stage + filmstrip (Highlights)
+   ================================================================ */
+.lb-bar { display: flex; align-items: center; justify-content: space-between; padding: 1rem 1.25rem; }
+.lb-btn, .lb-nav {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    color: #fff;
+    background: rgba(255, 255, 255, 0.1);
+    transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+.lb-btn:hover, .lb-nav:hover { background: rgba(255, 255, 255, 0.2); transform: scale(1.06); }
+.lb-nav:disabled { opacity: 0.25; pointer-events: none; }
+.lb-stage {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0 0.75rem;
+}
+.lb-figure {
+    max-width: min(1100px, 100%);
+    max-height: 100%;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+}
+.lb-img {
+    max-width: 100%;
+    max-height: calc(100vh - 13rem);
+    object-fit: contain;
+    border-radius: 0.9rem;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+    will-change: transform, opacity;
+}
+.lb-caption { color: #cbd5e1; font-size: 0.9rem; text-align: center; max-width: 40rem; }
+.lb-strip {
+    display: flex;
+    gap: 0.5rem;
+    overflow-x: auto;
+    padding: 0.9rem 1.25rem 1.1rem;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+    justify-content: safe center;
+}
+.lb-strip::-webkit-scrollbar { display: none; }
+.lb-thumb {
+    flex: 0 0 auto;
+    width: 64px;
+    height: 44px;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    opacity: 0.45;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    scroll-snap-align: center;
+    transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.lb-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.lb-thumb:hover { opacity: 0.85; }
+.lb-thumb.is-active {
+    opacity: 1;
+    border-color: #ffb45c;
+    box-shadow: 0 0 0 1px rgba(255, 180, 92, 0.4), 0 0 16px rgba(255, 138, 61, 0.35);
+    transform: translateY(-2px);
+}
+@media (max-width: 767px) {
+    .lb-nav { display: none; }
+    .lb-img { max-height: calc(100vh - 11rem); }
+}
+
+/* Post carousel: confident slide */
+.carousel-track { transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+@media (prefers-reduced-motion: reduce) {
+    .carousel-track { transition: none; }
+    .sim-tile.is-mini:hover { transform: none; }
+}

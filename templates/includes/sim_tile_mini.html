@@ -1,0 +1,13 @@
+{# Compact Launch Bay tile with a live preview. Usage: {% include "includes/sim_tile_mini.html" with app=app %} #}
+<a href="{{ app.get_absolute_url }}" class="sim-tile is-mini spotlight" data-sim="{{ app.slug }}">
+    <canvas class="sim-preview" aria-hidden="true"></canvas>
+    <span class="sim-shade" aria-hidden="true"></span>
+    {% if app.category %}<span class="sim-badge">{{ app.category.name }}</span>{% endif %}
+    <div class="sim-tile-body">
+        <h3 class="sim-title">{{ app.name }}</h3>
+        <span class="sim-play">
+            Play
+            <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+        </span>
+    </div>
+</a>

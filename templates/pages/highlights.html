@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Highlights — Sherwin Universe{% endblock %}
+{% block title %}Highlights · Sherwin Universe{% endblock %}
 {% block meta_description %}Photo gallery showcasing Sherwin's favorite moments and creations.{% endblock %}
 
 {% block content %}
@@ -10,8 +10,8 @@
         <!-- Header -->
         <div class="mb-10" data-scrub="inout">
             <p class="hud-label mb-4">Sector 04 &middot; Highlights</p>
-            <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-4">Hall of <span class="gradient-text-fire">Highlights</span></h1>
-            <p class="text-gray-500 max-w-lg text-lg">The best shots from every mission — creations, moments, and memories.</p>
+            <h1 class="text-5xl md:text-7xl font-display font-bold text-white mb-4 tracking-tight">Hall of <span class="gradient-text-fire">Highlights</span></h1>
+            <p class="text-gray-500 max-w-lg text-lg">The best shots from every mission: creations, moments, and memories.</p>
         </div>
 
         <!-- Type Filters -->
@@ -30,38 +30,40 @@
         </div>
     </div>
 
-    <!-- Lightbox Overlay -->
-    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+    <!-- Lightbox: stage + filmstrip. Arrow keys, swipe, and thumbnails all navigate. -->
+    <div x-show="open" x-cloak
+         x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
          x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-         @keydown.escape.window="open = false" @keydown.left.window="prev()" @keydown.right.window="next()"
-         class="fixed inset-0 z-[70] bg-black/90 backdrop-blur-md flex items-center justify-center p-4" @click.self="open = false">
+         @keydown.escape.window="close()" @keydown.left.window="prev()" @keydown.right.window="next()"
+         @touchstart.passive="touchX = $event.touches[0].clientX" @touchend="swipe($event)"
+         class="lightbox fixed inset-0 z-[70] bg-black/90 backdrop-blur-md flex flex-col" role="dialog" aria-modal="true" aria-label="Image viewer">
 
-        <!-- Counter -->
-        <div class="absolute top-5 left-5 font-mono text-xs tracking-[0.25em] text-gray-400" x-text="(index + 1) + ' / ' + total"></div>
+        <div class="lb-bar">
+            <div class="font-mono text-xs tracking-[0.25em] text-gray-400" x-text="String(index + 1).padStart(2, '0') + ' / ' + String(total).padStart(2, '0')"></div>
+            <button type="button" @click="close()" class="lb-btn" aria-label="Close">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
 
-        <!-- Close -->
-        <button @click="open = false" class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors z-10">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        <div class="lb-stage" @click.self="close()">
+            <button type="button" @click.stop="prev()" class="lb-nav" :disabled="index === 0" aria-label="Previous image">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            </button>
+            <figure class="lb-figure" @click.self="close()">
+                <img x-ref="img" :src="currentUrl" :alt="currentAlt" class="lb-img" @click.stop>
+                <figcaption x-show="currentCaption" x-text="currentCaption" class="lb-caption"></figcaption>
+            </figure>
+            <button type="button" @click.stop="next()" class="lb-nav" :disabled="index >= total - 1" aria-label="Next image">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+            </button>
+        </div>
 
-        <!-- Prev -->
-        <button @click="prev()" class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 hover:scale-110 transition-all">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-        </button>
-
-        <!-- Next -->
-        <button @click="next()" class="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 hover:scale-110 transition-all">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-        </button>
-
-        <!-- Image -->
-        <div class="max-w-5xl max-h-[85vh] flex flex-col items-center"
-             x-show="open"
-             x-transition:enter="transition ease-out duration-300"
-             x-transition:enter-start="opacity-0 scale-95"
-             x-transition:enter-end="opacity-100 scale-100">
-            <img :src="currentUrl" :alt="currentAlt" class="max-w-full max-h-[75vh] object-contain rounded-xl shadow-2xl shadow-black/60">
-            <p x-show="currentCaption" x-text="currentCaption" class="text-gray-300 text-sm mt-4 text-center max-w-lg"></p>
+        <div class="lb-strip" x-ref="strip">
+            <template x-for="(item, i) in items" :key="i">
+                <button type="button" class="lb-thumb" :class="{ 'is-active': i === index }" @click.stop="go(i)" :aria-label="'Image ' + (i + 1)">
+                    <img :src="item.url" alt="" loading="lazy">
+                </button>
+            </template>
         </div>
     </div>
 </section>
@@ -74,31 +76,81 @@ function lightbox() {
         open: false,
         index: 0,
         total: 0,
+        items: [],
+        touchX: 0,
         currentUrl: '',
         currentAlt: '',
         currentCaption: '',
 
+        collect() {
+            this.items = Array.from(document.querySelectorAll('[data-lightbox-idx]')).map(function (el) {
+                return { url: el.dataset.url, alt: el.dataset.alt || '', caption: el.dataset.caption || '' };
+            });
+            this.total = this.items.length;
+        },
+        // Called by the tiles (media_grid.html): show(url, alt, caption, idx)
         show(url, alt, caption, idx) {
-            this.currentUrl = url;
-            this.currentAlt = alt;
-            this.currentCaption = caption;
+            this.collect();
             this.index = idx;
-            this.total = document.querySelectorAll('[data-lightbox-idx]').length;
+            this.apply();
             this.open = true;
+            document.documentElement.style.overflow = 'hidden';
         },
-        prev() {
-            const imgs = document.querySelectorAll('[data-lightbox-idx]');
-            if (this.index > 0) {
-                const el = imgs[this.index - 1];
-                this.show(el.dataset.url, el.dataset.alt, el.dataset.caption, this.index - 1);
-            }
+        close() {
+            this.open = false;
+            document.documentElement.style.overflow = '';
         },
-        next() {
-            const imgs = document.querySelectorAll('[data-lightbox-idx]');
-            if (this.index < imgs.length - 1) {
-                const el = imgs[this.index + 1];
-                this.show(el.dataset.url, el.dataset.alt, el.dataset.caption, this.index + 1);
-            }
+        apply() {
+            var it = this.items[this.index] || {};
+            this.currentUrl = it.url || '';
+            this.currentAlt = it.alt || '';
+            this.currentCaption = it.caption || '';
+            this.preload(this.index + 1);
+            this.preload(this.index - 1);
+            var self = this;
+            this.$nextTick(function () {
+                var strip = self.$refs.strip;
+                var thumb = strip && strip.children[self.index];
+                if (thumb && thumb.scrollIntoView) thumb.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+            });
+        },
+        preload(i) {
+            var it = this.items[i];
+            if (it && it.url) { var im = new Image(); im.src = it.url; }
+        },
+        // Direction-aware slide + fade between images; falls back to a plain swap under reduced motion.
+        go(i, dir) {
+            if (!this.open || i < 0 || i >= this.total || i === this.index) return;
+            dir = dir || (i > this.index ? 1 : -1);
+            var img = this.$refs.img, self = this;
+            var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!img || !img.animate || reduce) { this.index = i; this.apply(); return; }
+            var out = img.animate(
+                [{ opacity: 1, transform: 'translateX(0) scale(1)' }, { opacity: 0, transform: 'translateX(' + (-36 * dir) + 'px) scale(0.98)' }],
+                { duration: 150, easing: 'ease-in', fill: 'forwards' }
+            );
+            out.onfinish = function () {
+                self.index = i;
+                self.apply();
+                var done = false;
+                var swapIn = function () {
+                    if (done) return;
+                    done = true;
+                    out.cancel();
+                    img.animate(
+                        [{ opacity: 0, transform: 'translateX(' + (36 * dir) + 'px) scale(0.98)' }, { opacity: 1, transform: 'translateX(0) scale(1)' }],
+                        { duration: 380, easing: 'cubic-bezier(0.16, 1, 0.3, 1)' }
+                    );
+                };
+                if (img.complete && img.naturalWidth) swapIn();
+                else { img.onload = swapIn; setTimeout(swapIn, 700); }
+            };
+        },
+        prev() { this.go(this.index - 1, -1); },
+        next() { this.go(this.index + 1, 1); },
+        swipe(e) {
+            var dx = e.changedTouches[0].clientX - this.touchX;
+            if (Math.abs(dx) > 40) { if (dx < 0) this.next(); else this.prev(); }
         }
     };
 }

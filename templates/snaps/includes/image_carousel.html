@@ -24,12 +24,19 @@ Supports: multi-image carousel, YouTube embeds, single image, or video-only snap
 {# Calculate total slides: featured + extras + optional video #}
 <div x-data="{
     current: 0,
+    tx: 0,
     total: {% if snap.featured_image %}{{ extra_images|length|add:1 }}{% else %}{{ extra_images|length }}{% endif %}{% if snap.youtube_video_id %} + 1{% endif %},
     fullscreen: false,
     containerH: 'auto',
     hasVideo: {% if snap.youtube_video_id %}true{% else %}false{% endif %},
     videoIdx: {% if snap.featured_image %}{{ extra_images|length|add:1 }}{% else %}{{ extra_images|length }}{% endif %},
     urls: [{% if snap.featured_image %}'{{ snap.featured_image.url }}'{% endif %}{% for img in extra_images %}{% if snap.featured_image or not forloop.first %},{% endif %}'{{ img.file.url }}'{% endfor %}],
+    swipe(e) {
+        const dx = e.changedTouches[0].clientX - this.tx;
+        if (Math.abs(dx) < 40) return;
+        this.current = dx < 0 ? Math.min(this.total - 1, this.current + 1) : Math.max(0, this.current - 1);
+        this.updateHeight();
+    },
     updateHeight() {
         this.$nextTick(() => {
             const slides = this.$refs.track.children;
@@ -48,11 +55,11 @@ Supports: multi-image carousel, YouTube embeds, single image, or video-only snap
             }
         });
     }
-}" x-init="updateHeight()" @resize.window="updateHeight()" class="relative select-none">
+}" x-init="updateHeight()" @resize.window="updateHeight()" @touchstart.passive="tx = $event.touches[0].clientX" @touchend="swipe($event)" class="relative select-none">
 
     {# --- Inline carousel (feed/detail view) --- #}
     <div class="overflow-hidden bg-space-900 transition-[height] duration-300 ease-out" :style="'height:' + containerH">
-        <div x-ref="track" class="flex transition-transform duration-300 ease-out h-full" :style="'transform: translateX(-' + (current * 100) + '%)'">
+        <div x-ref="track" class="flex h-full carousel-track" :style="'transform: translateX(-' + (current * 100) + '%)'">
             {# First image: featured_image #}
             {% if snap.featured_image %}
             <div class="w-full shrink-0 cursor-pointer flex items-center justify-center{% if snap.lqip %} bg-cover bg-center bg-no-repeat{% endif %}" @click="fullscreen = true"{% if snap.lqip %} style="background-image: url('{{ snap.lqip }}')"{% endif %}>
@@ -113,6 +120,7 @@ Supports: multi-image carousel, YouTube embeds, single image, or video-only snap
              @keydown.escape.window="fullscreen = false"
              @keydown.left.window="if(fullscreen && current > 0) current = current - 1"
              @keydown.right.window="if(fullscreen && current < urls.length - 1) current = current + 1"
+             @touchstart.passive="tx = $event.touches[0].clientX" @touchend="swipe($event)"
              class="fixed inset-0 z-[100] bg-black flex items-center justify-center" style="display: none;">
 
             {# Close button #}

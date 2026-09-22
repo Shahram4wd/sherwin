@@ -1,0 +1,249 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-21T23:16:49Z",
+  "title": "Design System: Sherwin Universe",
+  "extensions": {
+    "colorMeta": {
+      "cosmos": { "role": "neutral", "displayName": "Cosmos Black", "canonical": "#050508", "tonalRamp": ["#050508", "#0a0a12", "#111120", "#1a1a2e", "#22223a"] },
+      "panel-deep": { "role": "neutral", "displayName": "Deep Panel", "canonical": "#0a0a16", "tonalRamp": ["#07070f", "#0a0a16", "#0a0a12", "#111120"] },
+      "glass-fill": { "role": "neutral", "displayName": "Glass Film", "canonical": "rgba(255, 255, 255, 0.03)", "tonalRamp": ["rgba(255,255,255,0.03)", "rgba(255,255,255,0.04)", "rgba(255,255,255,0.05)", "rgba(255,255,255,0.06)"] },
+      "glass-border": { "role": "neutral", "displayName": "Glass Hairline", "canonical": "rgba(255, 255, 255, 0.08)", "tonalRamp": ["rgba(255,255,255,0.06)", "rgba(255,255,255,0.08)", "rgba(255,255,255,0.1)", "rgba(255,255,255,0.12)", "rgba(255,255,255,0.15)"] },
+      "ignition": { "role": "primary", "displayName": "Ignition Red", "canonical": "#ef2d2d", "tonalRamp": ["#dc2626", "#ef2d2d", "#ff4d4d", "#ff8080"] },
+      "nova": { "role": "primary", "displayName": "Nova Orange", "canonical": "#ff8a3d", "tonalRamp": ["#ff8a3d", "#ffb45c", "#ffd08a"] },
+      "plasma": { "role": "secondary", "displayName": "Plasma Cyan", "canonical": "#22d3ee", "tonalRamp": ["#22d3ee", "#38bdf8", "#7dd3fc"] },
+      "nebula": { "role": "tertiary", "displayName": "Nebula Violet", "canonical": "#8b5cf6", "tonalRamp": ["#8b5cf6", "#a78bfa", "#c4b5fd"] },
+      "status-go": { "role": "status", "displayName": "Systems Go", "canonical": "#34d399", "tonalRamp": ["#059669", "#34d399"] },
+      "text-primary": { "role": "neutral", "displayName": "Signal White", "canonical": "#ffffff", "tonalRamp": ["#6b7280", "#9ca3af", "#d1d5db", "#e5e7eb", "#cbd5e1", "#ffffff"] },
+      "light-sky-peach": { "role": "neutral", "displayName": "Daylight Sky", "canonical": "#fdf3ec", "tonalRamp": ["#e3f0f6", "#e9edf8", "#f2f3fb", "#fdf3ec"] },
+      "light-surface": { "role": "neutral", "displayName": "Daylight Card", "canonical": "#ffffff", "tonalRamp": ["#d1d5db", "#e5e7eb", "#f3f4f6", "#ffffff"] },
+      "light-text": { "role": "neutral", "displayName": "Daylight Ink", "canonical": "#1f2937", "tonalRamp": ["#111827", "#1f2937", "#374151", "#4b5563", "#6b7280"] },
+      "light-nova": { "role": "primary", "displayName": "Ember (daylight nova)", "canonical": "#c2410c", "tonalRamp": ["#9a3412", "#c2410c", "#dc2626", "#ea580c", "#d97706"] },
+      "light-plasma": { "role": "secondary", "displayName": "Daylight Plasma", "canonical": "#0284c7", "tonalRamp": ["#0369a1", "#0284c7"] },
+      "light-nebula": { "role": "tertiary", "displayName": "Daylight Nebula", "canonical": "#7c3aed", "tonalRamp": ["#7c3aed"] }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "The hero headline only: two stacked lines, the second wearing gradient-text-cosmic; clamp(2.1rem, 10.5vw, 2.5rem) under 768px." },
+      "headline": { "displayName": "Headline", "purpose": "Sector page H1 (Lab, Timeline, Highlights, About); one word wears gradient-text-fire." },
+      "section": { "displayName": "Section", "purpose": "Home feed H2 (\"Latest from the fleet\"); the Launch Bay rail heading drops to text-lg and the commander card name to text-base." },
+      "title": { "displayName": "Title", "purpose": "Sim tile titles (1rem on mini tiles), flight-year headings (1.6rem), card headings, button labels." },
+      "lede": { "displayName": "Lede", "purpose": "The hero's one-sentence lede and page intros." },
+      "body": { "displayName": "Body", "purpose": "Mission Log bodies (15px), tile descriptions (0.875rem), About prose." },
+      "readout": { "displayName": "Readout", "purpose": "HUD strip stat values, profile-stat and cc-stat values (1.05rem); tabular numerals, counted up on reveal." },
+      "label": { "displayName": "HUD Label", "purpose": "Sector labels with the 24px gradient hairline; 9px to 10px on card headings." },
+      "tag": { "displayName": "Tag / Badge", "purpose": "snap-tag, sim-badge (9px on mini tiles), sim-tags, flight-type, tile-type; uppercase, 0.12em to 0.2em tracking." }
+    },
+    "shadows": [
+      { "name": "cta-glow", "value": "0 4px 24px rgba(239, 45, 45, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25)", "purpose": "btn-launch at rest; sim-play uses 0 6px 20px rgba(239,45,45,0.35) with the same inset." },
+      { "name": "cta-glow-hover", "value": "0 8px 36px rgba(255, 95, 45, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25)", "purpose": "btn-launch hover." },
+      { "name": "card-hover-ring", "value": "0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 138, 61, 0.18)", "purpose": "snap-card hover; gallery-tile uses 0 12px 40px black with a 0.15 nova ring." },
+      { "name": "tile-hover", "value": "0 22px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 138, 61, 0.18), 0 0 40px rgba(255, 138, 61, 0.12)", "purpose": "sim-tile hover and focus-visible (mini tiles too)." },
+      { "name": "chip-active", "value": "0 4px 16px rgba(239, 45, 45, 0.3)", "purpose": "feed-chip.is-active." },
+      { "name": "lightbox-image", "value": "0 30px 80px rgba(0, 0, 0, 0.6)", "purpose": ".lb-img on the black stage." },
+      { "name": "thumb-lit", "value": "0 0 0 1px rgba(255, 180, 92, 0.4), 0 0 16px rgba(255, 138, 61, 0.35)", "purpose": ".lb-thumb.is-active with a #ffb45c border and a 2px lift." },
+      { "name": "panel-rest", "value": "0 10px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08)", "purpose": "hud-strip at rest." },
+      { "name": "horizon-glow", "value": "0 -1px 0 rgba(255, 205, 160, 0.75), 0 -14px 40px rgba(255, 138, 61, 0.45), 0 -50px 140px rgba(139, 92, 246, 0.32), 0 -130px 320px rgba(34, 211, 238, 0.10)", "purpose": "The planet horizon's cream rim and nova, violet, cyan atmosphere." },
+      { "name": "text-glow", "value": "0 0 24px rgba(255, 138, 61, 0.45)", "purpose": "stat-value text-shadow; HUD hairline 0 0 8px at 0.8." },
+      { "name": "glyph-glow", "value": "drop-shadow(0 0 10px rgba(255, 138, 61, 0.55))", "purpose": "Rocket glyph filter in the hero; 0 0 6px at 0.8 on the scroll rocket, 0 0 10px at 0.75 on the flight marker." },
+      { "name": "waypoint-lit", "value": "0 0 0 4px rgba(239, 45, 45, 0.22), 0 0 18px rgba(239, 45, 45, 0.7)", "purpose": "flight-year dot once passed; nodes use 0 0 14px rgba(255,138,61,0.85)." },
+      { "name": "segment-active", "value": "0 2px 12px rgba(239, 45, 45, 0.35)", "purpose": "seg-active pill." },
+      { "name": "light-card-rest", "value": "0 1px 3px rgba(0, 0, 0, 0.08)", "purpose": "Daylight glass-card, gallery-tile, segmented at rest." },
+      { "name": "light-card-hover", "value": "0 4px 12px rgba(0, 0, 0, 0.1)", "purpose": "Daylight glass-card hover." },
+      { "name": "light-panel", "value": "0 16px 48px rgba(30, 41, 59, 0.10)", "purpose": "Daylight cosmic-panel; hud-strip 0 10px 30px rgba(30,41,59,0.12); sim-tile 0 12px 34px rgba(30,41,59,0.18), hover 0 22px 50px rgba(30,41,59,0.28) with an ember ring." }
+    ],
+    "motion": [
+      { "name": "ease-launch", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Every entrance and transform: reveal (0.7s), hero-line (0.9s), hero-scene (1.2s), sim-tile lift (0.35s), sim-preview scale (0.7s), sim-desc expand (0.45s), sim-scan (0.9s), rocket-liftoff (2.6s), gallery image zoom (0.7s), snap brackets (0.4s), page-in (0.34s), carousel-track slide (0.5s), lightbox image entry (0.38s, WAAPI)." },
+      { "name": "ease-toy", "value": "cubic-bezier(0.34, 1.56, 0.64, 1)", "purpose": "Playful feedback only: horizon-poke (0.9s), icon-launch hop (0.6s)." },
+      { "name": "ease-state", "value": "ease", "purpose": "Color, border, shadow and small transform state changes at 0.2s (buttons, chips), 0.25s (cards, nav underline), 0.3s to 0.35s (tiles, waypoints, spotlight)." },
+      { "name": "counter-ease", "value": "1 - (1 - p)^3", "purpose": "JS cubic ease-out for data-count-to counters (1400ms) and data-scrub enter." },
+      { "name": "duration-state", "value": "0.2s", "purpose": "btn-launch transform, chip colors, mobile nav color." },
+      { "name": "duration-card", "value": "0.25s to 0.35s", "purpose": "snap-card, nav underline, sim-tile lift, waypoint fill, spotlight fade." },
+      { "name": "duration-sheen", "value": "0.5s", "purpose": "btn-launch ::after sheen sweep from -80% to 130%." },
+      { "name": "duration-reveal", "value": "0.7s", "purpose": ".reveal opacity and 26px rise; stagger via --reveal-delay (100ms steps on tiles, 0/70/140/70ms on gallery)." },
+      { "name": "duration-hero-line", "value": "0.9s", "purpose": "hero-line blur(8px) + 28px rise; delays --d 0.05 / 0.15 / 0.28 / 0.42 / 0.56 / 0.7s." },
+      { "name": "countdown-step", "value": "380ms", "purpose": "T-3, T-2, T-1, Liftoff; the live T+ clock starts 1400ms after the last step (2920ms total). Plays once per session via sessionStorage.su-launched." },
+      { "name": "liftoff", "value": "2.6s", "purpose": "rocket-liftoff to translate(34px, calc(-1 * var(--climb, 40vh))) rotate(9deg); flame-ignite 2.6s ease-out; launch-smoke 1.8s ease-out; is-instant collapses these to 0.01s." },
+      { "name": "climb", "value": "--climb = 0.47 × hero height (0.55 under 768px), in px, re-set on resize", "purpose": "Liftoff distance follows the hero so the rocket ends in clear sky on any screen." },
+      { "name": "flame-flicker", "value": "0.12s ease-in-out infinite alternate", "purpose": "Rocket and flight-marker flames." },
+      { "name": "page-transition", "value": "out 0.2s ease-in, in 0.34s ease-launch with 12px rise", "purpose": "@view-transition { navigation: auto } cross-document fade." },
+      { "name": "loop-nebula", "value": "46s / 58s / 52s ease-in-out infinite alternate", "purpose": "Three nebula discs drifting up to 7vw and scaling 0.95 to 1.15." },
+      { "name": "loop-orbit", "value": "36s / 60s linear infinite", "purpose": "avatar-orbit dashed rings (ring-a forward, ring-b reverse)." },
+      { "name": "loop-ambient", "value": "float 6s, pulse-glow 3s, sparkle-pulse 3.2s ease-in-out infinite", "purpose": "Empty glyph float, footer status dot, hero sparkles." },
+      { "name": "scroll-scrub", "value": "in: 22vh window from 94% viewport, 30px travel; out: fade to 0.15 over 11vh, -22px", "purpose": "[data-scrub=in|out|inout], continuous, one shared passive scroll listener + rAF." },
+      { "name": "scroll-ascent", "value": "rocket translate(70px * p, -0.95 * heroHeight * p); horizon translateY(0.32 * heroHeight * p); p = scrollY / heroHeight clamped to 1.3", "purpose": "Launch hero scroll choreography." },
+      { "name": "flight-marker", "value": "marker pinned at 42% of viewport height; waypoints light when marker passes within 8px", "purpose": "Timeline flight path." },
+      { "name": "lightbox-slide", "value": "out 150ms ease-in to translateX(-36px × dir) scale(0.98); in 380ms ease-launch from translateX(36px × dir) scale(0.98); swipe threshold 40px", "purpose": "Highlights lightbox, direction-aware WAAPI on .lb-img; neighbours preloaded; plain swap under reduced motion." },
+      { "name": "carousel-slide", "value": "transform 0.5s ease-launch; frame height 300ms ease-out; swipe threshold 40px", "purpose": "Post carousel .carousel-track and its full-screen viewer; transition none under reduced motion." },
+      { "name": "pointer-parallax", "value": "depth 0.35 / 0.7, amplitude 34px x 26px, lerp 0.07", "purpose": "Hero distant bodies on hover-capable devices." },
+      { "name": "pointer-magnetic", "value": "0.14x / 0.22y factors, clamp 6px, scale 1.02, -2px lift", "purpose": "btn-launch and btn-ghost lean toward the cursor." },
+      { "name": "pointer-spotlight", "value": "radial-gradient(340px circle at --mx --my, rgba(255,138,61,0.10), transparent 65%), 0.35s fade", "purpose": ".spotlight cards and tiles; ember 0.07 on daylight." },
+      { "name": "preview-boost", "value": "2.4x speed on hover, lerp 0.08; dpr capped 1.5; runs only while 5% visible and tab visible; scene box fit 0.72 of tile height (0.56 is-open, 0.92 is-mini), width ≤ 1.75 × height, centred", "purpose": "Procedural sim previews (gravity, hydraulics, nucleus, artillery, comet fallback) keyed by slug in pickScene." },
+      { "name": "reduced-motion", "value": "prefers-reduced-motion: reduce", "purpose": "Reveals shown, hero-line/scene skip, nebula and orbit rings static, counters jump to final, scrub/tilt/magnetic/parallax off, starfield static (no drift, twinkle, shooters), countdown skipped (is-instant is-launched, clock runs), flight marker hidden and all waypoints lit, sim previews render one composed still (40 silent ticks), tile transitions none, flame static at 0.95, view transitions none, planet poke disabled, carousel-track transition none, mini tile hover static, lightbox plain swap." }
+    ],
+    "breakpoints": [
+      { "name": "narrow-max", "value": "380px", "purpose": "Bottom nav squeeze (64px centre column, 10px labels)." },
+      { "name": "phone-max", "value": "767px", "purpose": "Body padding-bottom 4rem for bottom nav; hero rocket 52px on a 78% / 66% track; far planet 40px top-left; scene-moon hidden; hero-title clamp(2.1rem, 10.5vw, 2.5rem); hud-strip 2 columns; lb-nav hidden; rail mini tile 150px." },
+      { "name": "sm", "value": "640px", "purpose": "Tailwind sm; Lab sim grid 2 columns." },
+      { "name": "md", "value": "768px", "purpose": "Tailwind md; desktop nav; hud-strip 4 columns; masonry 3 columns; sector section padding 6rem; home feed top padding 3rem." },
+      { "name": "tablet-max", "value": "1023px", "purpose": "Legacy .hero-scene 210px rule; inert on the launch hero, which resets its scene to inset: 0." },
+      { "name": "lg", "value": "1024px", "purpose": "Tailwind lg; home feed bridge (240px commander card | max-w-xl posts | 300px Launch Bay rail, asides sticky at 6rem; below lg the rail becomes the swipe strip above the feed); Lab and About sidebars." },
+      { "name": "xl", "value": "1280px", "purpose": "Tailwind xl; masonry 4 columns." }
+    ]
+  },
+  "components": [
+    {
+      "name": "Launch Button",
+      "kind": "button",
+      "refersTo": "button-launch",
+      "description": "The primary CTA: fire gradient, warm glow, sheen sweep on hover, magnetic on pointer devices.",
+      "html": "<a href=\"#\" class=\"ds-btn-launch\"><span>Enter the Lab</span><svg width=\"20\" height=\"20\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 7l5 5m0 0l-5 5m5-5H6\"/></svg></a>",
+      "css": ".ds-btn-launch { display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.9rem 2rem; border-radius: 0.9rem; font-family: \"Space Grotesk\", system-ui, sans-serif; font-weight: 700; font-size: 1rem; color: #fff; text-decoration: none; background: linear-gradient(120deg, #ef2d2d 0%, #ff5f2d 55%, #ff8a3d 100%); box-shadow: 0 4px 24px rgba(239, 45, 45, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.25); position: relative; overflow: hidden; transition: transform 0.2s ease, box-shadow 0.2s ease; } .ds-btn-launch::after { content: \"\"; position: absolute; top: 0; left: -80%; width: 50%; height: 100%; background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent); transform: skewX(-20deg); transition: left 0.5s ease; } .ds-btn-launch:hover { transform: translateY(-2px) scale(1.02); box-shadow: 0 8px 36px rgba(255, 95, 45, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.25); } .ds-btn-launch:hover::after { left: 130%; } .ds-btn-launch:active { transform: scale(0.97); } .ds-btn-launch:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary CTA: glass fill and hairline, plasma tint on hover.",
+      "html": "<a href=\"#\" class=\"ds-btn-ghost\">Read the Mission Log</a>",
+      "css": ".ds-btn-ghost { display: inline-flex; align-items: center; justify-content: center; gap: 0.6rem; padding: 0.9rem 2rem; border-radius: 0.9rem; font-family: \"Space Grotesk\", system-ui, sans-serif; font-weight: 600; font-size: 1rem; color: #e5e7eb; text-decoration: none; border: 1px solid rgba(255, 255, 255, 0.15); background: rgba(255, 255, 255, 0.04); backdrop-filter: blur(8px); transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease; } .ds-btn-ghost:hover { border-color: rgba(125, 211, 252, 0.5); background: rgba(125, 211, 252, 0.08); transform: translateY(-2px); } .ds-btn-ghost:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }"
+    },
+    {
+      "name": "HUD Label",
+      "kind": "custom",
+      "refersTo": "hud-label",
+      "description": "Sector label: JetBrains Mono, uppercase, 0.32em tracking, 24px gradient hairline before the text.",
+      "html": "<p class=\"ds-hud-label\">Sector 05 &middot; The Lab</p>",
+      "css": ".ds-hud-label { font-family: \"JetBrains Mono\", ui-monospace, monospace; font-size: 11px; font-weight: 500; letter-spacing: 0.32em; text-transform: uppercase; color: #ff8a3d; display: inline-flex; align-items: center; gap: 0.6em; margin: 0; } .ds-hud-label::before { content: \"\"; width: 24px; height: 1px; background: linear-gradient(90deg, #ef2d2d, #ff8a3d); box-shadow: 0 0 8px rgba(255, 138, 61, 0.8); }"
+    },
+    {
+      "name": "Glass Card",
+      "kind": "card",
+      "refersTo": "glass-card",
+      "description": "The default surface: 3% white film, 8% hairline, 12px blur; brightens and lifts on hover.",
+      "html": "<article class=\"ds-glass-card\"><p class=\"ds-glass-card__label\">Filter by tag</p><h3 class=\"ds-glass-card__title\">Mun landing, first try</h3><p class=\"ds-glass-card__body\">Free capture at Tylo, then a burn back home. The lander tipped but the crew walked.</p></article>",
+      "css": ".ds-glass-card { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border-radius: 1rem; padding: 1.25rem; color: #fff; transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease, background 0.25s ease; } .ds-glass-card:hover { background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.15); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 138, 61, 0.18); transform: translateY(-2px); } .ds-glass-card__label { font-family: \"JetBrains Mono\", ui-monospace, monospace; font-size: 9px; font-weight: 500; letter-spacing: 0.32em; text-transform: uppercase; color: #ff8a3d; margin: 0 0 1rem; } .ds-glass-card__title { font-family: \"Space Grotesk\", system-ui, sans-serif; font-weight: 600; font-size: 1.125rem; margin: 0 0 0.5rem; } .ds-glass-card__body { font-family: Inter, system-ui, sans-serif; font-size: 15px; line-height: 1.625; color: #e5e7eb; margin: 0; }"
+    },
+    {
+      "name": "Snap Tag",
+      "kind": "chip",
+      "refersTo": "snap-tag",
+      "description": "Mono tag chip on Mission Log cards and Lab filters; nova on a 9% nova wash.",
+      "html": "<a href=\"#\" class=\"ds-snap-tag\">#ksp</a> <a href=\"#\" class=\"ds-snap-tag\">#mach-5.8</a>",
+      "css": ".ds-snap-tag { display: inline-flex; align-items: center; font-family: \"JetBrains Mono\", ui-monospace, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; padding: 0.28rem 0.65rem; border-radius: 9999px; color: #ffb45c; background: rgba(255, 138, 61, 0.09); border: 1px solid rgba(255, 138, 61, 0.24); text-decoration: none; transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease; } .ds-snap-tag:hover { background: rgba(255, 138, 61, 0.2); border-color: rgba(255, 138, 61, 0.5); color: #ffd08a; } .ds-snap-tag:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }"
+    },
+    {
+      "name": "Navigation Links",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Desktop nav on the dark glass bar: muted Inter links, a fire underline that grows from the left, the active link held white with a glowing underline.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\" class=\"ds-nav-link ds-nav-link--active\">Home</a><a href=\"#\" class=\"ds-nav-link\">Timeline</a><a href=\"#\" class=\"ds-nav-link\">Highlights</a><a href=\"#\" class=\"ds-nav-link\">Lab</a><a href=\"#\" class=\"ds-nav-link\">About</a></nav>",
+      "css": ".ds-nav { display: inline-flex; align-items: center; gap: 1.5rem; padding: 1rem 1.5rem; background: rgba(8, 8, 16, 0.8); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.06); } .ds-nav-link { position: relative; font-family: Inter, system-ui, sans-serif; font-size: 0.875rem; font-weight: 500; letter-spacing: 0.025em; color: #9ca3af; text-decoration: none; padding-bottom: 2px; transition: color 0.2s ease; } .ds-nav-link::after { content: \"\"; position: absolute; left: 0; right: 100%; bottom: -4px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, #ef2d2d, #ff8a3d); transition: right 0.25s ease; } .ds-nav-link:hover { color: #fff; } .ds-nav-link:hover::after { right: 0; } .ds-nav-link--active { color: #fff; } .ds-nav-link--active::after { right: 0; box-shadow: 0 0 8px rgba(255, 77, 77, 0.7); } .ds-nav-link:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; border-radius: 6px; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "The always-visible nav search: space-800 fill, hairline, magnifier at left, ignition ring on focus.",
+      "html": "<label class=\"ds-search\"><svg width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z\"/></svg><input type=\"search\" placeholder=\"Scan the universe...\" aria-label=\"Search\"></label>",
+      "css": ".ds-search { position: relative; display: block; max-width: 20rem; color: #6b7280; } .ds-search svg { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); pointer-events: none; } .ds-search input { width: 100%; box-sizing: border-box; padding: 0.5rem 1rem 0.5rem 2.25rem; border-radius: 0.5rem; background: #111120; border: 1px solid rgba(255, 255, 255, 0.1); color: #fff; font-family: Inter, system-ui, sans-serif; font-size: 0.875rem; outline: none; caret-color: #ff8a3d; transition: border-color 0.2s ease, box-shadow 0.2s ease; } .ds-search input::placeholder { color: #6b7280; } .ds-search input:focus { border-color: rgba(255, 77, 77, 0.5); box-shadow: 0 0 0 1px rgba(255, 77, 77, 0.2); }"
+    },
+    {
+      "name": "HUD Stat Strip",
+      "kind": "custom",
+      "refersTo": "hud-strip",
+      "description": "The mission stats that ride the hero horizon: hairline-divided cells, mono tabular readouts with a nova text glow, a Systems Go cell.",
+      "html": "<div class=\"ds-hud-strip\"><div class=\"ds-mission-stat\"><div class=\"ds-stat-value\">42</div><div class=\"ds-stat-label\">Missions logged</div></div><div class=\"ds-mission-stat\"><div class=\"ds-stat-value\">4</div><div class=\"ds-stat-label\">Playable sims</div></div><div class=\"ds-mission-stat\"><div class=\"ds-stat-value\">318</div><div class=\"ds-stat-label\">Mission day</div></div><div class=\"ds-mission-stat\"><div class=\"ds-stat-value ds-stat-value--go\">GO</div><div class=\"ds-stat-label\">All systems</div></div></div>",
+      "css": ".ds-hud-strip { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-radius: 1rem; border: 1px solid rgba(255, 255, 255, 0.12); background: linear-gradient(180deg, rgba(10, 10, 22, 0.55), rgba(10, 10, 22, 0.25)); backdrop-filter: blur(8px); box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08); overflow: hidden; } .ds-mission-stat { text-align: center; padding: 1.1rem 0.75rem 1rem; border-right: 1px solid rgba(255, 255, 255, 0.08); } .ds-mission-stat:last-child { border-right: 0; } .ds-stat-value { font-family: \"JetBrains Mono\", ui-monospace, monospace; font-size: clamp(1.6rem, 3.5vw, 2.4rem); font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; text-shadow: 0 0 24px rgba(255, 138, 61, 0.45); } .ds-stat-value--go { color: #34d399; text-shadow: 0 0 24px rgba(52, 211, 153, 0.5); } .ds-stat-label { font-family: \"JetBrains Mono\", ui-monospace, monospace; font-size: 11px; letter-spacing: 0.28em; text-transform: uppercase; color: rgba(255, 208, 138, 0.72); margin-top: 0.35rem; }"
+    },
+    {
+      "name": "Sim Tile",
+      "kind": "card",
+      "refersTo": "sim-tile",
+      "description": "A sim tile (static stand-in for the live canvas), shown as the Lab card and the 128px rail mini: deep panel with cover tint, category badge, low-left lockup, play pill; lifts, warms and scans on hover. Height comes from the container, never an aspect ratio.",
+      "html": "<div class=\"ds-sim-demo\"><a href=\"#\" class=\"ds-sim-tile\"><span class=\"ds-sim-shade\"></span><span class=\"ds-sim-badge\">Physics</span><div class=\"ds-sim-tile-body\"><h3 class=\"ds-sim-title\">Gravity Gunner</h3><span class=\"ds-sim-tags\">#orbits #arcade</span><p class=\"ds-sim-desc\">Curve your shots around two gravity wells. Every miss becomes a moon.</p><span class=\"ds-sim-play\">Play now <svg width=\"13\" height=\"13\" fill=\"currentColor\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 5v14l11-7z\"/></svg></span></div></a><a href=\"#\" class=\"ds-sim-tile ds-sim-tile--mini\"><span class=\"ds-sim-shade\"></span><span class=\"ds-sim-badge\">Engineering</span><div class=\"ds-sim-tile-body\"><h3 class=\"ds-sim-title\">Hydraulics Lab</h3><span class=\"ds-sim-play\">Play <svg width=\"13\" height=\"13\" fill=\"currentColor\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path d=\"M8 5v14l11-7z\"/></svg></span></div></a></div>",
+      "css": ".ds-sim-demo { display: grid; gap: 0.75rem; max-width: 26rem; } .ds-sim-tile { position: relative; display: block; overflow: hidden; isolation: isolate; height: 250px; border-radius: 1.25rem; border: 1px solid rgba(255, 255, 255, 0.09); background: radial-gradient(110% 80% at 30% 10%, rgba(239, 45, 45, 0.22), transparent 55%), radial-gradient(90% 70% at 90% 20%, rgba(139, 92, 246, 0.25), transparent 55%), #0a0714; color: #fff; text-decoration: none; transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.35s ease; } .ds-sim-tile::before { content: \"\"; position: absolute; inset: 0; z-index: 2; background: linear-gradient(180deg, transparent 0%, rgba(125, 211, 252, 0.14) 48%, rgba(255, 255, 255, 0.08) 52%, transparent 100%); transform: translateY(-100%); pointer-events: none; } .ds-sim-tile:hover, .ds-sim-tile:focus-visible { transform: translateY(-4px); border-color: rgba(255, 138, 61, 0.5); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 138, 61, 0.18), 0 0 40px rgba(255, 138, 61, 0.12); outline: none; } .ds-sim-tile:hover::before { animation: ds-sim-scan 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; } @keyframes ds-sim-scan { to { transform: translateY(100%); } } .ds-sim-shade { position: absolute; inset: 0; z-index: 1; background: linear-gradient(180deg, rgba(5, 5, 8, 0) 18%, rgba(5, 5, 8, 0.5) 48%, rgba(5, 5, 8, 0.94) 100%); pointer-events: none; } .ds-sim-badge { position: absolute; top: 0.9rem; right: 0.9rem; z-index: 3; font-family: \"JetBrains Mono\", ui-monospace, monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.2em; text-transform: uppercase; padding: 0.32rem 0.7rem; border-radius: 9999px; color: #7dd3fc; background: rgba(5, 5, 8, 0.55); border: 1px solid rgba(255, 255, 255, 0.14); backdrop-filter: blur(6px); } .ds-sim-tile-body { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; padding: 1.2rem 1.3rem 1.3rem; } .ds-sim-title { font-family: \"Space Grotesk\", system-ui, sans-serif; font-weight: 700; font-size: 1.25rem; line-height: 1.12; letter-spacing: -0.015em; margin: 0 0 0.45rem; } .ds-sim-tags { display: block; font-family: \"JetBrains Mono\", ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: #ffb45c; margin-bottom: 0.6rem; } .ds-sim-desc { font-family: Inter, system-ui, sans-serif; font-size: 0.875rem; line-height: 1.5; color: #cbd5e1; margin: 0 0 0.95rem; } .ds-sim-play { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 40px; padding: 0.5rem 1.15rem; border-radius: 9999px; font-family: \"Space Grotesk\", system-ui, sans-serif; font-size: 0.95rem; font-weight: 700; color: #fff; background: linear-gradient(120deg, #ef2d2d 0%, #ff5f2d 55%, #ff8a3d 100%); box-shadow: 0 6px 20px rgba(239, 45, 45, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25); transition: transform 0.25s ease, box-shadow 0.25s ease; } .ds-sim-tile:hover .ds-sim-play { transform: translateX(3px); box-shadow: 0 8px 28px rgba(255, 95, 45, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.25); } .ds-sim-tile--mini { height: 128px; border-radius: 1rem; background: radial-gradient(110% 80% at 20% 100%, rgba(34, 211, 238, 0.18), transparent 55%), radial-gradient(80% 60% at 90% 0%, rgba(125, 211, 252, 0.10), transparent 55%), #060b16; } .ds-sim-tile--mini .ds-sim-tile-body { padding: 0.75rem 0.9rem 0.85rem; display: flex; align-items: flex-end; justify-content: space-between; gap: 0.75rem; } .ds-sim-tile--mini .ds-sim-title { font-size: 1rem; margin: 0; } .ds-sim-tile--mini .ds-sim-desc, .ds-sim-tile--mini .ds-sim-tags { display: none; } .ds-sim-tile--mini .ds-sim-play { min-height: 32px; padding: 0.3rem 0.8rem; font-size: 0.8rem; flex-shrink: 0; } .ds-sim-tile--mini .ds-sim-badge { font-size: 9px; padding: 0.2rem 0.5rem; top: 0.6rem; right: 0.6rem; } .ds-sim-tile--mini .ds-sim-shade { background: linear-gradient(180deg, rgba(5, 5, 8, 0) 25%, rgba(5, 5, 8, 0.55) 62%, rgba(5, 5, 8, 0.9) 100%); } .ds-sim-tile--mini:hover { transform: translateY(-2px); }"
+    },
+    {
+      "name": "Feed Chip",
+      "kind": "chip",
+      "refersTo": "feed-chip",
+      "description": "Home feed tag filter: Inter pills on a glass wash; the active chip wears the fire gradient. The row scrolls horizontally with the scrollbar hidden.",
+      "html": "<nav class=\"ds-feed-filter\" aria-label=\"Filter posts by tag\"><a href=\"#\" class=\"ds-feed-chip ds-feed-chip--active\">All</a><a href=\"#\" class=\"ds-feed-chip\">ksp</a><a href=\"#\" class=\"ds-feed-chip\">stormworks</a><a href=\"#\" class=\"ds-feed-chip\">tanks</a><a href=\"#\" class=\"ds-feed-chip\">rockets</a></nav>",
+      "css": ".ds-feed-filter { display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.35rem; scrollbar-width: none; } .ds-feed-filter::-webkit-scrollbar { display: none; } .ds-feed-chip { flex: 0 0 auto; padding: 0.45rem 0.95rem; border-radius: 9999px; font-family: Inter, system-ui, sans-serif; font-size: 0.8rem; font-weight: 600; color: #cbd5e1; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08); text-decoration: none; transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s ease; } .ds-feed-chip:hover { color: #fff; background: rgba(255, 255, 255, 0.1); } .ds-feed-chip--active { color: #fff; background: linear-gradient(120deg, #ef2d2d, #ff8a3d); border-color: transparent; box-shadow: 0 4px 16px rgba(239, 45, 45, 0.3); } .ds-feed-chip:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }"
+    },
+    {
+      "name": "Commander Card",
+      "kind": "card",
+      "refersTo": "commander-card",
+      "description": "The home feed's left rail: a glass card with a cosmic cover band, an orbit-ringed avatar overlapping it, a mono kicker, three counting stat cells and a profile link.",
+      "html": "<article class=\"ds-commander-card\"><div class=\"ds-cc-cover\"></div><div class=\"ds-cc-head\"><div class=\"ds-cc-avatar\"><span class=\"ds-cc-ring-b\"></span><span class=\"ds-cc-ring-a\"></span><div class=\"ds-cc-initial\">S</div></div><h2 class=\"ds-cc-name\">Sherwin</h2><p class=\"ds-cc-kicker\">Cmdr &middot; Sherwin Universe</p><p class=\"ds-cc-sub\">I build rockets, super-tanks and flying machines, then launch them here.</p></div><div class=\"ds-cc-stats\"><div class=\"ds-cc-stat\"><div class=\"v\">42</div><div class=\"k\">Missions</div></div><div class=\"ds-cc-stat\"><div class=\"v\">4</div><div class=\"k\">Sims</div></div><div class=\"ds-cc-stat\"><div class=\"v\">318</div><div class=\"k\">Day</div></div></div><a href=\"#\" class=\"ds-cc-link\">Commander profile <svg width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13 7l5 5m0 0l-5 5m5-5H6\"/></svg></a></article>",
+      "css": ".ds-commander-card { position: relative; overflow: hidden; width: 240px; border-radius: 1.25rem; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); color: #fff; font-family: Inter, system-ui, sans-serif; } .ds-cc-cover { height: 4.25rem; background: radial-gradient(80% 120% at 20% 0%, rgba(239, 45, 45, 0.55), transparent 60%), radial-gradient(70% 120% at 85% 20%, rgba(139, 92, 246, 0.45), transparent 60%), linear-gradient(120deg, rgba(255, 138, 61, 0.25), rgba(34, 211, 238, 0.15)); } .ds-cc-head { padding: 0 1rem 0.75rem; text-align: center; } .ds-cc-avatar { position: relative; display: inline-block; margin-top: -2.25rem; } .ds-cc-ring-a, .ds-cc-ring-b { position: absolute; border-radius: 9999px; pointer-events: none; } .ds-cc-ring-a { inset: -7px; border: 1px dashed rgba(125, 211, 252, 0.35); animation: ds-orbit 36s linear infinite; } .ds-cc-ring-b { inset: -14px; border: 1px solid rgba(255, 138, 61, 0.18); animation: ds-orbit 60s linear infinite reverse; } .ds-cc-ring-a::before { content: \"\"; position: absolute; top: -3px; left: 50%; width: 5px; height: 5px; border-radius: 9999px; background: #ff8a3d; box-shadow: 0 0 10px rgba(255, 138, 61, 0.9); } @keyframes ds-orbit { to { transform: rotate(360deg); } } .ds-cc-initial { width: 4.5rem; height: 4.5rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #ff4d4d, #dc2626); box-shadow: 0 0 0 2px #0a0a12; font-family: \"Space Grotesk\", system-ui, sans-serif; font-weight: 700; font-size: 1.5rem; } .ds-cc-name { font-family: \"Space Grotesk\", system-ui, sans-serif; font-weight: 700; font-size: 1rem; margin: 0.75rem 0 0; } .ds-cc-kicker { font-family: \"JetBrains Mono\", ui-monospace, monospace; font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: #6b7280; margin: 0.25rem 0 0; } .ds-cc-sub { font-size: 0.75rem; line-height: 1.375; color: #9ca3af; margin: 0.625rem 0 0; } .ds-cc-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid rgba(255, 255, 255, 0.08); } .ds-cc-stat { padding: 0.7rem 0.25rem; text-align: center; } .ds-cc-stat .v { font-family: \"JetBrains Mono\", ui-monospace, monospace; font-weight: 700; font-size: 1.05rem; color: #ffb45c; font-variant-numeric: tabular-nums; } .ds-cc-stat .k { font-family: \"JetBrains Mono\", ui-monospace, monospace; font-size: 9px; letter-spacing: 0.18em; text-transform: uppercase; color: #9ca3af; margin-top: 0.15rem; } .ds-cc-link { display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.75rem; border-top: 1px solid rgba(255, 255, 255, 0.08); font-size: 0.8rem; font-weight: 600; color: #cbd5e1; text-decoration: none; transition: color 0.2s ease, background 0.2s ease; } .ds-cc-link:hover { color: #ffb45c; background: rgba(255, 255, 255, 0.04); } .ds-cc-link:focus-visible { outline: 2px solid #38bdf8; outline-offset: -3px; } @media (prefers-reduced-motion: reduce) { .ds-cc-ring-a, .ds-cc-ring-b { animation: none; } }"
+    },
+    {
+      "name": "Segmented Filter",
+      "kind": "chip",
+      "refersTo": "segmented",
+      "description": "Highlights type filter: a glass pill track with a fire-gradient active segment.",
+      "html": "<div class=\"ds-segmented\"><a href=\"#\" class=\"ds-seg ds-seg--active\">All</a><a href=\"#\" class=\"ds-seg\">Snaps</a><a href=\"#\" class=\"ds-seg\">Photos</a><a href=\"#\" class=\"ds-seg\">Videos</a></div>",
+      "css": ".ds-segmented { display: inline-flex; padding: 0.25rem; gap: 0.25rem; border-radius: 9999px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); } .ds-seg { padding: 0.4rem 1.1rem; border-radius: 9999px; font-family: Inter, system-ui, sans-serif; font-size: 0.8rem; font-weight: 600; color: #9ca3af; text-decoration: none; transition: color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease; } .ds-seg:hover { color: #fff; } .ds-seg--active { color: #fff; background: linear-gradient(120deg, #ef2d2d, #ff8a3d); box-shadow: 0 2px 12px rgba(239, 45, 45, 0.35); } .ds-seg:focus-visible { outline: 2px solid #38bdf8; outline-offset: 3px; }"
+    },
+    {
+      "name": "Empty Glyph (rocket)",
+      "kind": "custom",
+      "refersTo": "empty-glyph",
+      "description": "Empty-state badge holding an authored sprite glyph; shown here with the #i-rocket symbol (window and nozzle via custom properties).",
+      "html": "<div class=\"ds-empty-glyph\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><path fill=\"currentColor\" d=\"M12 1.6c3.4 2.3 5 6.1 5 10.4 0 1.8-.3 3.5-.8 5H7.8c-.5-1.5-.8-3.2-.8-5C7 7.7 8.6 3.9 12 1.6Z\"/><path fill=\"currentColor\" opacity=\".8\" d=\"M7.4 12.2 4.2 15.6v3.6l3.6-1.8v-5.2Zm9.2 0v5.2l3.6 1.8v-3.6l-3.6-3.4Z\"/><path fill=\"var(--rocket-nozzle,#c4b5fd)\" d=\"M9.6 17h4.8l-.9 2.6h-3Z\"/><circle cx=\"12\" cy=\"9.6\" r=\"2\" fill=\"var(--rocket-window,#7dd3fc)\"/><circle cx=\"12\" cy=\"9.6\" r=\"2.7\" fill=\"none\" stroke=\"rgba(255,255,255,.35)\" stroke-width=\".8\"/></svg></div>",
+      "css": ".ds-empty-glyph { display: inline-flex; align-items: center; justify-content: center; width: 4.5rem; height: 4.5rem; border-radius: 1.25rem; color: #ffb45c; --rocket-window: #7dd3fc; --rocket-nozzle: #c4b5fd; background: rgba(255, 138, 61, 0.08); border: 1px solid rgba(255, 138, 61, 0.22); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); animation: ds-float 6s ease-in-out infinite; } .ds-empty-glyph svg { width: 2.2rem; height: 2.2rem; filter: drop-shadow(0 0 10px rgba(255, 138, 61, 0.55)); } @keyframes ds-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } } @media (prefers-reduced-motion: reduce) { .ds-empty-glyph { animation: none; } }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Mission Control, played like a game launcher",
+    "overview": "Sherwin Universe is a 12-year-old's space program rendered as his own Mission Control. The screen is a near-black cosmos with a live starfield and three slow nebulae; everything that sits on it is either glass (a faint white film with a hairline border) or a lit instrument (nova-orange readouts, plasma-cyan focus, violet depth). The visitor lands mid-launch: a T-minus readout counts down, a rocket lifts off a planet horizon and keeps climbing as they scroll, and the sims in the Launch Bay are already moving before anyone clicks. The build refuses the boxed hero card, the equal-card row and the generic social feed: the hero is full-bleed and short enough that the feed shows under it, the home is feed-first (a three-column bridge: commander card on the left, the Mission Log in the centre under a row of tag chips, a sticky Launch Bay rail of live mini tiles on the right), and the Mission Log's cards behave like field reports (HUD corner brackets, `T-` timestamps, mono tag chips). The Lab is the full game shelf; on Home the sims are a rail, not a section.\n\nDensity is editorial rather than dashboard-dense: one big display line per screen, a feed that starts 2rem to 3rem under the hero and then breathes in 1.25rem card gaps, sector pages with 3rem to 6rem of section rhythm, and small mono labels doing the wayfinding. Dark is the default. The light theme is not an inversion but a \"daylight cosmos\": a tinted peach-to-lavender-to-blue sky with the same pastel nebulae turned up, white cards, and every glow either removed or re-tuned to a deeper ember. The nav stays dark in both themes.",
+    "keyCharacteristics": [
+      "Cosmos background (`#050508`) that is drawn, not flat: canvas starfield with three parallax layers, twinkle and shooting stars, plus three blurred nebula discs drifting on 46s to 58s loops.",
+      "Fire gradient as the signature: ignition red into nova orange (into cream for text), used for the primary CTA, the active segment and feed chip, the nav underline, the scroll-progress bar and gradient headlines.",
+      "Feed-first home: the hero hands off to a three-column bridge (240px commander card | `max-w-xl` posts | 300px Launch Bay rail), both rails sticky at 6rem; on phones the rail becomes a snap-scrolling swipe strip above the feed.",
+      "HUD grammar: JetBrains Mono, uppercase, wide tracking (0.12em to 0.32em), a 24px gradient hairline before every sector label.",
+      "Glass at rest, glow on interaction: surfaces are near-transparent with hairline borders; hover adds a warm ring or shadow and a 2px to 4px lift.",
+      "One easing curve for entrances, `cubic-bezier(0.16, 1, 0.3, 1)`, and a bouncy `cubic-bezier(0.34, 1.56, 0.64, 1)` reserved for toy interactions (poking the planet, the icon hop).",
+      "An authored rocket glyph (`#i-rocket`) appears in three places: the scroll-progress bar, the launch hero, and the timeline's flight marker.",
+      "Motion is respectful by construction: every loop stops off-screen or when the tab is hidden, the countdown plays once per session, and `prefers-reduced-motion` keeps the states and drops the movement."
+    ],
+    "rules": [
+      { "name": "The Fire Ramp Rule", "body": "Warm accents always travel red → orange (→ cream). A gradient that starts on nova and ends on red, or a warm accent that mixes in violet, is off-world. `gradient-text-cosmic` is the one sanctioned crossover (fire into violet into cyan) and it is reserved for the hero headline.", "section": "colors" },
+      { "name": "The Nova Light Rule", "body": "Nova orange (`#ff8a3d`) is the light source, not a fill. It appears as text on readouts, as hairlines, and as glow (`box-shadow`, `text-shadow`, `drop-shadow`); the only solid nova fills are the skip link and the \"passed\" flight node dot.", "section": "colors" },
+      { "name": "The Cool Counterpoint Rule", "body": "Plasma and nebula never carry a call to action. Cyan means focus, structure (dashed orbits, flight line) and category badges; violet means depth (distant bodies, nebulae, tile tints).", "section": "colors" },
+      { "name": "The Deeper-on-Daylight Rule", "body": "Every accent has a light-theme partner one to two steps darker (`#ff8a3d` → `#c2410c`, `#7dd3fc` → `#0284c7`, `#34d399` → `#059669`). Never ship a dark-theme accent on a white card.", "section": "colors" },
+      { "name": "The Readout Rule", "body": "JetBrains Mono appears only where a number or a system label would appear on an instrument panel: sector labels, stat values, timestamps, tags, badges, coordinates. Never for headings, body copy or button labels.", "section": "typography" },
+      { "name": "The One Gradient Word Rule", "body": "A gradient headline lights one word (or one line in the hero). The rest of the headline stays solid white (`light-heading` on daylight).", "section": "typography" },
+      { "name": "The Sector Label Rule", "body": "Every sector page opens with a `.hud-label` reading `Sector NN · Name` (03 Timeline, 04 Highlights, 05 The Lab, 06 Commander Profile), 1rem above the H1. Card-level HUD labels shrink to 9px to 10px but keep the hairline.", "section": "typography" },
+      { "name": "The Glass-Then-Glow Rule", "body": "Surfaces are flat glass at rest. Shadow and glow are responses to state (hover, focus, \"passed\", active), not decoration.", "section": "elevation" },
+      { "name": "The Warm Shadow Rule", "body": "Colored shadows are always warm (`rgba(239,45,45,x)` or `rgba(255,138,61,x)`). Neutral depth uses black in the dark theme and slate `rgba(30,41,59,x)` on daylight. No cyan or violet shadows outside the horizon atmosphere.", "section": "elevation" },
+      { "name": "The Inset Highlight Rule", "body": "Every gradient-filled control carries `inset 0 1px 0 rgba(255,255,255,0.25)`; glass panels carry it at 0.08 (0.9 on daylight). It is what makes a fill read as a lit surface.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do open every sector page with `.hud-label` reading `Sector NN · Name`, then the Space Grotesk H1 with one word in `gradient-text-fire`, then a one-sentence intro in `text-muted`/`text-dim` at `text-lg`, `mb-12` before content.",
+      "Do build warm gradients red → orange (`#ef2d2d` → `#ff8a3d`, with `#ff5f2d` at 55% on fills and `#ffd08a` as the text end), and reserve `gradient-text-cosmic` for the hero.",
+      "Do keep surfaces as glass (`rgba(255,255,255,0.03)` + 1px `rgba(255,255,255,0.08)`) and express state with a warm ring, a black shadow and a 2px to 4px lift.",
+      "Do use `cubic-bezier(0.16, 1, 0.3, 1)` for every entrance and transform (0.35s tiles, 0.7s reveals and image zooms, 0.9s hero lines), `cubic-bezier(0.34, 1.56, 0.64, 1)` only for toy feedback, and plain `ease` 0.2s to 0.35s for color, border and shadow.",
+      "Do give every new light-theme variant an explicit rule scoped `[data-theme=\"light\"] main .component` (or `footer`), and pair each accent with its deeper daylight partner.",
+      "Do draw icons as inline stroke SVG (24 viewBox, `stroke-width` 1.5 to 2, round caps) or a sprite `<use href=\"#i-rocket|#i-satellite|#i-antenna\"/>`; add new glyphs to the sprite in `base.html`.",
+      "Do stop any loop when its element is off-screen or the tab is hidden (IntersectionObserver + `visibilitychange`), subscribe scroll work to the shared `onScroll` bus, and provide a still or an instant state under `prefers-reduced-motion`.",
+      "Do size sim tiles from their container (Lab rows `clamp(230px, 24vw, 330px)`, rail tiles 128px / 150px), never with `aspect-ratio`; the preview fits its scene into a centred box (0.72 / 0.56 / 0.92 of the height, width ≤ 1.75 × height) so the lockup stays clear.",
+      "Do move media with a direction-aware slide: a 40px swipe threshold, the incoming frame on `cubic-bezier(0.16, 1, 0.3, 1)` (0.38s lightbox, 0.5s carousel), the outgoing on a short `ease-in`, and a plain swap under reduced motion.",
+      "Do write template copy in first person, plain and specific, in space-program vocabulary (mission, launch bay, mission day, T-minus, sector, commander), and title pages `X · Sherwin Universe` with a middle dot.",
+      "Do bump `?v=` on `main.css` and `main.js` in `base.html` whenever they change."
+    ],
+    "donts": [
+      "Don't box the hero in a card, lay sims out as an equal-card row, or render the Mission Log as a generic social feed; the horizon-riding HUD strip, the feed-first bridge (commander card | posts | Launch Bay rail) and the field-report brackets are the shape of this world.",
+      "Don't add a standalone sims section back to Home; the Launch Bay is the right rail (a swipe rail above the feed on phones) and the Lab is the full shelf. Mini tiles carry a title and Play only, never a description.",
+      "Don't use JetBrains Mono for headings, body copy or button labels, and don't set a HUD label in Inter (the 404 kicker does this and is not the pattern).",
+      "Don't use emoji as UI icons; emoji belong only in owner-authored content (About loadout chips, snap bodies). Don't use text glyphs (`✦`, arrows) where an SVG should be.",
+      "Don't put em-dashes in template copy (HTML comments are fine); don't title a page with ` - Sherwin Universe`.",
+      "Don't ship cyan or violet shadows, solid nova fills (skip link and lit waypoint dots excepted), or a dark-theme accent on a white daylight card.",
+      "Don't hard-code sims in templates; tiles are DB rows and scenes are keyed by slug in `pickScene`. Don't draw a sim twice (static mark plus live scene).",
+      "Don't let the nav go light; it stays `glass-nav` dark in both themes.",
+      "Don't replay the launch countdown on every page load; `sessionStorage.su-launched` gates it once per session.",
+      "Don't add a new dependency or a build step; the system is Tailwind CDN config in `base.html`, `main.css` and `main.js`."
+    ]
+  }
+}

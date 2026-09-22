@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {% block meta %}
-    <meta name="description" content="{% block meta_description %}Sherwin's Universe — rockets, super-tanks, physics sims, and space experiments built by a young engineer.{% endblock %}">
+    <meta name="description" content="{% block meta_description %}Sherwin's Universe: rockets, super-tanks, physics sims, and space experiments built by a young engineer.{% endblock %}">
     <meta property="og:title" content="{% block og_title %}Sherwin Universe{% endblock %}">
     <meta property="og:description" content="{% block og_description %}Rockets, experiments, and playable physics sims from Sherwin's own corner of the cosmos.{% endblock %}">
     <meta property="og:type" content="website">
@@ -105,10 +105,47 @@
         @keyframes pulse-glow { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
         .animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
     </style>
-    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=20260714-craft">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}?v=20260921-launch3">
     {% block extra_head %}{% endblock %}
 </head>
 <body class="min-h-screen overflow-x-hidden text-white font-sans flex flex-col" x-data="{ mobileMenu: false }">
+
+<!--
+  DIRECTION CONTRACT (impeccable, 2026-09-21)
+  THESIS: Sherwin's space program, presented like a game launcher. Refuses the boxed hero card, the equal-card row, and the generic social feed.
+  OWN-WORLD: near-black cosmos (#050508) lit by nova orange, plasma cyan and nebula violet; Space Grotesk display, JetBrains Mono only for readouts; HUD hairlines, a planet horizon, an authored rocket glyph. Dark by default, daylight-cosmos light theme.
+  STORY: a friend lands mid-launch, understands Sherwin builds and flies things, and is one click from playing a sim.
+  FIRST VIEWPORT: full-bleed launch scene. T-minus readout, two-line headline, one-sentence lede, Enter the Lab + Read the Mission Log; a rocket lifts off the planet horizon and keeps climbing on scroll; the HUD stat strip rides the horizon.
+  FORM: the established Mission Control world, extended (no concept roll; code-led, no image generation available).
+  FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
+-->
+    <a href="#main" class="skip-link">Skip to content</a>
+    <!-- Icon sprite: authored glyphs used across the site -->
+    <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+        <symbol id="i-rocket" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M12 1.6c3.4 2.3 5 6.1 5 10.4 0 1.8-.3 3.5-.8 5H7.8c-.5-1.5-.8-3.2-.8-5C7 7.7 8.6 3.9 12 1.6Z"/>
+            <path fill="currentColor" opacity=".8" d="M7.4 12.2 4.2 15.6v3.6l3.6-1.8v-5.2Zm9.2 0v5.2l3.6 1.8v-3.6l-3.6-3.4Z"/>
+            <path fill="var(--rocket-nozzle,#c4b5fd)" d="M9.6 17h4.8l-.9 2.6h-3Z"/>
+            <circle cx="12" cy="9.6" r="2" fill="var(--rocket-window,#7dd3fc)"/>
+            <circle cx="12" cy="9.6" r="2.7" fill="none" stroke="rgba(255,255,255,.35)" stroke-width=".8"/>
+        </symbol>
+        <symbol id="i-satellite" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3.5 12.5a8.5 8.5 0 0 0 8 8"/>
+            <path d="M7 10.5a5 5 0 0 0 6.5 6.5"/>
+            <path d="m9.6 14.4 6.2-6.2"/>
+            <path d="m13.6 4.6 5.8 5.8"/>
+            <path d="m15 3.2-1.4 1.4M20.8 9l-1.4 1.4"/>
+            <circle cx="17.5" cy="6.5" r="1.4" fill="currentColor" stroke="none"/>
+        </symbol>
+        <symbol id="i-antenna" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 21v-8"/>
+            <path d="M8.5 21h7"/>
+            <circle cx="12" cy="11" r="2"/>
+            <path d="M7.8 6.8a6 6 0 0 0 0 8.4M16.2 6.8a6 6 0 0 1 0 8.4"/>
+            <path d="M5 4a10 10 0 0 0 0 14M19 4a10 10 0 0 1 0 14"/>
+        </symbol>
+    </svg>
+
 
     <!-- Animated cosmos background (stars + nebulae, rendered by main.js) -->
     <div id="cosmos" aria-hidden="true">
@@ -121,7 +158,7 @@
     <!-- Scroll progress rocket -->
     <div id="scroll-progress" aria-hidden="true">
         <div id="scroll-progress-bar"></div>
-        <span id="scroll-rocket">🚀</span>
+        <svg id="scroll-rocket" aria-hidden="true"><use href="#i-rocket"/></svg>
     </div>
 
     <!-- Desktop Navigation -->
@@ -218,7 +255,7 @@
     {% endif %}
 
     <!-- Main Content -->
-    <main class="flex-1 w-full relative">
+    <main id="main" class="flex-1 w-full relative" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
 
@@ -234,7 +271,7 @@
         </div>
     </footer>
 
-    <script src="{% static 'js/main.js' %}?v=20260714-craft" defer></script>
+    <script src="{% static 'js/main.js' %}?v=20260921-launch3" defer></script>
 
     <!-- Mobile Bottom Navigation -->
     <nav class="md:hidden fixed bottom-0 left-0 right-0 glass-nav z-50 border-t border-white/5">
