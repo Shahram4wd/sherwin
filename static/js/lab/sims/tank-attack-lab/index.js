@@ -411,6 +411,7 @@ export class TankAttackLabApp {
       turretHeadingDeg: 0,
       turretElevationDeg: 0,
       selectedTargetId: null,
+      aimedTargetId: null,
       rangefinderMeters: null,
       tankHealth: TANKS.m109.health,
       reloadRemaining: 0,
@@ -683,6 +684,7 @@ export class TankAttackLabApp {
       '<div style="position:absolute;top:50%;left:50%;width:5px;height:5px;border-radius:50%;border:2px solid rgba(251,191,36,0.95);transform:translate(-50%,-50%)"></div>',
       '<div style="position:absolute;top:50%;left:50%;width:20px;height:20px;border-radius:50%;border:1px solid rgba(251,191,36,0.5);transform:translate(-50%,-50%)"></div>',
     ].join('');
+    this.crosshairEl = crosshair;
     this.hudOverlay.appendChild(crosshair);
 
     this.headingHud = document.createElement('div');
@@ -1550,6 +1552,7 @@ export class TankAttackLabApp {
     this._tickCameraShake(dt);
     this._tickWorldFx(dt);
     this._syncPeriscopeCameraPose();
+    this._updateAimLock();
     this._updateUI();
     this._updateTargetOverlays();
   }
@@ -2348,6 +2351,55 @@ export class TankAttackLabApp {
   _addHistory(message) {
     this.state.history.push(message);
     if (this.state.history.length > 14) this.state.history.shift();
+  }
+
+  /**
+   * Aim-to-lock: the target nearest the crosshair (by heading) becomes the
+   * selected target, so turning the barrel to face a dome lights it up red and
+   * feeds the rangefinder / Set Elevation. Rolling terrain and fog mean the
+   * clickable box no longer sits on the crosshair, so aiming, not clicking, is
+   * the primary way to pick a target (clicking a box still works too).
+   */
+  _updateAimLock() {
+    const cam = this.engine?.camera;
+    const canvas = this.engine?.renderer?.domElement;
+    if (!cam || !canvas) {
+      this.state.aimedTargetId = null;
+      return;
+    }
+    const W = canvas.clientWidth;
+    const H = canvas.clientHeight;
+    const centerX = W / 2;
+    const tmp = new THREE.Vector3();
+    let bestId = null;
+    let bestDx = Infinity;
+    for (const target of this.state.targets) {
+      if (!target.alive) continue;
+      const groundY = terrainHeight(target.x, target.z);
+      tmp.set(target.x, groundY + 0.5, target.z).project(cam);
+      if (tmp.z > 1) continue; // behind the camera
+      const sx = (tmp.x * 0.5 + 0.5) * W;
+      const sy = (-tmp.y * 0.5 + 0.5) * H;
+      if (sy < -160 || sy > H + 160) continue;
+      const dx = Math.abs(sx - centerX);
+      if (dx < bestDx) {
+        bestDx = dx;
+        bestId = target.id;
+      }
+    }
+    const aimPx = Math.max(90, W * 0.14);
+    const aimedId = (bestId !== null && bestDx <= aimPx) ? bestId : null;
+    this.state.aimedTargetId = aimedId;
+
+    if (aimedId !== null && aimedId !== this.state.selectedTargetId) {
+      this.state.selectedTargetId = aimedId;
+      this.state.rangefinderMeters = null;
+      this._updateUI();
+    }
+    if (this.crosshairEl) {
+      // Amber crosshair swings toward red when a target is locked under it.
+      this.crosshairEl.style.filter = aimedId !== null ? 'hue-rotate(-48deg) saturate(1.5) brightness(1.1)' : 'none';
+    }
   }
 
   _updateTargetOverlays() {

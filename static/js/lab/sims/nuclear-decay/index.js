@@ -18,6 +18,7 @@ import {
   SceneManager,
   ParticlePool,
   UIPanel,
+  makeGlowTexture,
   formatHalfLife,
   stabilityColor,
   randomOnSphere,
@@ -39,6 +40,12 @@ const SPRING_K       = 4.0;      // spring stiffness toward target
 const DAMPING        = 0.92;     // velocity damping
 const REPULSION      = 0.3;     // inter-nucleon push to prevent overlap
 const MAGIC_NUMBERS  = [2, 8, 20, 28, 50, 82, 126];
+
+// Heavier post-processing only on wider screens with motion allowed.
+const HIGH_FX = (typeof window !== 'undefined')
+  && window.matchMedia
+  && window.matchMedia('(min-width: 900px)').matches
+  && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 function nucleusRadiusFromCounts(z, n) {
   const total = Math.max(1, z + n);
@@ -937,11 +944,22 @@ export class NuclearDecayApp {
 
     // Three.js scene
     this.engine = new SceneManager(this.container, {
-      background: '#080810',
+      background: '#05060f',
       orbit: true,
+      toneMapping: 'aces',
+      exposure: 1.0,
+      defaultLights: false,
     });
+    await this.engine.setEnvironment(0.55);
+    if (HIGH_FX) {
+      this.engine.enableBloom({ strength: 0.55, radius: 0.55, threshold: 0.75 }).catch(() => {});
+    }
+    this._buildSpaceEnvironment();
 
     this.nucleus = new Nucleus3D(this.engine.scene);
+    // Push the nucleon glow a little harder so bloom catches the proton/neutron sheen.
+    this.nucleus.protons.mesh.material.emissiveIntensity = 0.6;
+    this.nucleus.neutrons.mesh.material.emissiveIntensity = 0.45;
     const reducedMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
     this.effects = new DecayEffects(this.engine.scene, { reducedMotion });
 
@@ -961,9 +979,63 @@ export class NuclearDecayApp {
       this.nucleus.tick(dt);
       this.nucleus.rotate(dt);
       this.effects.tick(dt);
+      if (this._starfield) this._starfield.rotation.y += dt * 0.006;
       this._tickCamera(dt);
     });
     this.engine.start();
+  }
+
+  /**
+   * Space-lab lighting + a faint starfield backdrop, matching the graphics
+   * styling of the Hydraulics and Tank Attack sims.
+   */
+  _buildSpaceEnvironment() {
+    const scene = this.engine.scene;
+    this._envObjects = [];
+
+    const hemi = new THREE.HemisphereLight(0x4a5a88, 0x090912, 0.6);
+    scene.add(hemi);
+    this._envObjects.push(hemi);
+
+    const key = new THREE.PointLight(0xffffff, 60, 140, 2);
+    key.position.set(12, 16, 14);
+    scene.add(key);
+    this._envObjects.push(key);
+
+    const rimCyan = new THREE.PointLight(0x22d3ee, 42, 150, 2);
+    rimCyan.position.set(-15, 6, -11);
+    scene.add(rimCyan);
+    this._envObjects.push(rimCyan);
+
+    const rimMagenta = new THREE.PointLight(0xff4d9d, 30, 150, 2);
+    rimMagenta.position.set(10, -11, -13);
+    scene.add(rimMagenta);
+    this._envObjects.push(rimMagenta);
+
+    // Starfield: points on a large sphere, additive glow sprites.
+    const starCount = HIGH_FX ? 1100 : 500;
+    const positions = new Float32Array(starCount * 3);
+    for (let i = 0; i < starCount; i++) {
+      const v = randomOnSphere(120 + Math.random() * 40);
+      positions[i * 3] = v.x;
+      positions[i * 3 + 1] = v.y;
+      positions[i * 3 + 2] = v.z;
+    }
+    const starGeo = new THREE.BufferGeometry();
+    starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    this._starTexture = makeGlowTexture(64);
+    const starMat = new THREE.PointsMaterial({
+      size: 1.6,
+      map: this._starTexture,
+      color: 0xbcd4ff,
+      transparent: true,
+      opacity: 0.85,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      sizeAttenuation: true,
+    });
+    this._starfield = new THREE.Points(starGeo, starMat);
+    scene.add(this._starfield);
   }
 
   /* ---- UI builders ----------------------------------------------- */
@@ -1351,6 +1423,11 @@ export class NuclearDecayApp {
   }
 
   dispose() {
+    if (this._starfield) {
+      this._starfield.geometry.dispose();
+      this._starfield.material.dispose();
+    }
+    if (this._starTexture) this._starTexture.dispose();
     this.engine.dispose();
   }
 }

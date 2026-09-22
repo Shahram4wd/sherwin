@@ -82,6 +82,7 @@
     shell.mount();
 
     const app = new manifest.AppClass(shell.stageId);
+    window.__labApp = app; // debug handle for headless tests and the browser console
 
     // Defer the expensive sim init() until the stage scrolls into view.
     // Falls back to immediate attach when IntersectionObserver isn't available.
